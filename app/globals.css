@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -163,4 +164,9 @@
   bottom: 0;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
   animation: speed-lines 3s ease-in-out infinite;
+}
+
+html, body {
+  font-family: 'Press Start 2P', cursive, monospace !important;
+  image-rendering: pixelated;
 }
