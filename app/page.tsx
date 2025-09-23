@@ -1,194 +1,209 @@
-  "use client"
+"use client"
 
-  import { Button } from "@/components/ui/button"
-  import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-  import { Input } from "@/components/ui/input"
-  import { Flag, Volume2, VolumeX, Settings, Users } from "lucide-react"
-  import Link from "next/link"
-  import { useEffect, useState } from "react"
-  import { motion } from "framer-motion"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Flag, Volume2, VolumeX, Settings, Users } from "lucide-react"
+import Link from "next/link"
+import { useEffect, useState } from "react"
+import { motion } from "framer-motion"
+import { useRouter } from "next/navigation"
 
-  export default function HomePage() {
-    const [isMuted, setIsMuted] = useState(false)
-    const [isGlitch, setIsGlitch] = useState(false)
-    const [roomCode, setRoomCode] = useState("")
-    const [username, setUsername] = useState("")
+export default function HomePage() {
+  const router = useRouter()
 
-    // Efek glitch sesekali
-    useEffect(() => {
-      const glitchInterval = setInterval(() => {
-        if (Math.random() > 0.7) {
-          setIsGlitch(true)
-          setTimeout(() => setIsGlitch(false), 100)
-        }
-      }, 3000)
-      return () => clearInterval(glitchInterval)
-    }, [])
+  const [isMuted, setIsMuted] = useState(false)
+  const [isGlitch, setIsGlitch] = useState(false)
+  const [roomCode, setRoomCode] = useState("")
+  const [nickname, setNickname] = useState("")
 
-    return (
-      <div className={`h-screen w-screen relative overflow-hidden pixel-font ${isGlitch ? 'glitch-effect' : ''}`}>
-        {/* Background Image */}
-        <div
-          className="absolute inset-0 w-full h-full bg-cover bg-center"
-          style={{ backgroundImage: "url('/images/carbackground.gif')" }}
-        />
+  // Efek glitch sesekali
+  useEffect(() => {
+    const glitchInterval = setInterval(() => {
+      if (Math.random() > 0.7) {
+        setIsGlitch(true)
+        setTimeout(() => setIsGlitch(false), 100)
+      }
+    }, 3000)
+    return () => clearInterval(glitchInterval)
+  }, [])
 
-        {/* CRT Monitor Effect */}
-        <div className="crt-effect"></div>
+  const handleJoin = () => {
+    if (!roomCode || !nickname) return;
 
-        {/* Static Noise */}
-        <div className="noise-effect"></div>
+    localStorage.setItem("nickname", nickname)
 
-        {/* Purple Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none"></div>
+    router.push(`/join/${roomCode}`);
+  }
 
-        {/* Header Controls (Volume, Settings) */}
-        <div className="absolute top-6 right-6 z-20 flex gap-3">
-          <button 
-            onClick={() => setIsMuted(!isMuted)}
-            className="p-2 bg-[#ff6bff] border-2 border-white pixel-button hover:bg-[#ff8aff] glow-pink"
-          >
-            {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-          </button>
-          <button className="p-2 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan">
-            <Settings size={16} />
-          </button>
-        </div>
+  return (
+    <div className={`h-screen w-screen relative overflow-hidden pixel-font ${isGlitch ? 'glitch-effect' : ''}`}>
+      {/* Background Image */}
+      <div
+        className="absolute inset-0 w-full h-full bg-cover bg-center"
+        style={{ backgroundImage: "url('/images/carbackground.gif')" }}
+      />
 
-        <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
-          {/* Main Title dengan efek pixel art */}
-          <div className="text-center mb-12 relative">
-            {/* Title Border */}
-            <div className="pixel-border-large mb-8 mx-auto" style={{ maxWidth: '500px' }}>
-              <h1 className="text-5xl md:text-7xl font-bold mb-2 text-white pixel-text-outline">
-                CRAZY
-              </h1>
-              <h2 className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff6bff] to-[#00ffff] pixel-text">
-                RACE
-              </h2>
-            </div>
+      {/* CRT Monitor Effect */}
+      <div className="crt-effect"></div>
 
-            {/* Subtitle dengan pixel border */}
-            <div className="pixel-border-small inline-block">
-              <p className="text-lg md:text-xl text-white px-4 py-2 bg-[#] pixel-text">
-                ANSWER • RACE • WIN
-              </p>
-            </div>
+      {/* Static Noise */}
+      <div className="noise-effect"></div>
+
+      {/* Purple Gradient Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none"></div>
+
+      {/* Header Controls (Volume, Settings) */}
+      <div className="absolute top-6 right-6 z-20 flex gap-3">
+        <button
+          onClick={() => setIsMuted(!isMuted)}
+          className="p-2 bg-[#ff6bff] border-2 border-white pixel-button hover:bg-[#ff8aff] glow-pink"
+        >
+          {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+        </button>
+        <button className="p-2 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan">
+          <Settings size={16} />
+        </button>
+      </div>
+
+      <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
+        {/* Main Title dengan efek pixel art */}
+        <div className="text-center mb-12 relative">
+          {/* Title Border */}
+          <div className="pixel-border-large mb-8 mx-auto" style={{ maxWidth: '500px' }}>
+            <h1 className="text-5xl md:text-7xl font-bold mb-2 text-white pixel-text-outline">
+              CRAZY
+            </h1>
+            <h2 className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff6bff] to-[#00ffff] pixel-text">
+              RACE
+            </h2>
           </div>
 
-          {/* Action Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-4xl w-full mb-16">
-            {/* Host Game Card */}
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3, duration: 0.8 }}
-              whileHover={{ scale: 1.02 }}
-              className="group"
-            >
-              <Link href="/host">
-                <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 hover:border-[#ff6bff] transition-all duration-300 h-full shadow-[0_0_15px_rgba(255,107,255,0.3)] pixel-card">
-                  <CardHeader className="text-center pb-4">
-                    <motion.div
-                      className="w-16 h-16 bg-gradient-to-br from-[#ff6bff] to-[#1a0a2a] border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-[0_0_15px_rgba(255,107,255,0.7)] transition-all duration-300"
-                      whileHover={{ rotate: 5 }}
-                    >
-                      <Flag className="w-8 h-8 text-white" />
-                    </motion.div>
-                    <CardTitle className="text-2xl font-bold text-[#ff6bff] pixel-text glow-pink">
-                      HOST GAME
-                    </CardTitle>
-                    <CardDescription className="text-[#ff6bff]/80 text-sm pixel-text glow-pink-subtle">
-                      Create your own race and challenge others
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button className="w-full bg-gradient-to-r from-[#ff6bff] to-[#d400ff] hover:from-[#ff8aff] hover:to-[#e633ff] text-white border-4 border-[#ff6bff] pixel-button-large retro-button glow-pink">
-                      Create Room
-                    </Button>
-                  </CardContent>
-                </Card>
-              </Link>
-            </motion.div>
+          {/* Subtitle dengan pixel border */}
+          <div className="pixel-border-small inline-block">
+            <p className="text-lg md:text-xl text-white px-4 py-2 bg-[#] pixel-text">
+              ANSWER • RACE • WIN
+            </p>
+          </div>
+        </div>
 
-            {/* Join Race Card */}
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3, duration: 0.8 }}
-              whileHover={{ scale: 1.02 }}
-              className="group"
-            >
-              <Card className="bg-[#1a0a2a]/40 border-[#00ffff]/50 hover:border-[#00ffff] transition-all duration-300 h-full shadow-[0_0_15px_rgba(0,255,255,0.3)] pixel-card">
+        {/* Action Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-4xl w-full mb-16">
+          {/* Host Game Card */}
+          <motion.div
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3, duration: 0.8 }}
+            whileHover={{ scale: 1.02 }}
+            className="group"
+          >
+            <Link href="/host">
+              <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 hover:border-[#ff6bff] transition-all duration-300 h-full shadow-[0_0_15px_rgba(255,107,255,0.3)] pixel-card">
                 <CardHeader className="text-center pb-4">
                   <motion.div
-                    className="w-16 h-16 bg-gradient-to-br from-[#00ffff] to-[#1a0a2a] border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-[0_0_15px_rgba(0,255,255,0.7)] transition-all duration-300"
-                    whileHover={{ rotate: -5 }}
+                    className="w-16 h-16 bg-gradient-to-br from-[#ff6bff] to-[#1a0a2a] border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-[0_0_15px_rgba(255,107,255,0.7)] transition-all duration-300"
+                    whileHover={{ rotate: 5 }}
                   >
-                    <Users className="w-8 h-8 text-white" />
+                    <Flag className="w-8 h-8 text-white" />
                   </motion.div>
-                  <CardTitle className="text-2xl font-bold text-[#00ffff] pixel-text glow-cyan">
-                    JOIN RACE
+                  <CardTitle className="text-2xl font-bold text-[#ff6bff] pixel-text glow-pink">
+                    HOST GAME
                   </CardTitle>
-                  <CardDescription className="text-[#00ffff]/80 text-sm pixel-text glow-cyan-subtle">
-                    Enter a code to join an existing race
+                  <CardDescription className="text-[#ff6bff]/80 text-sm pixel-text glow-pink-subtle">
+                    Create your own race and challenge others
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <Input
-                    placeholder="Room Code"
-                    value={roomCode}
-                    onChange={(e) => setRoomCode(e.target.value)}
-                    className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-base pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
-                    aria-label="Room Code"
-                  />
-                  <Input
-                    placeholder="Username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-base pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
-                    aria-label="Username"
-                  />
-                  <Link href={roomCode && username ? `/join?code=${roomCode}&username=${username}` : "#"}>
-                    <Button 
-                      className="w-full bg-gradient-to-r from-[#00ffff] to-[#0099cc] hover:from-[#33ffff] hover:to-[#00aadd] text-white border-4 border-[#00ffff] pixel-button-large retro-button glow-cyan"
-                      disabled={!roomCode || !username}
-                    >
-                      JOIN 
-                    </Button>
-                  </Link>
+                <CardContent>
+                  <Button className="w-full bg-gradient-to-r from-[#ff6bff] to-[#d400ff] hover:from-[#ff8aff] hover:to-[#e633ff] text-white border-4 border-[#ff6bff] pixel-button-large retro-button glow-pink">
+                    Create Room
+                  </Button>
                 </CardContent>
               </Card>
-            </motion.div>
-          </div>
+            </Link>
+          </motion.div>
 
-          {/* Pixel Art Decoration */}
-          <div className="absolute bottom-4 left-4 opacity-40">
-            <div className="flex gap-1">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="w-3 h-3 bg-[#00ffff]"></div>
-              ))}
-            </div>
-          </div>
+          {/* Join Race Card */}
+          <motion.div
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3, duration: 0.8 }}
+            whileHover={{ scale: 1.02 }}
+            className="group"
+          >
+            <Card className="bg-[#1a0a2a]/40 border-[#00ffff]/50 hover:border-[#00ffff] transition-all duration-300 h-full shadow-[0_0_15px_rgba(0,255,255,0.3)] pixel-card">
+              <CardHeader className="text-center pb-4">
+                <motion.div
+                  className="w-16 h-16 bg-gradient-to-br from-[#00ffff] to-[#1a0a2a] border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-[0_0_15px_rgba(0,255,255,0.7)] transition-all duration-300"
+                  whileHover={{ rotate: -5 }}
+                >
+                  <Users className="w-8 h-8 text-white" />
+                </motion.div>
+                <CardTitle className="text-2xl font-bold text-[#00ffff] pixel-text glow-cyan">
+                  JOIN RACE
+                </CardTitle>
+                <CardDescription className="text-[#00ffff]/80 text-sm pixel-text glow-cyan-subtle">
+                  Enter a code to join an existing race
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Input
+                  placeholder="Room Code"
+                  value={roomCode}
+                  maxLength={6}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                    setRoomCode(value);
+                  }}
+                  className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-base pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
+                  aria-label="Room Code"
+                />
+                <Input
+                  placeholder="Nickname"
+                  value={nickname}
+                  maxLength={26}
+                  onChange={(e) => setNickname(e.target.value)}
+                  className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-base pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
+                  aria-label="Nickname"
+                />
+                <Button
+                  onClick={handleJoin}
+                  className="w-full bg-gradient-to-r from-[#00ffff] to-[#0099cc] hover:from-[#33ffff] hover:to-[#00aadd] text-white border-4 border-[#00ffff] pixel-button-large retro-button glow-cyan"
+                  disabled={!roomCode || !nickname}
+                >
+                  JOIN
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
 
-          <div className="absolute bottom-4 right-4 opacity-40">
-            <div className="flex flex-col gap-1">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="w-3 h-3 bg-[#ff6bff]"></div>
-              ))}
-            </div>
-          </div>
-
-          {/* Corner Decorations */}
-          <div className="absolute top-4 left-4 opacity-30">
-            <div className="w-6 h-6 border-2 border-[#00ffff]"></div>
-          </div>
-          <div className="absolute top-4 right-4 opacity-30">
-            <div className="w-6 h-6 border-2 border-[#ff6bff]"></div>
+        {/* Pixel Art Decoration */}
+        <div className="absolute bottom-4 left-4 opacity-40">
+          <div className="flex gap-1">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="w-3 h-3 bg-[#00ffff]"></div>
+            ))}
           </div>
         </div>
 
-        <style jsx>{`
+        <div className="absolute bottom-4 right-4 opacity-40">
+          <div className="flex flex-col gap-1">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="w-3 h-3 bg-[#ff6bff]"></div>
+            ))}
+          </div>
+        </div>
+
+        {/* Corner Decorations */}
+        <div className="absolute top-4 left-4 opacity-30">
+          <div className="w-6 h-6 border-2 border-[#00ffff]"></div>
+        </div>
+        <div className="absolute top-4 right-4 opacity-30">
+          <div className="w-6 h-6 border-2 border-[#ff6bff]"></div>
+        </div>
+      </div>
+
+      <style jsx>{`
           .pixel-font {
             font-family: 'Press Start 2P', cursive, monospace;
             image-rendering: pixelated;
@@ -379,8 +394,8 @@
             
         `}</style>
 
-        {/* Load Pixel Font */}
-        <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
-      </div>
-    )
-  }
+      {/* Load Pixel Font */}
+      <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+    </div>
+  )
+}
