@@ -47,7 +47,38 @@ export default function QuestionListPage() {
     fetchQuizzes()
   }, [])
 
-  // Glitch effect
+  // Filter soal
+  const filteredQuestions = quizzes.filter((q) => {
+    const matchesSearch = q.title.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesSearch
+  })
+
+  function generateRoomCode(length = 6) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
+
+async function handleSelectQuiz(quizId: string, router: any) {
+  const roomCode = generateRoomCode();
+
+  const { data, error } = await supabase
+    .from("game_rooms")
+    .insert({
+      room_code: roomCode,
+      quiz_id: quizId,
+      settings: {} // tetap bisa isi default JSON
+    })
+    .select("room_code")
+    .single();
+
+  if (error) {
+    console.error("Error creating room:", error);
+    return;
+  }
+
+  router.push(`/host/${data.room_code}/settings`);
+}
+      
   useEffect(() => {
     const glitchInterval = setInterval(() => {
       if (Math.random() > 0.7) {
