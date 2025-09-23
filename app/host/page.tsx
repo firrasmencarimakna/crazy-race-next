@@ -3,126 +3,45 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Search, ArrowLeft, Clock, Star, Zap, Volume2, VolumeX } from "lucide-react"
+import { Search, ArrowLeft, Clock, Star, Zap, Volume2, VolumeX, HelpCircle } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import { motion } from "framer-motion"
+import { supabase } from "@/lib/supabase"
+import { useRouter } from "next/navigation"
 
 export default function QuestionListPage() {
+  const router = useRouter()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isMuted, setIsMuted] = useState(false)
   const [isGlitch, setIsGlitch] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null)
+  const [quizzes, setQuizzes] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // Mock data soal
-  const mockQuestions = [
-    {
-      id: 1,
-      category: "science",
-      categoryName: "SCIENCE",
-      difficulty: "easy",
-      difficultyName: "EASY",
-      time: 30,
-      question: "Apa simbol kimia untuk emas?",
-      color: "#00ffff"
-    },
-    {
-      id: 2,
-      category: "history",
-      categoryName: "HISTORY",
-      difficulty: "medium",
-      difficultyName: "MEDIUM",
-      time: 20,
-      question: "Siapa presiden pertama Indonesia?",
-      color: "#ff6bff"
-    },
-    {
-      id: 3,
-      category: "sports",
-      categoryName: "SPORTS",
-      difficulty: "hard",
-      difficultyName: "HARD",
-      time: 15,
-      question: "Di tahun berapa Michael Jordan pensiun pertama kali?",
-      color: "#ffff00"
-    },
-    {
-      id: 4,
-      category: "entertainment",
-      categoryName: "ENTERTAINMENT",
-      difficulty: "easy",
-      difficultyName: "EASY",
-      time: 30,
-      question: "Siapa sutradara film Avatar?",
-      color: "#ff4444"
-    },
-    {
-      id: 5,
-      category: "geography",
-      categoryName: "GEOGRAPHY",
-      difficulty: "insane",
-      difficultyName: "INSANE",
-      time: 10,
-      question: "Apa nama danau terdalam di dunia?",
-      color: "#00ff88"
-    },
-    {
-      id: 6,
-      category: "technology",
-      categoryName: "TECHNOLOGY",
-      difficulty: "medium",
-      difficultyName: "MEDIUM",
-      time: 20,
-      question: "Bahasa pemrograman apa yang diciptakan oleh Guido van Rossum?",
-      color: "#0099ff"
-    },
-    {
-      id: 7,
-      category: "science",
-      categoryName: "SCIENCE",
-      difficulty: "hard",
-      difficultyName: "HARD",
-      time: 15,
-      question: "Berapa jumlah proton dalam unsur Hidrogen?",
-      color: "#00ffff"
-    },
-    {
-      id: 8,
-      category: "history",
-      categoryName: "HISTORY",
-      difficulty: "easy",
-      difficultyName: "EASY",
-      time: 30,
-      question: "Tahun berapa Indonesia merdeka?",
-      color: "#ff6bff"
+  useEffect(() => {
+    const fetchQuizzes = async () => {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from("quizzes")
+        .select("*")
+        .order("created_at", { ascending: false })
+
+      if (error) {
+        console.error("Error fetching quizzes:", error)
+      } else {
+        setQuizzes(data || [])
+      }
+      setLoading(false)
     }
-  ]
 
-  // Kategori & Difficulty untuk filter
-  const categories = [
-    { id: "science", name: "SCIENCE", color: "#00ffff" },
-    { id: "history", name: "HISTORY", color: "#ff6bff" },
-    { id: "sports", name: "SPORTS", color: "#ffff00" },
-    { id: "entertainment", name: "ENTERTAINMENT", color: "#ff4444" },
-    { id: "geography", name: "GEOGRAPHY", color: "#00ff88" },
-    { id: "technology", name: "TECHNOLOGY", color: "#0099ff" }
-  ]
-
-  const difficulties = [
-    { id: "easy", name: "EASY", color: "#00ff88" },
-    { id: "medium", name: "MEDIUM", color: "#ffff00" },
-    { id: "hard", name: "HARD", color: "#ff4444" },
-    { id: "insane", name: "INSANE", color: "#ff00ff" }
-  ]
+    fetchQuizzes()
+  }, [])
 
   // Filter soal
-  const filteredQuestions = mockQuestions.filter(q => {
-    const matchesSearch = q.question.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = !selectedCategory || q.category === selectedCategory
-    const matchesDifficulty = !selectedDifficulty || q.difficulty === selectedDifficulty
-    return matchesSearch && matchesCategory && matchesDifficulty
+  const filteredQuestions = quizzes.filter((q) => {
+    const matchesSearch = q.title.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesSearch
   })
 
   // Efek glitch sesekali
@@ -163,7 +82,7 @@ export default function QuestionListPage() {
     const drawBackground = () => {
       ctx.fillStyle = '#0a0a0f'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
-      
+
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
           if ((x + y) % 3 === 0 && Math.random() > 0.8) {
@@ -199,19 +118,19 @@ export default function QuestionListPage() {
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
       drawBackground()
-      
+
       racingPixels.forEach(pixel => {
         pixel.x += pixel.speed
         if (pixel.x > canvas.width) {
           pixel.x = -10
           pixel.y = Math.random() * canvas.height
         }
-        
+
         const drawX = Math.floor(pixel.x / pixelSize) * pixelSize
         const drawY = Math.floor(pixel.y / pixelSize) * pixelSize
         ctx.fillStyle = pixel.color
         ctx.fillRect(drawX, drawY, pixelSize, pixelSize)
-        
+
         ctx.shadowBlur = 15
         ctx.shadowColor = pixel.color
         ctx.fillRect(drawX, drawY, pixelSize, pixelSize)
@@ -230,8 +149,8 @@ export default function QuestionListPage() {
   }, [])
 
   return (
-    <div className={`h-screen w-screen bg-gradient-to-br from-[#0a0a0f] via-[#1a0a2a] to-[#0a0a0f] relative overflow-hidden pixel-font ${isGlitch ? 'glitch-effect' : ''}`}>
-      
+    <div className={`w-full bg-gradient-to-br from-[#0a0a0f] via-[#1a0a2a] to-[#0a0a0f] relative  pixel-font ${isGlitch ? 'glitch-effect' : ''}`}>
+
       {/* Canvas Background */}
       <canvas
         ref={canvasRef}
@@ -247,21 +166,19 @@ export default function QuestionListPage() {
 
       {/* Header Controls */}
       <div className="absolute top-6 right-6 z-20 flex gap-3">
-        <button 
+        <button
           onClick={() => setIsMuted(!isMuted)}
           className="p-2 bg-[#ff6bff] border-2 border-white pixel-button hover:bg-[#ff8aff] glow-pink"
         >
           {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
         </button>
-        <Link href="/">
-          <Button className="p-2 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan">
-            <ArrowLeft size={16} />
-          </Button>
-        </Link>
+          <button className="p-2 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan">
+          <ArrowLeft size={16} />
+        </button>
       </div>
 
       <div className="relative z-10 container mx-auto px-6 py-8 max-w-6xl">
-        
+
         {/* Title */}
         <div className="text-center mb-12">
           <div className="pixel-border-large inline-ck mb-6">
@@ -269,13 +186,12 @@ export default function QuestionListPage() {
               Select Quiz
             </h1>
           </div>
-          <p className="text-lg text-[#ff6bff] pixel-text">FIND YOUR PERFECT CHALLENGE</p>
         </div>
 
         {/* Search & Filter Bar */}
         <div className="bg-[#1a0a2a]/60 border-2 border-[#6a4c93] rounded-xl p-6 mb-8 pixel-card">
           <div className="space-y-4">
-            
+
             {/* Search Bar */}
             <div className="relative">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -286,122 +202,34 @@ export default function QuestionListPage() {
                 className="w-full pl-12 pr-4 py-4 bg-[#0a0a0f] border-2 border-[#6a4c93] text-white placeholder:text-gray-400 focus:border-[#00ffff] focus:ring-0 text-lg pixel-text"
               />
             </div>
-
-            {/* Category Filter */}
-            <div className="flex flex-wrap gap-3 items-center">
-              <span className="text-white text-sm font-bold pixel-text">CATEGORY:</span>
-              {categories.map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
-                  className={`px-4 py-2 border-2 rounded-lg text-sm font-bold transition-all pixel-button ${
-                    selectedCategory === cat.id
-                      ? `border-[${cat.color}] bg-[${cat.color}]/20 text-[${cat.color}] glow-cyan`
-                      : 'border-[#6a4c93] bg-[#0a0a0f] text-gray-300 hover:border-[#ff6bff] hover:bg-[#1a0a2a]'
-                  }`}
-                  style={{
-                    borderColor: selectedCategory === cat.id ? cat.color : undefined,
-                    color: selectedCategory === cat.id ? cat.color : undefined
-                  }}
-                >
-                  {cat.name}
-                </button>
-              ))}
-            </div>
-
-            {/* Difficulty Filter */}
-            <div className="flex flex-wrap gap-3 items-center">
-              <span className="text-white text-sm font-bold pixel-text">DIFFICULTY:</span>
-              {difficulties.map(diff => (
-                <button
-                  key={diff.id}
-                  onClick={() => setSelectedDifficulty(selectedDifficulty === diff.id ? null : diff.id)}
-                  className={`px-4 py-2 border-2 rounded-lg text-sm font-bold transition-all pixel-button ${
-                    selectedDifficulty === diff.id
-                      ? `border-[${diff.color}] bg-[${diff.color}]/20 text-[${diff.color}] glow-pink`
-                      : 'border-[#6a4c93] bg-[#0a0a0f] text-gray-300 hover:border-[#ff6bff] hover:bg-[#1a0a2a]'
-                  }`}
-                  style={{
-                    borderColor: selectedDifficulty === diff.id ? diff.color : undefined,
-                    color: selectedDifficulty === diff.id ? diff.color : undefined
-                  }}
-                >
-                  {diff.name}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
 
-        {/* Results Count */}
-        <div className="mb-6 text-center">
-          <p className="text-gray-300 pixel-text">
-            Showing <span className="text-white font-bold">{filteredQuestions.length}</span> of {mockQuestions.length} questions
-          </p>
-        </div>
-
         {/* Questions Grid */}
-        {filteredQuestions.length > 0 ? (
+        {loading ? (
+          <p className="text-center text-white">Loading...</p>
+        ) : filteredQuestions.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredQuestions.map((q) => (
-              <motion.div
-                key={q.id}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.98 }}
-                className="group"
-              >
-                <Card className="bg-[#1a0a2a]/60 border-2 border-[#6a4c93] hover:border-[#ff6bff] transition-all duration-300 h-full shadow-[0_0_15px_rgba(255,107,255,0.2)] pixel-card group-hover:shadow-[0_0_20px_rgba(255,107,255,0.4)]">
-                  <CardHeader className="pb-3">
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: q.color }}
-                        ></div>
-                        <CardTitle className="text-lg text-white group-hover:text-[#00ffff] transition-colors pixel-text">
-                          {q.categoryName}
-                        </CardTitle>
-                      </div>
-                      <span 
-                        className="px-2 py-1 rounded text-xs font-bold border pixel-text"
-                        style={{ 
-                          backgroundColor: `${q.color}20`,
-                          color: q.color,
-                          borderColor: q.color
-                        }}
-                      >
-                        {q.difficultyName}
-                      </span>
-                    </div>
+            {filteredQuestions.map((quiz) => (
+              <motion.div key={quiz.id} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
+                <Card className="bg-[#1a0a2a]/60 border-2 border-[#6a4c93]">
+                  <CardHeader>
+                    <CardTitle className="text-lg text-white">{quiz.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-200 mb-4 leading-relaxed pixel-text">
-                      {q.question}
+                    <p className="text-gray-200 mb-4 line-clamp-3">{quiz.description}</p>
+                    <p className="flex items-center gap-2 text-gray-400 text-sm">
+                      <HelpCircle /> {quiz.questions?.length ?? 0}
                     </p>
-                    <div className="flex items-center justify-between text-sm text-gray-400">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        <span className="pixel-text">{q.time}s</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 text-yellow-400" />
-                        <span className="pixel-text">1 point</span>
-                      </div>
-                    </div>
                   </CardContent>
                 </Card>
               </motion.div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-[#ff6bff]/20 rounded-full mb-4 border-2 border-[#ff6bff]">
-              <Search className="h-8 w-8 text-[#ff6bff]" />
-            </div>
-            <h3 className="text-2xl font-bold text-white mb-2 pixel-text">NO QUESTIONS FOUND</h3>
-            <p className="text-gray-400 pixel-text">Try changing your search or filters</p>
-          </div>
+          <p className="text-center text-gray-400">No quiz found</p>
         )}
+
 
         {/* Corner Decorations */}
         <div className="absolute bottom-8 left-8 opacity-40">

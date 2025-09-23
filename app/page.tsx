@@ -167,8 +167,8 @@ export default function HomePage() {
                 />
                 <Button
                   onClick={handleJoin}
-                  className="w-full bg-gradient-to-r from-[#00ffff] to-[#0099cc] hover:from-[#33ffff] hover:to-[#00aadd] text-white border-4 border-[#00ffff] pixel-button-large retro-button glow-cyan"
-                  disabled={!roomCode || !nickname}
+                  className={`w-full bg-gradient-to-r from-[#00ffff] to-[#0099cc] hover:from-[#33ffff] hover:to-[#00aadd] text-white border-4 border-[#00ffff] pixel-button-large retro-button glow-cyan ${!roomCode || !nickname ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                  disabled={roomCode.length !== 6 || !nickname}
                 >
                   JOIN
                 </Button>
@@ -394,8 +394,7 @@ export default function HomePage() {
             
         `}</style>
 
-      {/* Load Pixel Font */}
-      <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+      
     </div>
   )
 }
