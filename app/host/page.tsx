@@ -109,11 +109,6 @@ async function handleSelectQuiz(quizId: string, router: any) {
     return () => clearInterval(bgInterval)
   }, [])
 
-  // Filter quizzes
-  const filteredQuestions = quizzes.filter((q) =>
-    q.title.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-
   // Handle quiz selection
   const handleQuizSelect = (quizId: string) => {
     router.push(`/host/${quizId}/lobby`)
@@ -247,7 +242,7 @@ async function handleSelectQuiz(quizId: string, router: any) {
                   <CardContent>
                     <p className="text-gray-200 mb-4 line-clamp-3 pixel-text">{quiz.description}</p>
                     <div className="flex items-center gap-2 text-[#ff6bff] text-sm pixel-text glow-pink-subtle">
-                      <HelpCircle className="h-4 w-4" /> {quiz.questions?.length ?? 0} QUERIES
+                      <HelpCircle className="h-4 w-4" /> {quiz.questions?.length ?? 0}
                     </div>
                   </CardContent>
                 </Card>
