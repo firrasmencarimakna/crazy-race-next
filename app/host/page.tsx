@@ -12,9 +12,7 @@ import { useRouter } from "next/navigation"
 
 // List of background GIFs in filename order
 const backgroundGifs = [
- 
   "/images/host/gif1.gif",
-
 ]
 
 export default function QuestionListPage() {
@@ -26,6 +24,7 @@ export default function QuestionListPage() {
   const [loading, setLoading] = useState(true)
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const [creating, setCreating] = useState(false);
 
   // Fetch quizzes from Supabase
   useEffect(() => {
@@ -54,31 +53,36 @@ export default function QuestionListPage() {
   })
 
   function generateRoomCode(length = 6) {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-}
-
-async function handleSelectQuiz(quizId: string, router: any) {
-  const roomCode = generateRoomCode();
-
-  const { data, error } = await supabase
-    .from("game_rooms")
-    .insert({
-      room_code: roomCode,
-      quiz_id: quizId,
-      settings: {} // tetap bisa isi default JSON
-    })
-    .select("room_code")
-    .single();
-
-  if (error) {
-    console.error("Error creating room:", error);
-    return;
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
   }
 
-  router.push(`/host/${data.room_code}/settings`);
-}
-      
+  async function handleSelectQuiz(quizId: string, router: any) {
+    if (creating) return;          // anti-double-click
+    setCreating(true);
+
+    const roomCode = generateRoomCode();
+
+    const { data, error } = await supabase
+      .from("game_rooms")
+      .insert({
+        room_code: roomCode,
+        quiz_id: quizId,
+        settings: {} // tetap bisa isi default JSON
+      })
+      .select("room_code")
+      .single();
+
+    if (error) {
+      console.error("Error creating room:", error);
+      setCreating(false)
+      return;
+    }
+
+    setCreating(false)
+    router.push(`/host/${data.room_code}/settings`);
+  }
+
   useEffect(() => {
     const glitchInterval = setInterval(() => {
       if (Math.random() > 0.7) {
@@ -93,26 +97,27 @@ async function handleSelectQuiz(quizId: string, router: any) {
   useEffect(() => {
     const bgInterval = setInterval(() => {
       setIsTransitioning(true)
-      
+
       // Start fade out
       setTimeout(() => {
         setCurrentBgIndex((prev) => (prev + 1) % backgroundGifs.length)
-        
+
         // Complete fade in
         setTimeout(() => {
           setIsTransitioning(false)
         }, 500)
       }, 500)
-      
+
     }, 5000) // Total cycle: 5 seconds
-    
+
     return () => clearInterval(bgInterval)
   }, [])
 
   // Handle quiz selection
-  const handleQuizSelect = (quizId: string) => {
-    router.push(`/host/${quizId}/lobby`)
-  }
+  const handleQuizSelect = async (quizId: string) => {
+    await handleSelectQuiz(quizId, router);   // panggil yang bikin room + redirect
+  };
+
 
   return (
     <div className={`min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font ${isGlitch ? 'glitch-effect' : ''}`}>
@@ -120,7 +125,7 @@ async function handleSelectQuiz(quizId: string, router: any) {
       {backgroundGifs.map((gif, index) => (
         <link key={index} rel="preload" href={gif} as="image" />
       ))}
-      
+
       {/* Background Image with Smooth Transition */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -133,7 +138,7 @@ async function handleSelectQuiz(quizId: string, router: any) {
           transition={{ duration: 1, ease: "easeInOut" }}
         />
       </AnimatePresence>
-      
+
       {/* CRT Monitor Effect */}
       <div className="crt-effect"></div>
       {/* Static Noise */}
@@ -163,6 +168,47 @@ async function handleSelectQuiz(quizId: string, router: any) {
         </div>
       </div>
 
+      {/* Creating Overlay */}
+      <AnimatePresence>
+        {creating && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[#1a0a2a]/80 backdrop-blur-sm"
+          >
+            <div className="pixel-border-large p-8 text-center">
+              <motion.p
+                animate={{ opacity: [1, 0.5, 1] }}
+                transition={{ repeat: Infinity, duration: 0.8 }}
+                className="text-2xl md:text-4xl text-[#00ffff] pixel-text glow-cyan"
+              >
+                CREATING ROOM...
+              </motion.p>
+              {/* Pixelated Loading Bar */}
+              <div className="mt-6 flex gap-1 justify-center">
+                {[...Array(8)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    animate={{
+                      scaleY: [1, 1.5, 1],
+                      backgroundColor: ["#00ffff", "#ff6bff", "#00ffff"],
+                    }}
+                    transition={{
+                      repeat: Infinity,
+                      duration: 0.5,
+                      delay: i * 0.1,
+                    }}
+                    className="w-4 h-8 bg-[#00ffff]"
+                  />
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header Controls */}
       <div className="absolute top-6 right-6 z-20 flex gap-3">
         <Button
@@ -188,7 +234,7 @@ async function handleSelectQuiz(quizId: string, router: any) {
             className="pixel-border-large inline-block p-6"
           >
             <h1 className="text-4xl md:text-6xl font-bold text-[#00ffff] pixel-text glow-cyan">
-             Select Quiz
+              Select Quiz
             </h1>
           </motion.div>
         </div>
@@ -213,7 +259,7 @@ async function handleSelectQuiz(quizId: string, router: any) {
 
         {/* Questions Grid */}
         {loading ? (
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
@@ -233,7 +279,7 @@ async function handleSelectQuiz(quizId: string, router: any) {
                 transition={{ duration: 0.3, delay: index * 0.1 }}
               >
                 <Card
-                  className="bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 hover:border-[#ff6bff] pixel-card glow-pink-subtle cursor-pointer"
+                  className="bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 hover:border-[#ff6bff] pixel-card glow-pink-subtle cursor-pointer h-full"
                   onClick={() => handleQuizSelect(quiz.id)}
                 >
                   <CardHeader>
@@ -250,7 +296,7 @@ async function handleSelectQuiz(quizId: string, router: any) {
             ))}
           </div>
         ) : (
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
