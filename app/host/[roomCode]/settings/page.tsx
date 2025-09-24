@@ -11,6 +11,7 @@ import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
+import LoadingRetro from "@/components/loadingRetro"
 
 // List of background GIFs (same as QuestionListPage for consistency)
 const backgroundGifs = [
@@ -23,7 +24,6 @@ export default function HostSettingsPage() {
   const roomCode = params.roomCode as string
   const [duration, setDuration] = useState("60")
   const [questionCount, setQuestionCount] = useState("10")
-  const [shuffleQuestions, setShuffleQuestions] = useState(true)
   const [quiz, setQuiz] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [isMuted, setIsMuted] = useState(false)
@@ -116,9 +116,7 @@ export default function HostSettingsPage() {
     }
 
     // Prepare questions (shuffle if enabled)
-    const questions = shuffleQuestions
-      ? shuffleArray(quiz.questions).slice(0, settings.questionCount)
-      : quiz.questions.slice(0, settings.questionCount)
+    const questions = shuffleArray(quiz.questions).slice(0, settings.questionCount)
 
     // Update game_rooms with settings and questions
     const { error } = await supabase
@@ -205,7 +203,7 @@ export default function HostSettingsPage() {
                 transition={{ repeat: Infinity, duration: 0.8 }}
                 className="text-2xl md:text-4xl text-[#00ffff] pixel-text glow-cyan"
               >
-                SAVING SETTINGS...
+                SAVING...
               </motion.p>
               <div className="mt-6 flex gap-1 justify-center">
                 {[...Array(8)].map((_, i) => (
@@ -252,7 +250,7 @@ export default function HostSettingsPage() {
           transition={{ duration: 0.5 }}
           className="text-center mb-12"
         >
-          <div className="pixel-border-large inline-block p-6">
+          <div className="p-6">
             <h1 className="text-4xl md:text-6xl font-bold text-[#00ffff] pixel-text glow-cyan">
               Game Settings
             </h1>
@@ -261,14 +259,7 @@ export default function HostSettingsPage() {
 
         {/* Loading State */}
         {loading ? (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="text-center text-white pixel-text glow-cyan-subtle"
-          >
-            INITIALIZING...
-          </motion.p>
+          <LoadingRetro />
         ) : !quiz ? (
           <motion.p
             initial={{ opacity: 0 }}
@@ -335,24 +326,6 @@ export default function HostSettingsPage() {
                         <SelectItem value="25">25 questions</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
-                </div>
-
-                {/* Shuffle Questions Toggle */}
-                <div className="space-y-3">
-                  <Label className="text-lg font-semibold flex items-center text-[#00ffff] pixel-text glow-cyan">
-                    <Hash className="mr-2 h-5 w-5" />
-                    Shuffle Questions
-                  </Label>
-                  <div className="flex items-center gap-4">
-                    <Switch
-                      checked={shuffleQuestions}
-                      onCheckedChange={setShuffleQuestions}
-                      className="data-[state=checked]:bg-[#00ffff] data-[state=unchecked]:bg-[#6a4c93]"
-                    />
-                    <span className="text-gray-200 pixel-text">
-                      {shuffleQuestions ? "ENABLED" : "DISABLED"}
-                    </span>
                   </div>
                 </div>
 

@@ -9,6 +9,7 @@ import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
+import LoadingRetro from "@/components/loadingRetro"
 
 // List of background GIFs in filename order
 const backgroundGifs = [
@@ -78,8 +79,6 @@ export default function QuestionListPage() {
       setCreating(false)
       return;
     }
-
-    setCreating(false)
     router.push(`/host/${data.room_code}/settings`);
   }
 
@@ -117,7 +116,6 @@ export default function QuestionListPage() {
   const handleQuizSelect = async (quizId: string) => {
     await handleSelectQuiz(quizId, router);   // panggil yang bikin room + redirect
   };
-
 
   return (
     <div className={`min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font ${isGlitch ? 'glitch-effect' : ''}`}>
@@ -168,46 +166,9 @@ export default function QuestionListPage() {
         </div>
       </div>
 
-      {/* Creating Overlay */}
-      <AnimatePresence>
-        {creating && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-[#1a0a2a]/80 backdrop-blur-sm"
-          >
-            <div className="pixel-border-large p-8 text-center">
-              <motion.p
-                animate={{ opacity: [1, 0.5, 1] }}
-                transition={{ repeat: Infinity, duration: 0.8 }}
-                className="text-2xl md:text-4xl text-[#00ffff] pixel-text glow-cyan"
-              >
-                CREATING ROOM...
-              </motion.p>
-              {/* Pixelated Loading Bar */}
-              <div className="mt-6 flex gap-1 justify-center">
-                {[...Array(8)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    animate={{
-                      scaleY: [1, 1.5, 1],
-                      backgroundColor: ["#00ffff", "#ff6bff", "#00ffff"],
-                    }}
-                    transition={{
-                      repeat: Infinity,
-                      duration: 0.5,
-                      delay: i * 0.1,
-                    }}
-                    className="w-4 h-8 bg-[#00ffff]"
-                  />
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {(loading || creating) && (
+        <LoadingRetro />
+      )}
 
       {/* Header Controls */}
       <div className="absolute top-6 right-6 z-20 flex gap-3">
