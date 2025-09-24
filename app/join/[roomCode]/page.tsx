@@ -258,9 +258,9 @@ export default function LobbyPage() {
           <h1 className="text-7xl md:text-8xl font-bold text-[#00ffff] pixel-text glow-cyan mb-4 tracking-wider">
             CRAZY RACE
           </h1>
-          <p className="text-xl md:text-2xl text-[#ff6bff] pixel-text glow-pink-subtle">
+          {/* <p className="text-xl md:text-2xl text-[#ff6bff] pixel-text glow-pink-subtle">
             Access Code: {roomCode.toUpperCase()}
-          </p>
+          </p> */}
         </div>
 
         {/* ———————————————————————————————————————— */}
@@ -289,7 +289,7 @@ export default function LobbyPage() {
                 transition={{ duration: 0.2 }}
               >
                 <Activity className="mr-2 h-8 w-8 text-[#00ffff] glow-cyan animate-pulse" />
-                <h2 className="text-3xl font-bold text-[#00ffff] pixel-text glow-cyan">ACTIVE TERMINALS</h2>
+                <h2 className="text-3xl font-bold text-[#00ffff] pixel-text glow-cyan">Waiting </h2>
               </motion.div>
               <Badge className="bg-[#1a0a2a]/50 border-[#00ff00] text-[#00ff00] pixel-text glow-green">
                 {players.filter((p) => p.isReady).length}/{players.length} SYNCHRONIZED
@@ -355,13 +355,14 @@ export default function LobbyPage() {
                   </div>
                 </div>
               ) : (
-                <div className="mt-12 text-center">
-                  <div className="p-8 bg-[#1a0a2a]/50 rounded-xl border-4 border-[#ff6bff] pixel-border-small glow-pink">
-                    <Clock className="h-16 w-16 mx-auto mb-6 text-[#ff6bff] glow-pink animate-spin-slow" />
-                    <h3 className="text-xl font-bold mb-4 text-[#ff6bff] pixel-text glow-pink">STANDBY MODE</h3>
-                    <p className="text-white pixel-text glow-pink-subtle">Awaiting core operator signal for grid activation</p>
-                  </div>
-                </div>
+                // <div className="mt-12 text-center">
+                //   <div className="p-8 bg-[#1a0a2a]/50 rounded-xl border-4 border-[#ff6bff] pixel-border-small glow-pink">
+                //     <Clock className="h-16 w-16 mx-auto mb-6 text-[#ff6bff] glow-pink animate-spin-slow" />
+                //     <h3 className="text-xl font-bold mb-4 text-[#ff6bff] pixel-text glow-pink">STANDBY MODE</h3>
+                //     <p className="text-white pixel-text glow-pink-subtle"></p>
+                //   </div>
+                // </div>
+                null
               )}
             </CardContent>
           </Card>
