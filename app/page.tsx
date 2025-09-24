@@ -7,15 +7,29 @@ import { Flag, Volume2, VolumeX, Settings, Users } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { supabase } from "@/lib/supabase"
 
 export default function HomePage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
 
+  const [joining, setJoining] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
   const [isGlitch, setIsGlitch] = useState(false)
   const [roomCode, setRoomCode] = useState("")
   const [nickname, setNickname] = useState("")
+
+  useEffect(() => {
+    const code = searchParams.get("code")
+    if (code) {
+      setRoomCode(code.toUpperCase())
+      // hapus query string
+      router.replace(pathname, undefined) // <--- ini otomatis bersih
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Efek glitch sesekali
   useEffect(() => {
@@ -28,13 +42,56 @@ export default function HomePage() {
     return () => clearInterval(glitchInterval)
   }, [])
 
-  const handleJoin = () => {
-    if (!roomCode || !nickname) return;
+  const handleJoin = async () => {
+  if (!roomCode || !nickname || joining) return;
+  setJoining(true);
 
+  try {
+    // Verify room exists
+    const { data: roomData, error: roomError } = await supabase
+      .from("game_rooms")
+      .select("id, status")
+      .eq("room_code", roomCode)
+      .single()
+
+    if (roomError || !roomData) {
+      console.error("Error: Room not found", roomError)
+      setJoining(false)
+      return
+    }
+
+    // Check if room is in 'waiting' status
+    if (roomData.status !== "waiting") {
+      console.error("Error: Room is not accepting players")
+      setJoining(false)
+      return
+    }
+
+    // Insert player
+    const { error: playerError } = await supabase
+      .from("players")
+      .insert({
+        room_id: roomData.id,
+        nickname,
+        car: ["red", "blue", "green", "yellow", "purple", "orange"][Math.floor(Math.random() * 6)]
+      })
+
+    if (playerError) {
+      console.error("Error joining room:", playerError)
+      setJoining(false)
+      return
+    }
+
+    // Store nickname in localStorage
     localStorage.setItem("nickname", nickname)
 
-    router.push(`/join/${roomCode}`);
+    // Navigate to game page
+    router.push(`/join/${roomCode}`)
+  } catch (error) {
+    console.error("Unexpected error:", error)
+    setJoining(false)
   }
+}
 
   return (
     <div className={`h-screen w-screen relative overflow-hidden pixel-font ${isGlitch ? 'glitch-effect' : ''}`}>
@@ -168,7 +225,7 @@ export default function HomePage() {
                 <Button
                   onClick={handleJoin}
                   className={`w-full bg-gradient-to-r from-[#00ffff] to-[#0099cc] hover:from-[#33ffff] hover:to-[#00aadd] text-white border-4 border-[#00ffff] pixel-button-large retro-button glow-cyan ${!roomCode || !nickname ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-                  disabled={roomCode.length !== 6 || !nickname}
+                  disabled={roomCode.length !== 6 || !nickname || joining}
                 >
                   JOIN
                 </Button>
