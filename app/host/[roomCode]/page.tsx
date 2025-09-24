@@ -85,12 +85,6 @@ export default function HostRoomPage() {
 
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <Link href="/host/settings">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Settings
-            </Button>
-          </Link>
           <h1 className="text-3xl font-bold text-primary">Racing Room</h1>
           <Badge variant="secondary" className="text-lg px-4 py-2">
             Room: {roomCode}
@@ -103,13 +97,18 @@ export default function HostRoomPage() {
             <div className="text-center space-y-6">
               <h2 className="text-2xl font-bold">Share Room Code</h2>
 
-              <div className="p-6 bg-primary/10 rounded-lg border border-primary/20">
-                <div className="text-4xl font-bold text-primary mb-4">{roomCode}</div>
-                <Button onClick={copyRoomCode} variant="outline" className="w-full bg-transparent">
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy Room Code
-                </Button>
-              </div>
+              <div className="relative p-6 bg-primary/10 rounded-lg border border-primary/20">
+  <div className="text-4xl font-bold text-primary">{roomCode}</div>
+
+  <Button
+    onClick={copyRoomCode}
+    variant="outline"
+    className="absolute top-3 right-3 bg-transparent"
+  >
+    <Copy className="h-4 w-4" />
+  </Button>
+</div>
+
 
               <div className="p-6 bg-muted rounded-lg">
                 <QrCode className="h-32 w-32 mx-auto text-muted-foreground mb-4" />
