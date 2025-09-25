@@ -228,7 +228,7 @@ export default function HostRoomPage() {
       {/* Static Noise */}
       <div className="noise-effect"></div>
       {/* Purple Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none"></div>
+      <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-100/20 pointer-events-none"></div>
 
       {/* Corner Decorations */}
       <div className="absolute top-4 left-4 opacity-30">
@@ -319,8 +319,8 @@ export default function HostRoomPage() {
                       <QRCode
                         value={joinLink}
                         size={625}
-                        bgColor="#0a0a0f"
-                        fgColor="#00ffff"
+                        // bgColor="#0a0a0f"
+                        // fgColor="#00ffff"
                         className="p-3 bg-[#6a4c93] rounded-lg"
                       />
                     </div>

@@ -15,7 +15,7 @@ import LoadingRetro from "@/components/loadingRetro"
 
 // List of background GIFs (same as QuestionListPage for consistency)
 const backgroundGifs = [
-  "/images/host/gif1.gif",
+  "/images/lobbyphase/gif8.gif",
 ]
 
 export default function HostSettingsPage() {

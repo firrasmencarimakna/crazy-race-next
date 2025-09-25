@@ -324,7 +324,7 @@ export default function LobbyPage() {
               ? 'text-[#00ff00] border-[#00ff00]/70 glow-green animate-pulse'
               : 'text-[#ff6bff] border-[#ff6bff]/70 glow-pink-subtle'
           }`}
-        >
+      >
           {player.isReady ? 'ONLINE' : 'WAITING'}
         </Badge>
       </div>
