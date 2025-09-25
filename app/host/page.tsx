@@ -178,7 +178,7 @@ export default function QuestionListPage() {
         >
           {isMuted ? <VolumeX size={16} className="text-white" /> : <Volume2 size={16} className="text-white" />}
         </Button>
-        <Link href="/host">
+        <Link href="/">
           <Button className="p-2 bg-[#00ffff] border-4 border-white pixel-button hover:bg-[#33ffff] glow-cyan">
             <ArrowLeft size={16} className="text-white" />
           </Button>

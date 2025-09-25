@@ -60,19 +60,7 @@ export default function LobbyPage() {
 
   const [countdown, setCountdown] = useState(0)
   const [gameStarting, setGameStarting] = useState(false)
-  const [isGlitch, setIsGlitch] = useState(false)
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
-
-  // Glitch effect
-  useEffect(() => {
-    const glitchInterval = setInterval(() => {
-      if (Math.random() > 0.7) {
-        setIsGlitch(true)
-        setTimeout(() => setIsGlitch(false), 100)
-      }
-    }, 3000)
-    return () => clearInterval(glitchInterval)
-  }, [])
 
   // Background image cycling
   useEffect(() => {
@@ -113,7 +101,7 @@ export default function LobbyPage() {
 
   if (countdown > 0) {
     return (
-      <div className={`min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font ${isGlitch ? 'glitch-effect' : ''}`}>
+      <div className={`min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font`}>
         {/* Preload semua GIF */}
         {backgroundGifs.map((gif, index) => (
           <link key={index} rel="preload" href={gif} as="image" />
@@ -152,7 +140,7 @@ export default function LobbyPage() {
             </div>
             <h2 className="text-4xl font-bold mb-2 text-[#ff6bff] pixel-text glow-pink">SYSTEM BOOT</h2>
             <p className="text-xl text-white pixel-text glow-cyan-subtle">Neural link engaged... Query protocols loading...</p>
-            
+
             {/* Players Grid - 5 per row */}
             <div className="mt-12 grid grid-cols-5 gap-4 max-w-4xl mx-auto">
               {players.map((player) => (
@@ -163,8 +151,8 @@ export default function LobbyPage() {
                   transition={{ duration: 0.2 }}
                 >
                   <div className="relative">
-                    <img 
-                      src={carGifMap[player.car] || "/images/car/car5.gif"} 
+                    <img
+                      src={carGifMap[player.car] || "/images/car/car5.gif"}
                       alt={`${player.car} car`}
                       className="h-32 w-48 mx-auto mb-2 relative z-10 pointer-events-none object-contain animate-neon-bounce"
                     />
@@ -187,7 +175,7 @@ export default function LobbyPage() {
   }
 
   return (
-    <div className={`min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font ${isGlitch ? 'glitch-effect' : ''}`}>
+    <div className={`min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font`}>
       {/* Preload semua GIF */}
       {backgroundGifs.map((gif, index) => (
         <link key={index} rel="preload" href={gif} as="image" />
@@ -240,13 +228,9 @@ export default function LobbyPage() {
       <div className="relative z-10 max-w-7xl mx-auto pt-8 px-4">
         {/* Judul Utama */}
         <div className="text-center mb-8">
-          <h1 className="text-6xl md:text-8xl font-bold text-[#00ffff] pixel-text glow-cyan mb-4 tracking-wider">
+          <h1 className="text-6xl font-bold text-[#00ffff] pixel-text glow-cyan mb-4 tracking-wider">
             CRAZY RACE
           </h1>
-          <Badge className="bg-[#1a0a2a]/50 border-[#00ffff] text-[#00ffff] px-6 py-3 text-lg pixel-text glow-cyan">
-            <Users className="h-5 w-5 mr-2" />
-            {players.length} / 10 PLAYERS CONNECTED
-          </Badge>
         </div>
 
         {/* Players Grid - 5 per baris */}
@@ -256,81 +240,80 @@ export default function LobbyPage() {
           transition={{ duration: 0.8 }}
         >
           <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 pixel-card">
-            <CardHeader className="text-center pb-4">
+            <CardHeader className="text-center">
+
               <motion.div
-                className="flex items-center justify-center mb-2"
-                whileHover={{ scale: 1.05 }}
-                transition={{ duration: 0.2 }}
+                className="relative flex items-center justify-center"
               >
+                <Badge className="absolute bg-[#1a0a2a]/50 border-[#00ffff] text-[#00ffff] px-4 py-2 text-lg pixel-text glow-cyan top-0 left-0">
+                  <Users className="h-5 w-5 mr-2" />
+                  {players.length}
+                </Badge>
                 <Activity className="mr-3 h-10 w-10 text-[#00ffff] glow-cyan animate-pulse" />
                 <h2 className="text-4xl font-bold text-[#00ffff] pixel-text glow-cyan">WAITING ROOM</h2>
+                <Activity className="ml-3 h-10 w-10 text-[#00ffff] glow-cyan animate-pulse" />
+
               </motion.div>
-              <Badge className="bg-[#1a0a2a]/50 border-[#00ff00] text-[#00ff00] text-lg pixel-text glow-green mx-auto">
-                {players.filter((p) => p.isReady).length}/{players.length} READY
-              </Badge>
             </CardHeader>
-            
+
             <CardContent className="p-6">
               {/* Players Grid - 5 columns */}
               <div className="grid grid-cols-5 gap-6 mb-8">
- {players.map((player) => (
-  <motion.div
-    key={player.id}
-    className={`relative group ${
-      player.id === currentPlayer.id ? 'glow-cyan' : 'glow-pink-subtle'
-    }`}
-    whileHover={{ scale: 1.05 }}
-    transition={{ duration: 0.2 }}
-  >
-    <div
-      className={`p-4 rounded-xl border-4 border-double transition-all duration-300 bg-transparent backdrop-blur-sm ${
-        player.id === currentPlayer.id
-          ? 'border-[#00ffff] animate-neon-pulse'
-          : 'border-[#ff6bff]/70 hover:border-[#ff6bff]'
-      }`}
-    >
-      {/* Car GIF - Enhanced visuals */}
-      <div className="relative mb-3">
-        <img
-          src={carGifMap[player.car] || '/images/car/car5.gif'}
-          alt={`${player.car} car`}
-          className="h-28 w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
-        />
-        {/* Ready Status Indicator */}
-        {player.isReady && (
-          <div className="absolute -top-2 -right-2 w-8 h-8 bg-[#00ff00] border-2 border-white rounded-full flex items-center justify-center animate-pulse glow-green">
-            <div className="w-4 h-4 bg-white rounded-full"></div>
-          </div>
-        )}
-      </div>
+                {players.map((player) => (
+                  <motion.div
+                    key={player.id}
+                    className={`relative group ${player.id === currentPlayer.id ? 'glow-cyan' : 'glow-pink-subtle'
+                      }`}
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div
+                      className={`p-4 rounded-xl border-4 border-double transition-all duration-300 bg-transparent backdrop-blur-sm ${player.id === currentPlayer.id
+                        ? 'border-[#00ffff] animate-neon-pulse'
+                        : 'border-[#ff6bff]/70 hover:border-[#ff6bff]'
+                        }`}
+                    >
+                      {/* Car GIF - Enhanced visuals */}
+                      <div className="relative mb-3">
+                        <img
+                          src={carGifMap[player.car] || '/images/car/car5.gif'}
+                          alt={`${player.car} car`}
+                          className="h-28 w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
+                        />
+                        {/* Ready Status Indicator */}
+                        {player.isReady && (
+                          <div className="absolute -top-2 -right-2 w-8 h-8 bg-[#00ff00] border-2 border-white rounded-full flex items-center justify-center animate-pulse glow-green">
+                            <div className="w-4 h-4 bg-white rounded-full"></div>
+                          </div>
+                        )}
+                      </div>
 
-      {/* Player Info */}
-      <div className="text-center">
-        <div className="flex items-center justify-center space-x-2 mb-1">
-          <h3 className="font-bold text-white pixel-text text-sm leading-tight glow-text">
-            {player.nickname}
-          </h3>
-          {player.id === currentPlayer.id && (
-            <Badge className="bg-transparent text-[#00ffff] border-[#00ffff]/70 text-xs pixel-text glow-cyan-subtle">
-              YOU
-            </Badge>
-          )}
-        </div>
+                      {/* Player Info */}
+                      <div className="text-center">
+                        <div className="flex items-center justify-center space-x-2 mb-1">
+                          <h3 className="font-bold text-white pixel-text text-sm leading-tight glow-text">
+                            {player.nickname}
+                          </h3>
+                          {player.id === currentPlayer.id && (
+                            <Badge className="bg-transparent text-[#00ffff] border-[#00ffff]/70 text-xs pixel-text glow-cyan-subtle">
+                              YOU
+                            </Badge>
+                          )}
+                        </div>
 
-        {/* Status Badge */}
-        <Badge
-          className={`text-xs pixel-text bg-transparent ${
-            player.isReady
-              ? 'text-[#00ff00] border-[#00ff00]/70 glow-green animate-pulse'
-              : 'text-[#ff6bff] border-[#ff6bff]/70 glow-pink-subtle'
-          }`}
-      >
-          {player.isReady ? 'ONLINE' : 'WAITING'}
-        </Badge>
-      </div>
-    </div>
-  </motion.div>
-))}
+                        {/* Status Badge */}
+                        <Badge
+                          className={`text-xs pixel-text bg-transparent ${player.isReady
+                            ? 'text-[#00ff00] border-[#00ff00]/70 glow-green animate-pulse'
+                            : 'text-[#ff6bff] border-[#ff6bff]/70 glow-pink-subtle'
+                            }`}
+                        >
+                          {player.isReady ? 'ONLINE' : 'WAITING'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
 
               {/* Game Status */}
@@ -357,10 +340,9 @@ export default function LobbyPage() {
 
         {/* Exit Button */}
         <div className="text-center mt-8">
-          <Link href="/join">
+          <Link href="/">
             <Button className="bg-[#ff6bff] border-4 border-white pixel-button-large hover:bg-[#ff8aff] glow-pink px-8 py-3">
-              <ArrowLeft className="mr-3 h-5 w-5" />
-              <span className="pixel-text text-lg">EXIT LOBBY</span>
+              <span className="pixel-text text-lg">EXIT</span>
             </Button>
           </Link>
         </div>

@@ -31,11 +31,16 @@ export default function HostRoomPage() {
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [open, setOpen] = useState(false);
+  const [joinLink, setJoinLink] = useState('')
   const [copiedRoom, setCopiedRoom] = useState(false);
   const [copiedJoin, setCopiedJoin] = useState(false);
 
   // Base URL for the join link (replace with your app's URL)
-  const joinLink = `${window.location.origin}/?code=${roomCode}`
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setJoinLink(`${window.location.origin}/?code=${roomCode}`)
+    }
+  }, [roomCode])
 
   // Fetch room details and set up real-time player subscription
   useEffect(() => {
