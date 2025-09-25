@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
 import { ArrowLeft, Clock, Hash, Play, Volume2, VolumeX } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
@@ -22,8 +21,8 @@ export default function HostSettingsPage() {
   const router = useRouter()
   const params = useParams()
   const roomCode = params.roomCode as string
-  const [duration, setDuration] = useState("60")
-  const [questionCount, setQuestionCount] = useState("10")
+  const [duration, setDuration] = useState("300") // Default: 5 minutes (300 seconds)
+  const [questionCount, setQuestionCount] = useState("10") // Default: 10 questions
   const [quiz, setQuiz] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [isMuted, setIsMuted] = useState(false)
@@ -31,6 +30,28 @@ export default function HostSettingsPage() {
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  // Generate dynamic question count options
+  const totalQuestions = quiz?.questions?.length || 0
+  const questionCountOptions = totalQuestions > 0
+    ? Array.from(
+      { length: Math.floor(totalQuestions / 5) + 1 },
+      (_, i) => (i + 1) * 5
+    ).filter((count) => count <= totalQuestions)
+    : [5, 10, 15, 20, 25] // Fallback options if quiz not loaded
+  if (totalQuestions > 0 && !questionCountOptions.includes(totalQuestions)) {
+    questionCountOptions.push(totalQuestions) // Add "All" option
+  }
+
+  // Set default question count to 10 or closest valid option
+  useEffect(() => {
+    if (totalQuestions > 0) {
+      const closest = questionCountOptions.reduce((prev, curr) =>
+        Math.abs(curr - 10) < Math.abs(prev - 10) ? curr : prev
+      )
+      setQuestionCount(closest.toString())
+    }
+  }, [totalQuestions])
 
   // Fetch quiz details from Supabase
   useEffect(() => {
@@ -69,7 +90,7 @@ export default function HostSettingsPage() {
     }
   }, [roomCode])
 
-  // Glitch effect (same as QuestionListPage)
+  // Glitch effect
   useEffect(() => {
     const glitchInterval = setInterval(() => {
       if (Math.random() > 0.7) {
@@ -80,7 +101,7 @@ export default function HostSettingsPage() {
     return () => clearInterval(glitchInterval)
   }, [])
 
-  // Background image cycling (same as QuestionListPage)
+  // Background image cycling
   useEffect(() => {
     const bgInterval = setInterval(() => {
       setIsTransitioning(true)
@@ -99,7 +120,7 @@ export default function HostSettingsPage() {
     const shuffled = [...array]
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
-      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+        ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
     }
     return shuffled
   }
@@ -134,7 +155,6 @@ export default function HostSettingsPage() {
     }
 
     setSaving(false)
-    // Navigate to game room
     router.push(`/host/${roomCode}`)
   }
 
@@ -186,46 +206,9 @@ export default function HostSettingsPage() {
           ))}
         </div>
       </div>
-
-      {/* Saving Overlay */}
-      <AnimatePresence>
-        {saving && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-[#1a0a2a]/80 backdrop-blur-sm"
-          >
-            <div className="pixel-border-large p-8 text-center">
-              <motion.p
-                animate={{ opacity: [1, 0.5, 1] }}
-                transition={{ repeat: Infinity, duration: 0.8 }}
-                className="text-2xl md:text-4xl text-[#00ffff] pixel-text glow-cyan"
-              >
-                SAVING...
-              </motion.p>
-              <div className="mt-6 flex gap-1 justify-center">
-                {[...Array(8)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    animate={{
-                      scaleY: [1, 1.5, 1],
-                      backgroundColor: ["#00ffff", "#ff6bff", "#00ffff"],
-                    }}
-                    transition={{
-                      repeat: Infinity,
-                      duration: 0.5,
-                      delay: i * 0.1,
-                    }}
-                    className="w-4 h-8 bg-[#00ffff]"
-                  />
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {saving && (
+          <LoadingRetro />
+      )}
 
       {/* Header Controls */}
       <div className="absolute top-6 right-6 z-20 flex gap-3">
@@ -279,10 +262,7 @@ export default function HostSettingsPage() {
               <div className="space-y-8">
                 {/* Selected Quiz */}
                 <div className="p-4 bg-[#0a0a0f] border-4 border-[#6a4c93] rounded-lg">
-                  <h3 className="text-lg font-semibold text-[#00ffff] pixel-text glow-cyan mb-2">
-                    Selected Quiz
-                  </h3>
-                  <p className="text-gray-200 pixel-text">{quiz.title}</p>
+                  <p className="text-lg text-gray-200 pixel-text font-semibold line-clamp-2">{quiz.title}</p>
                   <p className="text-gray-400 pixel-text text-sm mt-1">{quiz.description}</p>
                 </div>
 
@@ -299,11 +279,11 @@ export default function HostSettingsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-[#0a0a0f] border-4 border-[#6a4c93] text-white pixel-text">
-                        <SelectItem value="30">30 seconds</SelectItem>
-                        <SelectItem value="45">45 seconds</SelectItem>
-                        <SelectItem value="60">60 seconds</SelectItem>
-                        <SelectItem value="90">90 seconds</SelectItem>
-                        <SelectItem value="120">2 minutes</SelectItem>
+                        {Array.from({ length: 6 }, (_, i) => (i + 1) * 5).map((min) => (
+                          <SelectItem key={min} value={(min * 60).toString()}>
+                            {min} minutes
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -312,18 +292,18 @@ export default function HostSettingsPage() {
                   <div className="space-y-3">
                     <Label className="text-lg font-semibold flex items-center text-[#00ffff] pixel-text glow-cyan">
                       <Hash className="mr-2 h-5 w-5" />
-                      Number of Questions
+                      Total Questions
                     </Label>
                     <Select value={questionCount} onValueChange={setQuestionCount}>
                       <SelectTrigger className="text-lg p-4 bg-[#0a0a0f] border-4 border-[#6a4c93] text-white pixel-text focus:border-[#00ffff]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-[#0a0a0f] border-4 border-[#6a4c93] text-white pixel-text">
-                        <SelectItem value="5">5 questions</SelectItem>
-                        <SelectItem value="10">10 questions</SelectItem>
-                        <SelectItem value="15">15 questions</SelectItem>
-                        <SelectItem value="20">20 questions</SelectItem>
-                        <SelectItem value="25">25 questions</SelectItem>
+                        {questionCountOptions.map((count) => (
+                          <SelectItem key={count} value={count.toString()}>
+                            {count === totalQuestions ? `${count} (All)` : count}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
