@@ -154,7 +154,6 @@ export default function HostSettingsPage() {
       return
     }
 
-    setSaving(false)
     router.push(`/host/${roomCode}`)
   }
 

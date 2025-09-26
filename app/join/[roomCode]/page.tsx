@@ -4,29 +4,11 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Users, Clock, ArrowLeft, Activity } from "lucide-react"
+import { Users, Activity } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { useMultiplayer } from "@/hooks/use-multiplayer"
-import { ConnectionStatus } from "@/components/connection-status"
 import { motion, AnimatePresence } from "framer-motion"
-
-// Mock lobby data
-const mockLobbyData = {
-  roomCode: "ABC123",
-  quiz: "General Knowledge",
-  questionCount: 10,
-  duration: 60,
-  host: "GameMaster",
-  players: [
-    { id: "player-1", nickname: "SpeedRacer", car: "red", isReady: true },
-    { id: "player-2", nickname: "QuizMaster", car: "blue", isReady: true },
-    { id: "player-3", nickname: "FastLane", car: "green", isReady: false },
-    { id: "player-4", nickname: "RoadRunner", car: "yellow", isReady: true },
-    { id: "player-5", nickname: "Thunder", car: "purple", isReady: true },
-    { id: "player-6", nickname: "Lightning", car: "orange", isReady: false },
-  ],
-}
+import { supabase } from "@/lib/supabase"
 
 // Background GIFs
 const backgroundGifs = [
@@ -53,14 +35,149 @@ export default function LobbyPage() {
   const router = useRouter()
   const roomCode = params.roomCode as string
 
-  // Mock current player
-  const currentPlayer = { id: "player-1", nickname: "SpeedRacer", car: "red" }
+  const [currentPlayer, setCurrentPlayer] = useState({
+    id: null,
+    nickname: localStorage.getItem("nickname") || "Guest",
+    car: null
+  })
 
-  const { isConnected, players, gamePhase, joinRoom } = useMultiplayer(roomCode, currentPlayer.id)
-
+  const [players, setPlayers] = useState<any[]>([])
+  const [room, setRoom] = useState<any>(null)
+  const [quizTitle, setQuizTitle] = useState("")
+  const [gamePhase, setGamePhase] = useState("waiting")
   const [countdown, setCountdown] = useState(0)
   const [gameStarting, setGameStarting] = useState(false)
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
+
+  useEffect(() => {
+    if (!roomCode || !currentPlayer.nickname) return;
+
+    const fetchData = async () => {
+      try {
+        // Fetch room details
+        const { data: roomData, error: roomError } = await supabase
+          .from("game_rooms")
+          .select("id, quiz_id, status, settings")
+          .eq("room_code", roomCode)
+          .single()
+
+        if (roomError || !roomData) {
+          console.error("Error fetching room:", roomError)
+          return
+        }
+
+        setRoom(roomData)
+        setGamePhase(roomData.status)
+
+        // Fetch quiz title
+        const { data: quizData, error: quizError } = await supabase
+          .from("quizzes")
+          .select("title")
+          .eq("id", roomData.quiz_id)
+          .single()
+
+        if (quizError) {
+          console.error("Error fetching quiz:", quizError)
+        } else {
+          setQuizTitle(quizData.title)
+        }
+
+        // Fetch current player to get ID and car
+        const { data: playerData, error: playerError } = await supabase
+          .from("players")
+          .select("id, car")
+          .eq("room_id", roomData.id)
+          .eq("nickname", currentPlayer.nickname)
+          .single()
+
+        if (playerError || !playerData) {
+          console.error("Error fetching player:", playerError)
+          return
+        }
+
+        setCurrentPlayer((prev) => ({
+          ...prev,
+          id: playerData.id,
+          car: playerData.car || "blue"
+        }))
+
+        // Fetch all players
+        const { data: playersData, error: playersError } = await supabase
+          .from("players")
+          .select("id, nickname, joined_at, car")
+          .eq("room_id", roomData.id)
+
+        if (playersError) {
+          console.error("Error fetching players:", playersError)
+        } else {
+          setPlayers(playersData.map(p => ({
+            ...p,
+            isReady: true // Assume all players are ready for simplicity
+          })))
+        }
+
+        // Real-time subscription for new players
+        const playerSubscription = supabase
+          .channel(`players:room=${roomCode}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "INSERT",
+              schema: "public",
+              table: "players",
+              filter: `room_id=eq.${roomData.id}`,
+            },
+            (payload) => {
+              setPlayers((prev) => [
+                ...prev,
+                {
+                  id: payload.new.id,
+                  nickname: payload.new.nickname,
+                  joined_at: new Date(payload.new.joined_at),
+                  car: payload.new.car || "blue",
+                  isReady: true
+                }
+              ])
+            }
+          )
+          .subscribe()
+
+        // Real-time subscription for room status
+        const roomSubscription = supabase
+          .channel(`game_rooms:room=${roomCode}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "UPDATE",
+              schema: "public",
+              table: "game_rooms",
+              filter: `room_code=eq.${roomCode}`,
+            },
+            (payload) => {
+              setGamePhase(payload.new.status)
+              setRoom((prev: any) => ({ ...prev, status: payload.new.status }))
+            }
+          )
+          .subscribe()
+
+        return () => {
+          supabase.removeChannel(playerSubscription)
+          supabase.removeChannel(roomSubscription)
+        }
+      } catch (error) {
+        console.error("Unexpected error:", error)
+      }
+    }
+
+    fetchData()
+  }, [roomCode, currentPlayer.nickname])
+
+  useEffect(() => {
+    if (gamePhase === "countdown" && !gameStarting) {
+      setGameStarting(true)
+      setCountdown(10)
+    }
+  }, [gamePhase, gameStarting])
 
   // Background image cycling
   useEffect(() => {
@@ -69,12 +186,6 @@ export default function LobbyPage() {
     }, 5000)
     return () => clearInterval(bgInterval)
   }, [])
-
-  useEffect(() => {
-    if (roomCode && currentPlayer.id) {
-      joinRoom(currentPlayer.nickname, currentPlayer.car)
-    }
-  }, [roomCode, currentPlayer.id, currentPlayer.nickname, currentPlayer.car, joinRoom])
 
   useEffect(() => {
     if (gamePhase === "quiz" && !gameStarting) {
@@ -294,22 +405,14 @@ export default function LobbyPage() {
                           <h3 className="font-bold text-white pixel-text text-sm leading-tight glow-text">
                             {player.nickname}
                           </h3>
-                          {player.id === currentPlayer.id && (
+                        </div>
+
+                        {/* ME or NOT Badge */}
+                        {player.id === currentPlayer.id && (
                             <Badge className="bg-transparent text-[#00ffff] border-[#00ffff]/70 text-xs pixel-text glow-cyan-subtle">
                               YOU
                             </Badge>
                           )}
-                        </div>
-
-                        {/* Status Badge */}
-                        <Badge
-                          className={`text-xs pixel-text bg-transparent ${player.isReady
-                            ? 'text-[#00ff00] border-[#00ff00]/70 glow-green animate-pulse'
-                            : 'text-[#ff6bff] border-[#ff6bff]/70 glow-pink-subtle'
-                            }`}
-                        >
-                          {player.isReady ? 'ONLINE' : 'WAITING'}
-                        </Badge>
                       </div>
                     </div>
                   </motion.div>
