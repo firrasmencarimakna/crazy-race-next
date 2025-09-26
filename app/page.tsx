@@ -125,7 +125,7 @@ export default function HomePage() {
 
       <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
         {/* Main Title dengan efek pixel art */}
-        <div className="text-center mb-12 relative">
+        <div className="text-center relative">
           {/* Title Border */}
           <div className="pixel-border-large mb-8 mx-auto" style={{ maxWidth: '500px' }}>
             <h1 className="text-5xl md:text-7xl font-bold mb-2 text-white pixel-text-outline">
@@ -137,15 +137,15 @@ export default function HomePage() {
           </div>
 
           {/* Subtitle dengan pixel border */}
-          <div className="pixel-border-small inline-block">
-            <p className="text-lg md:text-xl text-white px-4 py-2 bg-[#] pixel-text">
+          <div className="pixel-border-small inline-block mb-12">
+            <p className="text-lg md:text-xl text-purple px-4 py-2 bg-[#] pixel-text">
               ANSWER • RACE • WIN
             </p>
           </div>
         </div>
 
         {/* Action Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-4xl w-full mb-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-4xl w-full">
           {/* Host Game Card */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
