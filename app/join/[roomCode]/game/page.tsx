@@ -123,8 +123,6 @@ export default function QuizGamePage() {
         })
       }, 1000)
       return () => clearInterval(timer)
-    } else if (totalTimeRemaining === 0 && !isAnswered) {
-      router.push(`/join/${roomCode}/result`)
     }
   }, [totalTimeRemaining, isAnswered, currentQuestion])
 
