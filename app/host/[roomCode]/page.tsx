@@ -170,7 +170,7 @@ export default function HostRoomPage() {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer)
-          router.push(`/host/monitor/${roomCode}`)
+          router.push(`/host/${roomCode}/game`)
           return 0
         }
         return prev - 1
@@ -348,7 +348,7 @@ export default function HostRoomPage() {
           {/* Players List */}
           <Card className="bg-[#1a0a2a]/60 border-3 border-[#ff6bff]/50 pixel-card glow-pink-subtle p-8 col-span-3">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-[#00ffff] pixel-text glow-cyan">Players: {players.length}</h2>
+              <h2 className="text-2xl font-bold text-[#00ffff] pixel-text glow-cyan">{players.length} Player{players.length <= 1 ? "" : "s"}</h2>
               <Button
                 onClick={startGame}
                 disabled={players.length === 0 || gameStarted}

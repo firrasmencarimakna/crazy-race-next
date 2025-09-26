@@ -200,7 +200,7 @@ export default function LobbyPage() {
         setCountdown((prev) => {
           if (prev <= 1) {
             clearInterval(timer)
-            router.push(`/play/quiz/${roomCode}`)
+            router.push(`/join/${roomCode}/game`)
             return 0
           }
           return prev - 1
@@ -350,26 +350,27 @@ export default function LobbyPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 pixel-card">
-            <CardHeader className="text-center">
+          <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 pixel-card py-5">
+            <CardHeader className="text-center px-5">
 
               <motion.div
                 className="relative flex items-center justify-center"
               >
-                <Badge className="absolute bg-[#1a0a2a]/50 border-[#00ffff] text-[#00ffff] px-4 py-2 text-lg pixel-text glow-cyan top-0 left-0">
-                  <Users className="h-5 w-5 mr-2" />
+                <Badge className="absolute bg-[#1a0a2a]/50 border-[#00ffff] text-[#00ffff] p-2 md:text-lg pixel-text glow-cyan top-0 left-0 gap-1 md:gap-3">
+                  <Users className="!w-3 !h-3 md:!w-5 md:!h-5" />
                   {players.length}
                 </Badge>
-                <Activity className="mr-3 h-10 w-10 text-[#00ffff] glow-cyan animate-pulse" />
-                <h2 className="text-4xl font-bold text-[#00ffff] pixel-text glow-cyan">WAITING ROOM</h2>
-                <Activity className="ml-3 h-10 w-10 text-[#00ffff] glow-cyan animate-pulse" />
+
+                <Activity className="w-10 text-[#00ffff] glow-cyan animate-pulse" />
+                <h2 className="text-xl md:text-4xl font-bold text-[#00ffff] pixel-text glow-cyan mx-2">WAITING ROOM</h2>
+                <Activity className="w-10 text-[#00ffff] glow-cyan animate-pulse" />
 
               </motion.div>
             </CardHeader>
 
             <CardContent className="p-6">
               {/* Players Grid - 5 columns */}
-              <div className="grid grid-cols-5 gap-6 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                 {players.map((player) => (
                   <motion.div
                     key={player.id}
@@ -409,10 +410,10 @@ export default function LobbyPage() {
 
                         {/* ME or NOT Badge */}
                         {player.id === currentPlayer.id && (
-                            <Badge className="bg-transparent text-[#00ffff] border-[#00ffff]/70 text-xs pixel-text glow-cyan-subtle">
-                              YOU
-                            </Badge>
-                          )}
+                          <Badge className="bg-transparent text-[#00ffff] border-[#00ffff]/70 text-xs pixel-text glow-cyan-subtle">
+                            YOU
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </motion.div>
