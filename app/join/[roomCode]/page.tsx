@@ -4,29 +4,12 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Users, Clock, ArrowLeft, Activity } from "lucide-react"
+import { Users, Activity } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { useMultiplayer } from "@/hooks/use-multiplayer"
-import { ConnectionStatus } from "@/components/connection-status"
 import { motion, AnimatePresence } from "framer-motion"
-
-// Mock lobby data
-const mockLobbyData = {
-  roomCode: "ABC123",
-  quiz: "General Knowledge",
-  questionCount: 10,
-  duration: 60,
-  host: "GameMaster",
-  players: [
-    { id: "player-1", nickname: "SpeedRacer", car: "red", isReady: true },
-    { id: "player-2", nickname: "QuizMaster", car: "blue", isReady: true },
-    { id: "player-3", nickname: "FastLane", car: "green", isReady: false },
-    { id: "player-4", nickname: "RoadRunner", car: "yellow", isReady: true },
-    { id: "player-5", nickname: "Thunder", car: "purple", isReady: true },
-    { id: "player-6", nickname: "Lightning", car: "orange", isReady: false },
-  ],
-}
+import { supabase } from "@/lib/supabase"
+import LoadingRetro from "@/components/loadingRetro"
 
 // Background GIFs
 const backgroundGifs = [
@@ -53,14 +36,121 @@ export default function LobbyPage() {
   const router = useRouter()
   const roomCode = params.roomCode as string
 
-  // Mock current player
-  const currentPlayer = { id: "player-1", nickname: "SpeedRacer", car: "red" }
+  const [currentPlayer, setCurrentPlayer] = useState({
+    id: null,
+    nickname: "",
+    car: null
+  })
 
-  const { isConnected, players, gamePhase, joinRoom } = useMultiplayer(roomCode, currentPlayer.id)
-
+  const [players, setPlayers] = useState<any[]>([])
+  const [room, setRoom] = useState<any>(null)
+  const [quizTitle, setQuizTitle] = useState("")
+  const [gamePhase, setGamePhase] = useState("waiting")
   const [countdown, setCountdown] = useState(0)
   const [gameStarting, setGameStarting] = useState(false)
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!roomCode) return // guard saja, nickname bisa kosong dulu
+
+    let roomId = ''
+    let myNick = ''
+
+    const bootstrap = async () => {
+      // 1. Dapatkan roomId dari roomCode
+      const { data: room, error: roomErr } = await supabase
+        .from('game_rooms')
+        .select('id, quiz_id, status, settings')
+        .eq('room_code', roomCode)
+        .single()
+
+      if (roomErr || !room) {
+        router.replace('/') // room tidak ada
+        return
+      }
+      roomId = room.id
+      setRoom(room)
+      setGamePhase(room.status)
+
+      // 2. Ambil judul quiz
+      const { data: quiz } = await supabase
+        .from('quizzes')
+        .select('title')
+        .eq('id', room.quiz_id)
+        .single()
+      if (quiz) setQuizTitle(quiz.title)
+
+      // 3. Ambil SEMUA player yang sudah join
+      const { data: allPlayers, error: plErr } = await supabase
+        .from('players')
+        .select('id, nickname, car, joined_at')
+        .eq('room_id', roomId)
+        .order('joined_at', { ascending: true })
+
+      if (!plErr && allPlayers) {
+        setPlayers(allPlayers.map(p => ({ ...p, isReady: true })))
+      }
+
+      // 4. Dari list itu tentukan player mana saya
+      myNick = localStorage.getItem('nickname') || ''
+      const me = allPlayers?.find(p => p.nickname === myNick)
+      if (!me) {
+        router.replace('/') // belum join
+        return
+      }
+      setCurrentPlayer({ id: me.id, nickname: me.nickname, car: me.car || 'blue' })
+
+      // 5. Baru buka subscription untuk perubahan SELANJUTNYA
+      const playerChannel = supabase
+        .channel(`players:${roomCode}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'players', filter: `room_id=eq.${roomId}` },
+          payload => {
+            const newOne = {
+              id: payload.new.id,
+              nickname: payload.new.nickname,
+              car: payload.new.car || 'blue',
+              joined_at: new Date(payload.new.joined_at),
+              isReady: true
+            }
+            setPlayers(prev => [...prev, newOne])
+          }
+        )
+        .subscribe()
+
+      const roomChannel = supabase
+        .channel(`room:${roomCode}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'game_rooms', filter: `room_code=eq.${roomCode}` },
+          payload => {
+            setGamePhase(payload.new.status)
+            setRoom((r: any) => ({ ...r, status: payload.new.status }))
+          }
+        )
+        .subscribe()
+
+      // 6. Matikan loading
+      setLoading(false)
+
+      // cleanup
+      return () => {
+        supabase.removeChannel(playerChannel)
+        supabase.removeChannel(roomChannel)
+      }
+    }
+
+    bootstrap()
+  }, [roomCode, router])
+
+  useEffect(() => {
+    if (gamePhase === "countdown" && !gameStarting) {
+      setGameStarting(true)
+      setCountdown(10)
+    }
+  }, [gamePhase, gameStarting])
 
   // Background image cycling
   useEffect(() => {
@@ -69,12 +159,6 @@ export default function LobbyPage() {
     }, 5000)
     return () => clearInterval(bgInterval)
   }, [])
-
-  useEffect(() => {
-    if (roomCode && currentPlayer.id) {
-      joinRoom(currentPlayer.nickname, currentPlayer.car)
-    }
-  }, [roomCode, currentPlayer.id, currentPlayer.nickname, currentPlayer.car, joinRoom])
 
   useEffect(() => {
     if (gamePhase === "quiz" && !gameStarting) {
@@ -89,7 +173,7 @@ export default function LobbyPage() {
         setCountdown((prev) => {
           if (prev <= 1) {
             clearInterval(timer)
-            router.push(`/play/quiz/${roomCode}`)
+            router.push(`/join/${roomCode}/game`)
             return 0
           }
           return prev - 1
@@ -174,6 +258,10 @@ export default function LobbyPage() {
     )
   }
 
+  if (loading) {
+    return <LoadingRetro />
+  }
+
   return (
     <div className={`min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font`}>
       {/* Preload semua GIF */}
@@ -239,26 +327,27 @@ export default function LobbyPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 pixel-card">
-            <CardHeader className="text-center">
+          <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 pixel-card py-5">
+            <CardHeader className="text-center px-5">
 
               <motion.div
                 className="relative flex items-center justify-center"
               >
-                <Badge className="absolute bg-[#1a0a2a]/50 border-[#00ffff] text-[#00ffff] px-4 py-2 text-lg pixel-text glow-cyan top-0 left-0">
-                  <Users className="h-5 w-5 mr-2" />
+                <Badge className="absolute bg-[#1a0a2a]/50 border-[#00ffff] text-[#00ffff] p-2 md:text-lg pixel-text glow-cyan top-0 left-0 gap-1 md:gap-3">
+                  <Users className="!w-3 !h-3 md:!w-5 md:!h-5" />
                   {players.length}
                 </Badge>
-                <Activity className="mr-3 h-10 w-10 text-[#00ffff] glow-cyan animate-pulse" />
-                <h2 className="text-4xl font-bold text-[#00ffff] pixel-text glow-cyan">WAITING ROOM</h2>
-                <Activity className="ml-3 h-10 w-10 text-[#00ffff] glow-cyan animate-pulse" />
+
+                <Activity className="w-10 text-[#00ffff] glow-cyan animate-pulse" />
+                <h2 className="text-xl md:text-4xl font-bold text-[#00ffff] pixel-text glow-cyan mx-2">WAITING ROOM</h2>
+                <Activity className="w-10 text-[#00ffff] glow-cyan animate-pulse" />
 
               </motion.div>
             </CardHeader>
 
             <CardContent className="p-6">
               {/* Players Grid - 5 columns */}
-              <div className="grid grid-cols-5 gap-6 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                 {players.map((player) => (
                   <motion.div
                     key={player.id}
@@ -294,22 +383,14 @@ export default function LobbyPage() {
                           <h3 className="font-bold text-white pixel-text text-sm leading-tight glow-text">
                             {player.nickname}
                           </h3>
-                          {player.id === currentPlayer.id && (
-                            <Badge className="bg-transparent text-[#00ffff] border-[#00ffff]/70 text-xs pixel-text glow-cyan-subtle">
-                              YOU
-                            </Badge>
-                          )}
                         </div>
 
-                        {/* Status Badge */}
-                        <Badge
-                          className={`text-xs pixel-text bg-transparent ${player.isReady
-                            ? 'text-[#00ff00] border-[#00ff00]/70 glow-green animate-pulse'
-                            : 'text-[#ff6bff] border-[#ff6bff]/70 glow-pink-subtle'
-                            }`}
-                        >
-                          {player.isReady ? 'ONLINE' : 'WAITING'}
-                        </Badge>
+                        {/* ME or NOT Badge */}
+                        {player.id === currentPlayer.id && (
+                          <Badge className="bg-transparent text-[#00ffff] border-[#00ffff]/70 text-xs pixel-text glow-cyan-subtle">
+                            YOU
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </motion.div>
