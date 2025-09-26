@@ -9,6 +9,7 @@ import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
+import LoadingRetro from "@/components/loadingRetro"
 
 // Background GIFs
 const backgroundGifs = [
@@ -37,7 +38,7 @@ export default function LobbyPage() {
 
   const [currentPlayer, setCurrentPlayer] = useState({
     id: null,
-    nickname: localStorage.getItem("nickname") || "Guest",
+    nickname: "",
     car: null
   })
 
@@ -48,129 +49,101 @@ export default function LobbyPage() {
   const [countdown, setCountdown] = useState(0)
   const [gameStarting, setGameStarting] = useState(false)
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!roomCode || !currentPlayer.nickname) return;
+    if (!roomCode) return // guard saja, nickname bisa kosong dulu
 
-    const fetchData = async () => {
-      try {
-        // Fetch room details
-        const { data: roomData, error: roomError } = await supabase
-          .from("game_rooms")
-          .select("id, quiz_id, status, settings")
-          .eq("room_code", roomCode)
-          .single()
+    let roomId = ''
+    let myNick = ''
 
-        if (roomError || !roomData) {
-          console.error("Error fetching room:", roomError)
-          return
-        }
+    const bootstrap = async () => {
+      // 1. Dapatkan roomId dari roomCode
+      const { data: room, error: roomErr } = await supabase
+        .from('game_rooms')
+        .select('id, quiz_id, status, settings')
+        .eq('room_code', roomCode)
+        .single()
 
-        setRoom(roomData)
-        setGamePhase(roomData.status)
+      if (roomErr || !room) {
+        router.replace('/') // room tidak ada
+        return
+      }
+      roomId = room.id
+      setRoom(room)
+      setGamePhase(room.status)
 
-        // Fetch quiz title
-        const { data: quizData, error: quizError } = await supabase
-          .from("quizzes")
-          .select("title")
-          .eq("id", roomData.quiz_id)
-          .single()
+      // 2. Ambil judul quiz
+      const { data: quiz } = await supabase
+        .from('quizzes')
+        .select('title')
+        .eq('id', room.quiz_id)
+        .single()
+      if (quiz) setQuizTitle(quiz.title)
 
-        if (quizError) {
-          console.error("Error fetching quiz:", quizError)
-        } else {
-          setQuizTitle(quizData.title)
-        }
+      // 3. Ambil SEMUA player yang sudah join
+      const { data: allPlayers, error: plErr } = await supabase
+        .from('players')
+        .select('id, nickname, car, joined_at')
+        .eq('room_id', roomId)
+        .order('joined_at', { ascending: true })
 
-        // Fetch current player to get ID and car
-        const { data: playerData, error: playerError } = await supabase
-          .from("players")
-          .select("id, car")
-          .eq("room_id", roomData.id)
-          .eq("nickname", currentPlayer.nickname)
-          .single()
+      if (!plErr && allPlayers) {
+        setPlayers(allPlayers.map(p => ({ ...p, isReady: true })))
+      }
 
-        if (playerError || !playerData) {
-          console.error("Error fetching player:", playerError)
-          return
-        }
+      // 4. Dari list itu tentukan player mana saya
+      myNick = localStorage.getItem('nickname') || ''
+      const me = allPlayers?.find(p => p.nickname === myNick)
+      if (!me) {
+        router.replace('/') // belum join
+        return
+      }
+      setCurrentPlayer({ id: me.id, nickname: me.nickname, car: me.car || 'blue' })
 
-        setCurrentPlayer((prev) => ({
-          ...prev,
-          id: playerData.id,
-          car: playerData.car || "blue"
-        }))
-
-        // Fetch all players
-        const { data: playersData, error: playersError } = await supabase
-          .from("players")
-          .select("id, nickname, joined_at, car")
-          .eq("room_id", roomData.id)
-
-        if (playersError) {
-          console.error("Error fetching players:", playersError)
-        } else {
-          setPlayers(playersData.map(p => ({
-            ...p,
-            isReady: true // Assume all players are ready for simplicity
-          })))
-        }
-
-        // Real-time subscription for new players
-        const playerSubscription = supabase
-          .channel(`players:room=${roomCode}`)
-          .on(
-            "postgres_changes",
-            {
-              event: "INSERT",
-              schema: "public",
-              table: "players",
-              filter: `room_id=eq.${roomData.id}`,
-            },
-            (payload) => {
-              setPlayers((prev) => [
-                ...prev,
-                {
-                  id: payload.new.id,
-                  nickname: payload.new.nickname,
-                  joined_at: new Date(payload.new.joined_at),
-                  car: payload.new.car || "blue",
-                  isReady: true
-                }
-              ])
+      // 5. Baru buka subscription untuk perubahan SELANJUTNYA
+      const playerChannel = supabase
+        .channel(`players:${roomCode}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'players', filter: `room_id=eq.${roomId}` },
+          payload => {
+            const newOne = {
+              id: payload.new.id,
+              nickname: payload.new.nickname,
+              car: payload.new.car || 'blue',
+              joined_at: new Date(payload.new.joined_at),
+              isReady: true
             }
-          )
-          .subscribe()
+            setPlayers(prev => [...prev, newOne])
+          }
+        )
+        .subscribe()
 
-        // Real-time subscription for room status
-        const roomSubscription = supabase
-          .channel(`game_rooms:room=${roomCode}`)
-          .on(
-            "postgres_changes",
-            {
-              event: "UPDATE",
-              schema: "public",
-              table: "game_rooms",
-              filter: `room_code=eq.${roomCode}`,
-            },
-            (payload) => {
-              setGamePhase(payload.new.status)
-              setRoom((prev: any) => ({ ...prev, status: payload.new.status }))
-            }
-          )
-          .subscribe()
+      const roomChannel = supabase
+        .channel(`room:${roomCode}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'game_rooms', filter: `room_code=eq.${roomCode}` },
+          payload => {
+            setGamePhase(payload.new.status)
+            setRoom((r: any) => ({ ...r, status: payload.new.status }))
+          }
+        )
+        .subscribe()
 
-        return () => {
-          supabase.removeChannel(playerSubscription)
-          supabase.removeChannel(roomSubscription)
-        }
-      } catch (error) {
-        console.error("Unexpected error:", error)
+      // 6. Matikan loading
+      setLoading(false)
+
+      // cleanup
+      return () => {
+        supabase.removeChannel(playerChannel)
+        supabase.removeChannel(roomChannel)
       }
     }
 
-    fetchData()
-  }, [roomCode, currentPlayer.nickname])
+    bootstrap()
+  }, [roomCode, router])
 
   useEffect(() => {
     if (gamePhase === "countdown" && !gameStarting) {
@@ -283,6 +256,10 @@ export default function LobbyPage() {
         </div>
       </div>
     )
+  }
+
+  if (loading) {
+    return <LoadingRetro />
   }
 
   return (
