@@ -259,16 +259,16 @@ export default function HostSettingsPage() {
                   <div className="space-y-3">
                     <Label className="text-lg font-semibold flex items-center text-[#00ffff] pixel-text glow-cyan">
                       <Clock className="mr-2 h-5 w-5" />
-                      Duration
+                      Duration 
                     </Label>
                     <Select value={duration} onValueChange={setDuration}>
-                      <SelectTrigger className="text-lg p-4 bg-[#0a0a0f] border-4 border-[#6a4c93] text-white pixel-text focus:border-[#00ffff]">
+                      <SelectTrigger className="text-lg p-5 w-110 bg-[#0a0a0f] border-4 border-[#6a4c93] text-white pixel-text focus:border-[#00ffff]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-[#0a0a0f] border-4 border-[#6a4c93] text-white pixel-text">
                         {Array.from({ length: 6 }, (_, i) => (i + 1) * 5).map((min) => (
                           <SelectItem key={min} value={(min * 60).toString()}>
-                            {min} minutes
+                            {min} Minutes
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -279,10 +279,10 @@ export default function HostSettingsPage() {
                   <div className="space-y-3">
                     <Label className="text-lg font-semibold flex items-center text-[#00ffff] pixel-text glow-cyan">
                       <Hash className="mr-2 h-5 w-5" />
-                      Total Questions
+                      Questions
                     </Label>
                     <Select value={questionCount} onValueChange={setQuestionCount}>
-                      <SelectTrigger className="text-lg p-4 bg-[#0a0a0f] border-4 border-[#6a4c93] text-white pixel-text focus:border-[#00ffff]">
+                      <SelectTrigger className="text-lg p-4 w-110 bg-[#0a0a0f] border-4 border-[#6a4c93] text-white pixel-text focus:border-[#00ffff]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-[#0a0a0f] border-4 border-[#6a4c93] text-white pixel-text">

@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
+import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Trophy, Users, Clock, CheckCircle, XCircle, ArrowRight, Flag } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
-import { MiniRacingPreview } from "@/components/mini-racing-preview"
+import { motion, AnimatePresence } from "framer-motion"
 
-// Mock player progress data
+// Mock player progress data - extended for more players to demonstrate scalability
 const mockPlayerProgress = [
   {
     id: 1,
@@ -44,14 +44,83 @@ const mockPlayerProgress = [
     score: 650,
     racingProgress: 60,
   },
+  {
+    id: 4,
+    nickname: "TurboBoost",
+    car: "yellow",
+    questionsAnswered: 5,
+    correctAnswers: 5,
+    currentlyAnswering: false,
+    timeRemaining: 0,
+    score: 700,
+    racingProgress: 55,
+  },
+  {
+    id: 5,
+    nickname: "NitroKing",
+    car: "purple",
+    questionsAnswered: 9,
+    correctAnswers: 7,
+    currentlyAnswering: true,
+    timeRemaining: 12,
+    score: 900,
+    racingProgress: 80,
+  },
+  {
+    id: 6,
+    nickname: "DriftQueen",
+    car: "orange",
+    questionsAnswered: 4,
+    correctAnswers: 3,
+    currentlyAnswering: false,
+    timeRemaining: 0,
+    score: 550,
+    racingProgress: 50,
+  },
+  // Tambahan player untuk demo scalability (bisa ditambah lagi sesuai kebutuhan)
+  {
+    id: 7,
+    nickname: "VelocityViper",
+    car: "red",
+    questionsAnswered: 8,
+    correctAnswers: 6,
+    currentlyAnswering: true,
+    timeRemaining: 30,
+    score: 800,
+    racingProgress: 70,
+  },
+  {
+    id: 8,
+    nickname: "ApexRacer",
+    car: "blue",
+    questionsAnswered: 7,
+    correctAnswers: 5,
+    currentlyAnswering: false,
+    timeRemaining: 0,
+    score: 750,
+    racingProgress: 65,
+  },
 ]
 
-// Mock racing standings
-const mockRacingStandings = [
-  { id: "2", nickname: "QuizMaster", car: "blue", position: 1, progress: 85 },
-  { id: "1", nickname: "SpeedRacer", car: "red", position: 2, progress: 75 },
-  { id: "3", nickname: "FastLane", car: "green", position: 3, progress: 60 },
+// Background GIFs
+const backgroundGifs = [
+  // "/images/lobbyphase/gif1.gif",
+  // "/images/lobbyphase/gif2.gif",
+  // "/images/lobbyphase/gif3.gif",
+  // "/images/lobbyphase/gif4.gif",
+  "/images/lobbyphase/gif5.gif",
+  // "/images/lobbyphase/gif6.gif",
 ]
+
+// Mapping warna mobil ke file GIF mobil
+const carGifMap: Record<string, string> = {
+  red: "/images/car/car1.gif",
+  blue: "/images/car/car2.gif",
+  green: "/images/car/car3.gif",
+  yellow: "/images/car/car4.gif",
+  purple: "/images/car/car5.gif",
+  orange: "/images/car/car5.gif",
+}
 
 export default function HostMonitorPage() {
   const params = useParams()
@@ -61,7 +130,7 @@ export default function HostMonitorPage() {
   const [currentQuestion, setCurrentQuestion] = useState(8)
   const [totalQuestions] = useState(10)
   const [gamePhase, setGamePhase] = useState<"quiz" | "racing" | "finished">("quiz")
-  const [racingStandings] = useState(mockRacingStandings)
+  const [currentBgIndex, setCurrentBgIndex] = useState(0)
 
   useEffect(() => {
     // Simulate real-time updates
@@ -82,6 +151,14 @@ export default function HostMonitorPage() {
 
     return () => clearInterval(interval)
   }, [currentQuestion, gamePhase])
+
+  // Background image cycling
+  useEffect(() => {
+    const bgInterval = setInterval(() => {
+      setCurrentBgIndex((prev) => (prev + 1) % backgroundGifs.length)
+    }, 5000)
+    return () => clearInterval(bgInterval)
+  }, [])
 
   const getCarColor = (car: string) => {
     const colors = {
@@ -119,13 +196,13 @@ export default function HostMonitorPage() {
   const getPhaseColor = () => {
     switch (gamePhase) {
       case "quiz":
-        return "default"
+        return "bg-[#00ff00]/20 border-[#00ff00]/50 text-[#00ff00]"
       case "racing":
-        return "secondary"
+        return "bg-[#ff6bff]/20 border-[#ff6bff]/50 text-[#ff6bff]"
       case "finished":
-        return "destructive"
+        return "bg-red-500/20 border-red-500/50 text-red-500"
       default:
-        return "outline"
+        return "bg-gray-500/20 border-gray-500/50 text-gray-500"
     }
   }
 
@@ -143,148 +220,206 @@ export default function HostMonitorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-primary">Race Monitor</h1>
-            <p className="text-muted-foreground">Room: {roomCode}</p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Badge variant="secondary" className="text-lg px-4 py-2">
-              Question {currentQuestion}/{totalQuestions}
-            </Badge>
-            <Badge variant={getPhaseColor() as any} className="text-lg px-4 py-2 flex items-center">
-              {getPhaseIcon()}
-              <span className="ml-2">{getPhaseText()}</span>
-            </Badge>
-            <Button onClick={handleEndGame} variant="outline">
-              <Trophy className="mr-2 h-4 w-4" />
-              View Leaderboard
-            </Button>
-          </div>
-        </div>
+    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
+      {/* Preload GIFs */}
+      {backgroundGifs.map((gif, index) => (
+        <link key={index} rel="preload" href={gif} as="image" />
+      ))}
+      {Object.values(carGifMap).map((gif, idx) => (
+        <link key={`car-${idx}`} rel="preload" href={gif} as="image" />
+      ))}
 
-        {/* Game Progress */}
-        <Card className="p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">Game Progress</h2>
-            <div className="flex items-center space-x-4">
-              <Badge variant={getPhaseColor() as any} className="flex items-center">
-                {getPhaseIcon()}
-                <span className="ml-2">{getPhaseText()}</span>
-              </Badge>
-            </div>
-          </div>
-          <Progress value={(currentQuestion / totalQuestions) * 100} className="h-3" />
-          <div className="flex justify-between text-sm text-muted-foreground mt-2">
-            <span>Started</span>
-            <span>{Math.round((currentQuestion / totalQuestions) * 100)}% Complete</span>
-            <span>Finish Line</span>
-          </div>
-        </Card>
+      {/* Background */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentBgIndex}
+          className="absolute inset-0 w-full h-full bg-cover bg-center"
+          style={{ backgroundImage: `url(${backgroundGifs[currentBgIndex]})` }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 1, ease: "easeInOut" }}
+        />
+      </AnimatePresence>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Player Progress */}
-          <div className="lg:col-span-2">
-            <h2 className="text-xl font-bold mb-6">Player Progress</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {players.map((player) => (
-                <Card key={player.id} className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-8 h-6 ${getCarColor(player.car)} rounded-sm`}></div>
-                      <div>
-                        <h3 className="font-bold">{player.nickname}</h3>
-                        <p className="text-sm text-muted-foreground">{player.car} racer</p>
-                      </div>
-                    </div>
-                    {player.currentlyAnswering ? (
-                      <Badge variant="secondary">
-                        <Clock className="mr-1 h-3 w-3" />
-                        {player.timeRemaining}s
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline">Waiting</Badge>
-                    )}
-                  </div>
+      {/* Overlay Effects */}
+      <div className="crt-effect"></div>
+      <div className="noise-effect"></div>
+      <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none"></div>
 
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex justify-between text-sm mb-2">
-                        <span>Quiz Progress</span>
-                        <span>
-                          {player.questionsAnswered}/{totalQuestions}
-                        </span>
-                      </div>
-                      <Progress value={(player.questionsAnswered / totalQuestions) * 100} className="h-2" />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        <span className="text-sm">Correct: {player.correctAnswers}</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <XCircle className="h-4 w-4 text-red-500" />
-                        <span className="text-sm">Wrong: {player.questionsAnswered - player.correctAnswers}</span>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 text-center">
-                      <div>
-                        <div className="text-xl font-bold text-primary">{player.score}</div>
-                        <div className="text-xs text-muted-foreground">Score</div>
-                      </div>
-                      <div>
-                        <div className="text-xl font-bold text-secondary">
-                          {getAccuracy(player.correctAnswers, player.questionsAnswered)}%
-                        </div>
-                        <div className="text-xs text-muted-foreground">Accuracy</div>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
-
-          {/* Racing Standings */}
-          <div className="lg:col-span-1">
-            <h2 className="text-xl font-bold mb-6">Live Race Standings</h2>
-            <MiniRacingPreview
-              players={racingStandings}
-              currentPlayer={racingStandings[0]} // Host doesn't have a player
-              title="Current Positions"
-            />
-
-            {/* Game Controls */}
-            <Card className="p-6 mt-6">
-              <h3 className="text-lg font-bold mb-4">Host Controls</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Active Players</span>
-                  <Badge variant="outline">
-                    <Users className="mr-1 h-3 w-3" />
-                    {players.length}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Game Phase</span>
-                  <Badge variant={getPhaseColor() as any} className="flex items-center">
-                    {getPhaseIcon()}
-                    <span className="ml-1">{getPhaseText()}</span>
-                  </Badge>
-                </div>
-                <Button onClick={handleEndGame} className="w-full">
-                  <ArrowRight className="mr-2 h-4 w-4" />
-                  End Game
-                </Button>
-              </div>
-            </Card>
-          </div>
+      {/* Corner Decorations */}
+      <div className="absolute top-4 left-4 opacity-30">
+        <div className="w-6 h-6 border-2 border-[#00ffff]"></div>
+      </div>
+      <div className="absolute top-4 right-4 opacity-30">
+        <div className="w-6 h-6 border-2 border-[#ff6bff]"></div>
+      </div>
+      <div className="absolute bottom-4 left-4 opacity-40">
+        <div className="flex gap-1">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="w-3 h-3 bg-[#00ffff]"></div>
+          ))}
         </div>
       </div>
+      <div className="absolute bottom-4 right-4 opacity-40">
+        <div className="flex flex-col gap-1">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="w-3 h-3 bg-[#ff6bff]"></div>
+          ))}
+        </div>
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto pt-8 px-4">
+        {/* Header - Centered */}
+        <div className="flex flex-col items-center mb-8 text-center">
+          <motion.h1 
+            className="text-6xl font-bold text-[#00ffff] pixel-text glow-cyan-intense mb-4 tracking-wider animate-neon-glow"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            CRAZY RACE
+          </motion.h1>
+          {/* <p className="text-muted-foreground text-sm md:text-lg">Room: {roomCode}</p> */}
+        </div>
+
+        {/* Host Controls - Simplified to only show player count, compact design */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+        >
+
+        </motion.div>
+
+        {/* Player Progress - Full width, below host controls */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, delay: 0.4 }}
+        >
+          <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 pixel-card p-4 md:p-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+              {players.map((player, index) => (
+                <motion.div
+                  key={player.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  whileHover={{ scale: 1.02 }}
+                  className={`group ${player.currentlyAnswering ? 'glow-cyan animate-neon-pulse' : 'glow-pink-subtle'}`}
+                >
+                  <Card className={`p-2 md:p-3 bg-[#1a0a2a]/50 border-2 border-double ${player.currentlyAnswering ? 'border-[#00ffff]/70' : 'border-[#ff6bff]/70'} transition-all duration-300 h-full`}>
+                    <div className="mb-2 md:mb-3">
+                      <h3 className="font-bold text-white pixel-text text-xs md:text-sm leading-tight glow-text text-center mb-2">{player.nickname}</h3>
+                      <div className="flex justify-between text-xs mb-1 pixel-text text-white/70">
+                        <span>Progress</span>
+                        <span>{player.questionsAnswered}/{totalQuestions}</span>
+                      </div>
+                      <Progress 
+                        value={(player.questionsAnswered / totalQuestions) * 100} 
+                        className="h-2 md:h-3 bg-[#1a0a2a]/50 border border-[#00ffff]/30" 
+                      />
+                    </div>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+
+      <style jsx>{`
+        .pixel-font {
+          font-family: 'Press Start 2P', cursive, monospace;
+          image-rendering: pixelated;
+        }
+        .pixel-text {
+          image-rendering: pixelated;
+          text-shadow: 2px 2px 0px #000;
+        }
+        .pixel-button-large {
+          image-rendering: pixelated;
+          box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.8);
+          transition: all 0.1s ease;
+        }
+        .pixel-button-large:hover {
+          transform: translate(3px, 3px);
+          box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.8);
+        }
+        .pixel-card {
+          box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 107, 255, 0.3);
+        }
+        .crt-effect {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+          background-size: 100% 4px;
+          z-index: 5;
+          pointer-events: none;
+          animation: scanline 8s linear infinite;
+        }
+        .noise-effect {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-image: url("data:image/svg+xml,%3Csvg%20viewBox%3D%270%200%20200%20200%27%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%3E%3Cfilter%20id%3D%27noiseFilter%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.65%27%20numOctaves%3D%273%27%20stitchTiles%3D%27stitch%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27100%25%27%20height%3D%27100%25%27%20filter%3D%27url(%23noiseFilter)%27%20opacity%3D%270.1%27%2F%3E%3C%2Fsvg%3E");
+          z-index: 4;
+          pointer-events: none;
+        }
+        .glow-cyan {
+          filter: drop-shadow(0 0 10px #00ffff);
+        }
+        .glow-cyan-intense {
+          filter: drop-shadow(0 0 5px #00ffff) drop-shadow(0 0 10px #00ffff) drop-shadow(0 0 15px #00ffff) drop-shadow(0 0 20px #00ffff);
+        }
+        .glow-pink-subtle {
+          filter: drop-shadow(0 0 5px rgba(255, 107, 255, 0.5));
+        }
+        .glow-green {
+          filter: drop-shadow(0 0 10px rgba(0, 255, 0, 0.8));
+        }
+        .glow-text {
+          filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));
+        }
+        @keyframes scanline {
+          0% { background-position: 0 0; }
+          100% { background-position: 0 100%; }
+        }
+        @keyframes neon-pulse {
+          0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 255, 0.7), 0 0 20px rgba(0, 255, 255, 0.5); }
+          50% { box-shadow: 0 0 15px rgba(0, 255, 255, 1), 0 0 30px rgba(0, 255, 255, 0.8); }
+        }
+        @keyframes neon-pulse-pink {
+          0%, 100% { box-shadow: 0 0 10px rgba(255, 107, 255, 0.7), 0 0 20px rgba(255, 107, 255, 0.5); }
+          50% { box-shadow: 0 0 15px rgba(255, 107, 255, 1), 0 0 30px rgba(255, 107, 255, 0.8); }
+        }
+        @keyframes neon-glow {
+          0%, 100% { 
+            filter: drop-shadow(0 0 5px #00ffff) drop-shadow(0 0 10px #00ffff) drop-shadow(0 0 15px #00ffff) drop-shadow(0 0 20px #00ffff);
+            text-shadow: 2px 2px 0px #000, 0 0 10px #00ffff;
+          }
+          50% { 
+            filter: drop-shadow(0 0 10px #00ffff) drop-shadow(0 0 20px #00ffff) drop-shadow(0 0 30px #00ffff) drop-shadow(0 0 40px #00ffff);
+            text-shadow: 2px 2px 0px #000, 0 0 20px #00ffff, 0 0 30px #00ffff;
+          }
+        }
+        .animate-neon-pulse {
+          animation: neon-pulse 1.5s ease-in-out infinite;
+        }
+        .glow-pink-subtle {
+          animation: neon-pulse-pink 2s ease-in-out infinite;
+        }
+        .animate-neon-glow {
+          animation: neon-glow 2s ease-in-out infinite;
+        }
+      `}</style>
+      <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
     </div>
   )
 }
