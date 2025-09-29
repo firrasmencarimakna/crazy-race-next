@@ -185,73 +185,14 @@ export default function LobbyPage() {
 
   if (countdown > 0) {
     return (
-      <div className={`min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font`}>
-        {/* Preload semua GIF */}
-        {backgroundGifs.map((gif, index) => (
-          <link key={index} rel="preload" href={gif} as="image" />
-        ))}
-        {Object.values(carGifMap).map((gif, idx) => (
-          <link key={`car-${idx}`} rel="preload" href={gif} as="image" />
-        ))}
-
-        {/* Background */}
-        <AnimatePresence mode="wait">
+      <div className={`min-h-screen bg-[#1a0a2a] flex items-center justify-center pixel-font`}>
+        <div className="text-center">
           <motion.div
-            key={currentBgIndex}
-            className="absolute inset-0 w-full h-full bg-cover bg-center"
-            style={{ backgroundImage: `url(${backgroundGifs[currentBgIndex]})` }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1, ease: "easeInOut" }}
-          />
-        </AnimatePresence>
-
-        {/* Overlay Effects */}
-        <div className="crt-effect"></div>
-        <div className="noise-effect"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none"></div>
-
-        <div className="relative z-10 flex items-center justify-center min-h-screen text-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="pixel-border-large p-8"
+            className="text-8xl font-bold text-[#00ffff] pixel-text glow-cyan race-pulse"
+            animate={{ scale: [1, 1.1, 1] }}
+            transition={{ repeat: Infinity, duration: 0.5 }}
           >
-            <div className="text-9xl font-bold text-[#00ffff] mb-4 pixel-text glow-cyan">
-              {countdown}
-            </div>
-            <h2 className="text-4xl font-bold mb-2 text-[#ff6bff] pixel-text glow-pink">SYSTEM BOOT</h2>
-            <p className="text-xl text-white pixel-text glow-cyan-subtle">Neural link engaged... Query protocols loading...</p>
-
-            {/* Players Grid - 5 per row */}
-            <div className="mt-12 grid grid-cols-5 gap-4 max-w-4xl mx-auto">
-              {players.map((player) => (
-                <motion.div
-                  key={player.id}
-                  className="text-center relative"
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className="relative">
-                    <img
-                      src={carGifMap[player.car] || "/images/car/car5.gif"}
-                      alt={`${player.car} car`}
-                      className="h-32 w-48 mx-auto mb-2 relative z-10 pointer-events-none object-contain animate-neon-bounce"
-                    />
-                    {player.isReady && (
-                      <div className="absolute -top-2 -right-2 w-8 h-8 bg-[#00ff00] border-2 border-[#00ff00] rounded-full flex items-center justify-center animate-bounce">
-                        <div className="w-4 h-4 bg-white rounded-full"></div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-sm font-bold text-white pixel-text px-2 py-1 rounded">
-                    {player.nickname}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+            {countdown}
           </motion.div>
         </div>
       </div>
@@ -396,25 +337,6 @@ export default function LobbyPage() {
                   </motion.div>
                 ))}
               </div>
-
-              {/* Game Status */}
-              {gameStarting && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5 }}
-                  className="text-center"
-                >
-                  <div className="p-6 bg-[#1a0a2a]/50 rounded-xl border-4 border-[#00ffff] pixel-border-small glow-cyan">
-                    <h3 className="text-2xl font-bold text-[#00ffff] mb-3 pixel-text glow-cyan animate-pulse">
-                      GAME STARTING SOON
-                    </h3>
-                    <p className="text-white pixel-text glow-cyan-subtle">
-                      Prepare for the race! Starting in {countdown} seconds...
-                    </p>
-                  </div>
-                </motion.div>
-              )}
             </CardContent>
           </Card>
         </motion.div>
