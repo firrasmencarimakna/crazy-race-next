@@ -100,6 +100,7 @@ export default function LobbyPage() {
         return
       }
       setCurrentPlayer({ id: me.id, nickname: me.nickname, car: me.car || 'blue' })
+      localStorage.setItem('playerId', me.id);
 
       // 5. Baru buka subscription untuk perubahan SELANJUTNYA
       const playerChannel = supabase
@@ -404,9 +405,6 @@ export default function LobbyPage() {
           z-index: 4;
           pointer-events: none;
         }
-        .glitch-effect {
-          animation: glitch 0.3s linear;
-        }
         .glow-cyan {
           filter: drop-shadow(0 0 10px #00ffff);
         }
@@ -416,14 +414,6 @@ export default function LobbyPage() {
         @keyframes scanline {
           0% { background-position: 0 0; }
           100% { background-position: 0 100%; }
-        }
-        @keyframes glitch {
-          0% { transform: translate(0); }
-          20% { transform: translate(-2px, 2px); }
-          40% { transform: translate(-2px, -2px); }
-          60% { transform: translate(2px, 2px); }
-          80% { transform: translate(2px, -2px); }
-          100% { transform: translate(0); }
         }
         @keyframes neon-bounce {
           0%, 100% { transform: translateY(0px); }

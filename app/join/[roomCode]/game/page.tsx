@@ -3,14 +3,13 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Clock, Trophy, CheckCircle, XCircle, Zap, Users, Activity } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import { calculateScore } from "@/lib/quiz-data"
 import { useMultiplayer } from "@/hooks/use-multiplayer"
 import { motion, AnimatePresence } from "framer-motion"
+import LoadingRetro from "@/components/loadingRetro"
 
 // Background GIFs (same as LobbyPage)
 const backgroundGifs = [
@@ -49,16 +48,17 @@ export default function QuizGamePage() {
   const router = useRouter()
   const roomCode = params.roomCode as string
 
-  // Mock player data - in real app this would come from session/auth
-  const playerId = "player-1"
-
-  const { isConnected, players, answerQuestion: sendAnswer } = useMultiplayer(roomCode, playerId)
+  const [playerId, setPlayerId] = useState<string>("")
+  useEffect(() => {
+    const pid = localStorage.getItem("playerId") || ""
+    if (!pid) router.replace(`/join/${roomCode}`)
+    else setPlayerId(pid)
+  }, [roomCode, router])
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([])
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [totalTimeRemaining, setTotalTimeRemaining] = useState(0)
-  const [score, setScore] = useState(0)
   const [correctAnswers, setCorrectAnswers] = useState(0)
   const [isAnswered, setIsAnswered] = useState(false)
   const [showResult, setShowResult] = useState(false)
@@ -90,16 +90,12 @@ export default function QuizGamePage() {
       const { settings, questions: rawQuestions } = data
       const parsedSettings = typeof settings === "string" ? JSON.parse(settings) : settings
 
-      // Map gameforsmart questions to QuizQuestion format
+
       const formattedQuestions: QuizQuestion[] = rawQuestions.map((q: any, index: number) => ({
-        id: `${roomCode}-${index}`, // Generate unique ID
+        id: `${roomCode}-${index}`,
         question: q.question,
         options: q.options,
         correctAnswer: q.correct,
-        timeLimit: parsedSettings.duration || 60, // Use settings.duration or default to 60s
-        difficulty: "medium", // Default, as not provided in gameforsmart
-        points: 100, // Default base points
-        category: "general", // Default, as not provided in gameforsmart
       }))
 
       setQuestions(formattedQuestions)
@@ -141,34 +137,30 @@ export default function QuizGamePage() {
   }, [])
 
   const handleAnswerSelect = (answerIndex: number) => {
-    if (!isAnswered) {
-      setSelectedAnswer(answerIndex)
+  if (isAnswered) return;
+
+  // 1. tandai sudah dijawab
+  setSelectedAnswer(answerIndex);
+  setIsAnswered(true);
+  setShowResult(true);
+
+  // 2. simpan jawaban
+  const newAnswers = [...answers];
+  newAnswers[currentQuestionIndex] = answerIndex;
+  setAnswers(newAnswers);
+
+  // 3. otomatis next setelah 2,5 detik
+  setTimeout(() => {
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+      setSelectedAnswer(null);
+      setIsAnswered(false);
+      setShowResult(false);
+    } else {
+      router.push(`/join/${roomCode}/result`);
     }
-  }
-
-  const handleAnswerSubmit = () => {
-    if (isAnswered || !currentQuestion) return
-
-    setIsAnswered(true)
-    setShowResult(true)
-
-    // Update answers array
-    const newAnswers = [...answers]
-    newAnswers[currentQuestionIndex] = selectedAnswer
-    setAnswers(newAnswers)
-
-    // Show result for 2.5 seconds, then move to next question
-    setTimeout(() => {
-      if (currentQuestionIndex < questions.length - 1) {
-        setCurrentQuestionIndex((prev) => prev + 1)
-        setSelectedAnswer(null)
-        setIsAnswered(false)
-        setShowResult(false)
-      } else {
-        router.push(`/play/results/${roomCode}`)
-      }
-    }, 2500)
-  }
+  }, 500);
+}
 
   const getOptionStyle = (optionIndex: number) => {
     if (!showResult) {
@@ -177,36 +169,12 @@ export default function QuizGamePage() {
         : "border-[#ff6bff]/70 hover:border-[#ff6bff] hover:bg-[#ff6bff]/10 hover:scale-[1.01] glow-pink-subtle"
     }
 
-    if (optionIndex === currentQuestion.correctAnswer) {
-      return "border-[#00ff00] bg-[#00ff00]/10 text-[#00ff00] glow-green"
-    } else if (optionIndex === selectedAnswer && selectedAnswer !== currentQuestion.correctAnswer) {
-      return "border-red-500 bg-red-500/10 text-red-500"
-    }
+    if (optionIndex === selectedAnswer) {
+    return optionIndex === currentQuestion.correctAnswer
+      ? "border-[#00ff00] bg-[#00ff00]/10 text-[#00ff00] glow-green"
+      : "border-red-500 bg-red-500/10 text-red-500";
+  }
     return "border-[#ff6bff]/50 bg-[#1a0a2a]/50 opacity-60"
-  }
-
-  const getOptionIcon = (optionIndex: number) => {
-    if (!showResult) return null
-
-    if (optionIndex === currentQuestion.correctAnswer) {
-      return <CheckCircle className="h-5 w-5 text-[#00ff00] glow-green" />
-    } else if (optionIndex === selectedAnswer && selectedAnswer !== currentQuestion.correctAnswer) {
-      return <XCircle className="h-5 w-5 text-red-500" />
-    }
-    return null
-  }
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "easy":
-        return "text-[#00ff00] glow-green"
-      case "medium":
-        return "text-[#00ffff] glow-cyan"
-      case "hard":
-        return "text-red-500"
-      default:
-        return "text-white glow-text"
-    }
   }
 
   const getTimeColor = () => {
@@ -215,123 +183,9 @@ export default function QuizGamePage() {
     return "text-[#00ffff] glow-cyan"
   }
 
-  if (loading) {
+  if (loading || error || !currentQuestion) {
     return (
-      <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
-        {backgroundGifs.map((gif, index) => (
-          <link key={index} rel="preload" href={gif} as="image" />
-        ))}
-        {Object.values(carGifMap).map((gif, idx) => (
-          <link key={`car-${idx}`} rel="preload" href={gif} as="image" />
-        ))}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentBgIndex}
-            className="absolute inset-0 w-full h-full bg-cover bg-center"
-            style={{ backgroundImage: `url(${backgroundGifs[currentBgIndex]})` }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1, ease: "easeInOut" }}
-          />
-        </AnimatePresence>
-        <div className="crt-effect"></div>
-        <div className="noise-effect"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none"></div>
-        <div className="relative z-10 flex items-center justify-center min-h-screen text-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="pixel-border-large p-8"
-          >
-            <h2 className="text-4xl font-bold mb-2 text-[#ff6bff] pixel-text glow-pink">LOADING...</h2>
-            <p className="text-xl text-white pixel-text glow-cyan-subtle">Syncing with the grid...</p>
-          </motion.div>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
-        {backgroundGifs.map((gif, index) => (
-          <link key={index} rel="preload" href={gif} as="image" />
-        ))}
-        {Object.values(carGifMap).map((gif, idx) => (
-          <link key={`car-${idx}`} rel="preload" href={gif} as="image" />
-        ))}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentBgIndex}
-            className="absolute inset-0 w-full h-full bg-cover bg-center"
-            style={{ backgroundImage: `url(${backgroundGifs[currentBgIndex]})` }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1, ease: "easeInOut" }}
-          />
-        </AnimatePresence>
-        <div className="crt-effect"></div>
-        <div className="noise-effect"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none"></div>
-        <div className="relative z-10 flex items-center justify-center min-h-screen text-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="pixel-border-large p-8"
-          >
-            <h2 className="text-4xl font-bold mb-2 text-[#ff6bff] pixel-text glow-pink">ERROR</h2>
-            <p className="text-xl text-white pixel-text glow-cyan-subtle">{error}</p>
-            <Button className="mt-4 bg-[#ff6bff] border-4 border-white pixel-button-large hover:bg-[#ff8aff] glow-pink px-8 py-3">
-              <span className="pixel-text text-lg">BACK TO HOST</span>
-            </Button>
-          </motion.div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!currentQuestion) {
-    return (
-      <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
-        {backgroundGifs.map((gif, index) => (
-          <link key={index} rel="preload" href={gif} as="image" />
-        ))}
-        {Object.values(carGifMap).map((gif, idx) => (
-          <link key={`car-${idx}`} rel="preload" href={gif} as="image" />
-        ))}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentBgIndex}
-            className="absolute inset-0 w-full h-full bg-cover bg-center"
-            style={{ backgroundImage: `url(${backgroundGifs[currentBgIndex]})` }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1, ease: "easeInOut" }}
-          />
-        </AnimatePresence>
-        <div className="crt-effect"></div>
-        <div className="noise-effect"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none"></div>
-        <div className="relative z-10 flex items-center justify-center min-h-screen text-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="pixel-border-large p-8"
-          >
-            <h2 className="text-4xl font-bold mb-2 text-[#ff6bff] pixel-text glow-pink">NO QUESTIONS AVAILABLE</h2>
-            <p className="text-xl text-white pixel-text glow-cyan-subtle">Please try another quiz.</p>
-            <Button className="mt-4 bg-[#ff6bff] border-4 border-white pixel-button-large hover:bg-[#ff8aff] glow-pink px-8 py-3">
-              <span className="pixel-text text-lg">BACK TO HOST</span>
-            </Button>
-          </motion.div>
-        </div>
-      </div>
+      <LoadingRetro />
     )
   }
 
@@ -452,38 +306,10 @@ export default function QuizGamePage() {
                       </div>
                       <span className="text-lg font-medium text-white pixel-text glow-text">{option}</span>
                     </div>
-                    {getOptionIcon(index)}
                   </div>
                 </motion.button>
               ))}
             </div>
-            {selectedAnswer !== null && !isAnswered && (
-              <div className="mt-8 text-center">
-                <Button
-                  onClick={handleAnswerSubmit}
-                  className="bg-[#ff6bff] border-4 border-white pixel-button-large hover:bg-[#ff8aff] glow-pink px-12 py-6"
-                >
-                  <span className="text-xl pixel-text glow-text">SUBMIT ANSWER</span>
-                </Button>
-              </div>
-            )}
-            {showResult && (
-              <div className="mt-8 text-center">
-                <div
-                  className={`text-2xl font-bold mb-2 pixel-text ${selectedAnswer === currentQuestion.correctAnswer ? "text-[#00ff00] glow-green" : "text-red-500"
-                    }`}
-                >
-                  {selectedAnswer === currentQuestion.correctAnswer ? "Correct!" : "Wrong!"}
-                </div>
-                {selectedAnswer === currentQuestion.correctAnswer && (
-                  <div className="space-y-1">
-                    <p className="text-sm text-white pixel-text glow-cyan-subtle">
-                      (Base: {currentQuestion.points} + Time bonus: {Math.max(0, Math.floor(totalTimeRemaining * 2))})
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
