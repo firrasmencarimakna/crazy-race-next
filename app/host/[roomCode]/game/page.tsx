@@ -272,14 +272,9 @@ export default function HostMonitorPage() {
       <div className="relative z-10 max-w-7xl mx-auto pt-8 px-4">
         {/* Header - Centered */}
         <div className="flex flex-col items-center mb-8 text-center">
-          <motion.h1 
-            className="text-6xl font-bold text-[#00ffff] pixel-text glow-cyan-intense mb-4 tracking-wider animate-neon-glow"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
+          <h1 className="text-6xl font-bold text-[#00ffff] pixel-text glow-cyan mb-4 tracking-wider">
             CRAZY RACE
-          </motion.h1>
+          </h1>
           {/* <p className="text-muted-foreground text-sm md:text-lg">Room: {roomCode}</p> */}
         </div>
 
