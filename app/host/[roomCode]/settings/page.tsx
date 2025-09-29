@@ -397,7 +397,7 @@ export default function HostSettingsPage() {
         }
         @keyframes glow-pink {
           0%, 100% { filter: drop-shadow(0 0 5px #ff6bff); }
-          50% { filter: drop-shadow(0 0 15px #ff6bff); }
+          51% { filter: drop-shadow(0 0 15px #ff6bff); }
         }
         /* Responsive */
         @media (max-width: 768px) {
