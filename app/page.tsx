@@ -123,140 +123,143 @@ export default function HomePage() {
         </button>
       </div>
 
-      <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
-        {/* Main Title dengan efek pixel art */}
-        <div className="text-center relative">
-          {/* Title Border */}
-          <div className="pixel-border-large mb-8 mx-auto" style={{ maxWidth: '500px' }}>
-            <h1 className="text-5xl md:text-7xl font-bold mb-2 text-white pixel-text-outline">
-              CRAZY
-            </h1>
-            <h2 className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff6bff] to-[#00ffff] pixel-text">
-              RACE
-            </h2>
+      {/* Wrapper untuk zoom out */}
+      <div className="relative z-10 flex flex-col items-center justify-center h-full w-full overflow-hidden">
+        <div className="w-full h-full flex flex-col items-center justify-center transform scale-90 origin-center">
+          {/* Main Title dengan efek pixel art */}
+          <div className="text-center relative mb-8">
+            {/* Title Border */}
+            <div className="pixel-border-large mx-auto" style={{ maxWidth: '500px' }}>
+              <h1 className="text-5xl md:text-7xl font-bold mb-2 text-white pixel-text-outline">
+                CRAZY
+              </h1>
+              <h2 className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff6bff] to-[#00ffff] pixel-text">
+                RACE
+              </h2>
+            </div>
+
+            {/* Subtitle dengan pixel border */}
+            <div className="pixel-border-small inline-block mt-12 mb-12">
+              <p className="text-lg md:text-xl text-purple px-4 py-2 bg-[#] pixel-text">
+                ANSWER • RACE • WIN
+              </p>
+            </div>
           </div>
 
-          {/* Subtitle dengan pixel border */}
-          <div className="pixel-border-small inline-block mb-12">
-            <p className="text-lg md:text-xl text-purple px-4 py-2 bg-[#] pixel-text">
-              ANSWER • RACE • WIN
-            </p>
-          </div>
-        </div>
+          {/* Action Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-4xl w-full">
+            {/* Host Game Card */}
+            <motion.div
+              initial={{ opacity: 0, x: -50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3, duration: 0.8 }}
+              whileHover={{ scale: 1.02 }}
+              className="group"
+            >
+              <Link href="/host">
+                <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 hover:border-[#ff6bff] transition-all duration-300 h-full shadow-[0_0_15px_rgba(255,107,255,0.3)] pixel-card">
+                  <CardHeader className="text-center pb-4">
+                    <motion.div
+                      className="w-16 h-16 bg-gradient-to-br from-[#ff6bff] to-[#1a0a2a] border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-[0_0_15px_rgba(255,107,255,0.7)] transition-all duration-300"
+                      whileHover={{ rotate: 5 }}
+                    >
+                      <Flag className="w-8 h-8 text-white" />
+                    </motion.div>
+                    <CardTitle className="text-2xl font-bold text-[#ff6bff] pixel-text glow-pink">
+                      HOST GAME
+                    </CardTitle>
+                    <CardDescription className="text-[#ff6bff]/80 text-sm pixel-text glow-pink-subtle">
+                      Create your own race and challenge others
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button className="w-full bg-gradient-to-r from-[#ff6bff] to-[#d400ff] hover:from-[#ff8aff] hover:to-[#e633ff] text-white border-4 border-[#ff6bff] pixel-button-large retro-button glow-pink">
+                      Create Room
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Link>
+            </motion.div>
 
-        {/* Action Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-4xl w-full">
-          {/* Host Game Card */}
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3, duration: 0.8 }}
-            whileHover={{ scale: 1.02 }}
-            className="group"
-          >
-            <Link href="/host">
-              <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 hover:border-[#ff6bff] transition-all duration-300 h-full shadow-[0_0_15px_rgba(255,107,255,0.3)] pixel-card">
+            {/* Join Race Card */}
+            <motion.div
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3, duration: 0.8 }}
+              whileHover={{ scale: 1.02 }}
+              className="group"
+            >
+              <Card className="bg-[#1a0a2a]/40 border-[#00ffff]/50 hover:border-[#00ffff] transition-all duration-300 h-full shadow-[0_0_15px_rgba(0,255,255,0.3)] pixel-card">
                 <CardHeader className="text-center pb-4">
                   <motion.div
-                    className="w-16 h-16 bg-gradient-to-br from-[#ff6bff] to-[#1a0a2a] border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-[0_0_15px_rgba(255,107,255,0.7)] transition-all duration-300"
-                    whileHover={{ rotate: 5 }}
+                    className="w-16 h-16 bg-gradient-to-br from-[#00ffff] to-[#1a0a2a] border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-[0_0_15px_rgba(0,255,255,0.7)] transition-all duration-300"
+                    whileHover={{ rotate: -5 }}
                   >
-                    <Flag className="w-8 h-8 text-white" />
+                    <Users className="w-8 h-8 text-white" />
                   </motion.div>
-                  <CardTitle className="text-2xl font-bold text-[#ff6bff] pixel-text glow-pink">
-                    HOST GAME
+                  <CardTitle className="text-2xl font-bold text-[#00ffff] pixel-text glow-cyan">
+                    JOIN RACE
                   </CardTitle>
-                  <CardDescription className="text-[#ff6bff]/80 text-sm pixel-text glow-pink-subtle">
-                    Create your own race and challenge others
+                  <CardDescription className="text-[#00ffff]/80 text-sm pixel-text glow-cyan-subtle">
+                    Enter a code to join an existing race
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <Button className="w-full bg-gradient-to-r from-[#ff6bff] to-[#d400ff] hover:from-[#ff8aff] hover:to-[#e633ff] text-white border-4 border-[#ff6bff] pixel-button-large retro-button glow-pink">
-                    Create Room
+                <CardContent className="space-y-4">
+                  <Input
+                    placeholder="Room Code"
+                    value={roomCode}
+                    maxLength={6}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                      setRoomCode(value);
+                    }}
+                    className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-base pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
+                    aria-label="Room Code"
+                  />
+                  <Input
+                    placeholder="Nickname"
+                    value={nickname}
+                    maxLength={26}
+                    onChange={(e) => setNickname(e.target.value)}
+                    className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-base pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
+                    aria-label="Nickname"
+                  />
+                  <Button
+                    onClick={handleJoin}
+                    className={`w-full bg-gradient-to-r from-[#00ffff] to-[#0099cc] hover:from-[#33ffff] hover:to-[#00aadd] text-white border-4 border-[#00ffff] pixel-button-large retro-button glow-cyan ${!roomCode || !nickname ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                    disabled={roomCode.length !== 6 || !nickname || joining}
+                  >
+                    JOIN
                   </Button>
                 </CardContent>
               </Card>
-            </Link>
-          </motion.div>
-
-          {/* Join Race Card */}
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3, duration: 0.8 }}
-            whileHover={{ scale: 1.02 }}
-            className="group"
-          >
-            <Card className="bg-[#1a0a2a]/40 border-[#00ffff]/50 hover:border-[#00ffff] transition-all duration-300 h-full shadow-[0_0_15px_rgba(0,255,255,0.3)] pixel-card">
-              <CardHeader className="text-center pb-4">
-                <motion.div
-                  className="w-16 h-16 bg-gradient-to-br from-[#00ffff] to-[#1a0a2a] border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-[0_0_15px_rgba(0,255,255,0.7)] transition-all duration-300"
-                  whileHover={{ rotate: -5 }}
-                >
-                  <Users className="w-8 h-8 text-white" />
-                </motion.div>
-                <CardTitle className="text-2xl font-bold text-[#00ffff] pixel-text glow-cyan">
-                  JOIN RACE
-                </CardTitle>
-                <CardDescription className="text-[#00ffff]/80 text-sm pixel-text glow-cyan-subtle">
-                  Enter a code to join an existing race
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Input
-                  placeholder="Room Code"
-                  value={roomCode}
-                  maxLength={6}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-                    setRoomCode(value);
-                  }}
-                  className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-base pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
-                  aria-label="Room Code"
-                />
-                <Input
-                  placeholder="Nickname"
-                  value={nickname}
-                  maxLength={26}
-                  onChange={(e) => setNickname(e.target.value)}
-                  className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-base pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
-                  aria-label="Nickname"
-                />
-                <Button
-                  onClick={handleJoin}
-                  className={`w-full bg-gradient-to-r from-[#00ffff] to-[#0099cc] hover:from-[#33ffff] hover:to-[#00aadd] text-white border-4 border-[#00ffff] pixel-button-large retro-button glow-cyan ${!roomCode || !nickname ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-                  disabled={roomCode.length !== 6 || !nickname || joining}
-                >
-                  JOIN
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
-
-        {/* Pixel Art Decoration */}
-        <div className="absolute bottom-4 left-4 opacity-40">
-          <div className="flex gap-1">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="w-3 h-3 bg-[#00ffff]"></div>
-            ))}
+            </motion.div>
           </div>
-        </div>
 
-        <div className="absolute bottom-4 right-4 opacity-40">
-          <div className="flex flex-col gap-1">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="w-3 h-3 bg-[#ff6bff]"></div>
-            ))}
+          {/* Pixel Art Decoration */}
+          <div className="absolute bottom-4 left-4 opacity-40">
+            <div className="flex gap-1">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="w-3 h-3 bg-[#00ffff]"></div>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Corner Decorations */}
-        <div className="absolute top-4 left-4 opacity-30">
-          <div className="w-6 h-6 border-2 border-[#00ffff]"></div>
-        </div>
-        <div className="absolute top-4 right-4 opacity-30">
-          <div className="w-6 h-6 border-2 border-[#ff6bff]"></div>
+          <div className="absolute bottom-4 right-4 opacity-40">
+            <div className="flex flex-col gap-1">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="w-3 h-3 bg-[#ff6bff]"></div>
+              ))}
+            </div>
+          </div>
+
+          {/* Corner Decorations */}
+          <div className="absolute top-4 left-4 opacity-30">
+            <div className="w-6 h-6 border-2 border-[#00ffff]"></div>
+          </div>
+          <div className="absolute top-4 right-4 opacity-30">
+            <div className="w-6 h-6 border-2 border-[#ff6bff]"></div>
+          </div>
         </div>
       </div>
 
@@ -401,7 +404,7 @@ export default function HomePage() {
             filter: drop-shadow(0 0 3px rgba(0, 255, 255, 0.5));
           }
 
-          @politics: scanline {
+          @keyframes scanline {
             0% { background-position: 0 0; }
             100% { background-position: 0 100%; }
           }

@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, ArrowLeft, Clock, Star, Zap, Volume2, VolumeX, HelpCircle } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
@@ -21,11 +22,15 @@ export default function QuestionListPage() {
   const [isMuted, setIsMuted] = useState(false)
   const [isGlitch, setIsGlitch] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("All")
+  const [currentPage, setCurrentPage] = useState(1)
   const [quizzes, setQuizzes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [creating, setCreating] = useState(false);
+
+  const itemsPerPage = 9;
 
   // Fetch quizzes from Supabase
   useEffect(() => {
@@ -47,11 +52,27 @@ export default function QuestionListPage() {
     fetchQuizzes()
   }, [])
 
-  // Filter soal
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, selectedCategory])
+
+  // Compute unique categories
+  const categories = ["All", ...new Set(quizzes.map(q => q.category).filter(Boolean))]
+
+  // Filter quizzes
   const filteredQuestions = quizzes.filter((q) => {
     const matchesSearch = q.title.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesSearch
+    const matchesCategory = selectedCategory === "All" || q.category === selectedCategory
+    return matchesSearch && matchesCategory
   })
+
+  // Pagination
+  const totalPages = Math.ceil(filteredQuestions.length / itemsPerPage)
+  const paginatedQuestions = filteredQuestions.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
 
   function generateRoomCode(length = 6) {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -207,14 +228,28 @@ export default function QuestionListPage() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-xl p-6 mb-8 pixel-card glow-pink-subtle"
         >
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#00ffff] h-5 w-5 glow-cyan" />
-            <Input
-              placeholder="Search Quiz..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 bg-[#0a0a0f] border-4 border-[#6a4c93] text-white placeholder:text-gray-400 focus:border-[#00ffff] focus:ring-0 text-lg pixel-text glow-cyan-subtle"
-            />
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#00ffff] h-5 w-5 glow-cyan" />
+              <Input
+                placeholder="Search Quiz..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-[#0a0a0f] border-4 border-[#6a4c93] text-white placeholder:text-gray-400 focus:border-[#00ffff] focus:ring-0 text-lg pixel-text glow-cyan-subtle"
+              />
+            </div>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-full sm:w-auto bg-[#0a0a0f] border-4 border-[#6a4c93] text-white focus:border-[#00ffff] focus:ring-0 text-lg pixel-text glow-cyan-subtle">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#1a0a2a] border-4 border-[#ff6bff]/50 text-white">
+                {categories.map((cat) => (
+                  <SelectItem key={cat} value={cat} className="pixel-text">
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </motion.div>
 
@@ -228,34 +263,70 @@ export default function QuestionListPage() {
           >
             INITIALIZING...
           </motion.p>
-        ) : filteredQuestions.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredQuestions.map((quiz, index) => (
-              <motion.div
-                key={quiz.id}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.98 }}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
-              >
-                <Card
-                  className="bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 hover:border-[#ff6bff] pixel-card glow-pink-subtle cursor-pointer h-full"
-                  onClick={() => handleQuizSelect(quiz.id)}
+        ) : paginatedQuestions.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {paginatedQuestions.map((quiz, index) => (
+                <motion.div
+                  key={quiz.id}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.98 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
                 >
-                  <CardHeader>
-                    <CardTitle className="text-lg text-[#00ffff] pixel-text glow-cyan">{quiz.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-200 mb-4 line-clamp-3 pixel-text">{quiz.description}</p>
-                    <div className="flex items-center gap-2 text-[#ff6bff] text-sm pixel-text glow-pink-subtle">
-                      <HelpCircle className="h-4 w-4" /> {quiz.questions?.length ?? 0}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
+                  <Card
+                    className="bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 hover:border-[#ff6bff] pixel-card glow-pink-subtle cursor-pointer h-full"
+                    onClick={() => handleQuizSelect(quiz.id)}
+                  >
+                    <CardHeader>
+                      <CardTitle className="text-lg text-[#00ffff] pixel-text glow-cyan">{quiz.title}</CardTitle>
+                      {quiz.category && (
+                        <div className="text-xs text-[#ff6bff] mt-1 pixel-text glow-pink-subtle">{quiz.category}</div>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-200 mb-4 line-clamp-3 pixel-text">{quiz.description}</p>
+                      <div className="flex items-center gap-2 text-[#ff6bff] text-sm pixel-text glow-pink-subtle">
+                        <HelpCircle className="h-4 w-4" /> {quiz.questions?.length ?? 0}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-8 flex-wrap">
+                <Button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="pixel-button bg-[#ff6bff] border-4 border-white hover:bg-[#ff8aff] glow-pink"
+                  variant="outline"
+                >
+                  Previous
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <Button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    variant={page === currentPage ? "default" : "outline"}
+                    className={`pixel-button ${page === currentPage ? 'bg-[#00ffff] border-4 border-white hover:bg-[#33ffff] glow-cyan' : 'bg-[#ff6bff] border-4 border-white hover:bg-[#ff8aff] glow-pink'}`}
+                  >
+                    {page}
+                  </Button>
+                ))}
+                <Button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="pixel-button bg-[#ff6bff] border-4 border-white hover:bg-[#ff8aff] glow-pink"
+                  variant="outline"
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </>
         ) : (
           <motion.p
             initial={{ opacity: 0 }}
