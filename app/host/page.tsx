@@ -19,7 +19,6 @@ const backgroundGifs = [
 export default function QuestionListPage() {
   const router = useRouter()
   const [isMuted, setIsMuted] = useState(false)
-  const [isGlitch, setIsGlitch] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [quizzes, setQuizzes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -82,16 +81,6 @@ export default function QuestionListPage() {
     router.push(`/host/${data.room_code}/settings`);
   }
 
-  useEffect(() => {
-    const glitchInterval = setInterval(() => {
-      if (Math.random() > 0.7) {
-        setIsGlitch(true)
-        setTimeout(() => setIsGlitch(false), 100)
-      }
-    }, 3000)
-    return () => clearInterval(glitchInterval)
-  }, [])
-
   // Background image cycling with smooth transition
   useEffect(() => {
     const bgInterval = setInterval(() => {
@@ -118,7 +107,7 @@ export default function QuestionListPage() {
   };
 
   return (
-    <div className={`min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font ${isGlitch ? 'glitch-effect' : ''}`}>
+    <div className={`min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font`}>
       {/* Preload Background GIFs */}
       {backgroundGifs.map((gif, index) => (
         <link key={index} rel="preload" href={gif} as="image" />
@@ -330,9 +319,6 @@ export default function QuestionListPage() {
           z-index: 4;
           pointer-events: none;
         }
-        .glitch-effect {
-          animation: glitch 0.3s linear;
-        }
         .glow-pink {
           animation: glow-pink 1.5s ease-in-out infinite;
         }
@@ -350,14 +336,6 @@ export default function QuestionListPage() {
         @keyframes scanline {
           0% { background-position: 0 0; }
           100% { background-position: 0 100%; }
-        }
-        @keyframes glitch {
-          0% { transform: translate(0); }
-          20% { transform: translate(-2px, 2px); }
-          40% { transform: translate(-2px, -2px); }
-          60% { transform: translate(2px, 2px); }
-          80% { transform: translate(2px, -2px); }
-          100% { transform: translate(0); }
         }
         @keyframes glow-cyan {
           0%, 100% { filter: drop-shadow(0 0 5px #00ffff); }

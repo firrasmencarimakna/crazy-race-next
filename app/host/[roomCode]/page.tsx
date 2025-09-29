@@ -17,6 +17,15 @@ const backgroundGifs = [
   "/images/host/gif1.gif",
 ]
 
+const carGifMap: Record<string, string> = {
+  red: "/images/car/car1.gif",
+  blue: "/images/car/car2.gif",
+  green: "/images/car/car3.gif",
+  yellow: "/images/car/car4.gif",
+  purple: "/images/car/car5.gif",
+  orange: "/images/car/car5.gif",
+}
+
 export default function HostRoomPage() {
   const params = useParams()
   const router = useRouter()
@@ -27,7 +36,6 @@ export default function HostRoomPage() {
   const [gameStarted, setGameStarted] = useState(false)
   const [countdown, setCountdown] = useState(0)
   const [isMuted, setIsMuted] = useState(false)
-  const [isGlitch, setIsGlitch] = useState(false)
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [open, setOpen] = useState(false);
@@ -64,7 +72,7 @@ export default function HostRoomPage() {
       // Fetch initial players
       const { data: playersData, error: playersError } = await supabase
         .from("players")
-        .select("id, nickname, joined_at")
+        .select("id, nickname, car, joined_at")
         .eq("room_id", roomData.id)
 
       if (playersError) {
@@ -103,17 +111,6 @@ export default function HostRoomPage() {
       fetchRoomAndPlayers()
     }
   }, [roomCode])
-
-  // Glitch effect (same as previous pages)
-  useEffect(() => {
-    const glitchInterval = setInterval(() => {
-      if (Math.random() > 0.7) {
-        setIsGlitch(true)
-        setTimeout(() => setIsGlitch(false), 100)
-      }
-    }, 3000)
-    return () => clearInterval(glitchInterval)
-  }, [])
 
   // Background image cycling (same as previous pages)
   useEffect(() => {
@@ -178,21 +175,9 @@ export default function HostRoomPage() {
     }, 1000)
   }
 
-  const getCarColor = (car: string) => {
-    const colors = {
-      red: "bg-red-500",
-      blue: "bg-blue-500",
-      green: "bg-green-500",
-      yellow: "bg-yellow-500",
-      purple: "bg-purple-500",
-      orange: "bg-orange-500",
-    }
-    return colors[car as keyof typeof colors] || "bg-gray-500"
-  }
-
   if (countdown > 0) {
     return (
-      <div className={`min-h-screen bg-[#1a0a2a] flex items-center justify-center pixel-font ${isGlitch ? 'glitch-effect' : ''}`}>
+      <div className={`min-h-screen bg-[#1a0a2a] flex items-center justify-center pixel-font`}>
         <div className="text-center">
           <motion.div
             className="text-8xl font-bold text-[#00ffff] pixel-text glow-cyan race-pulse"
@@ -201,18 +186,19 @@ export default function HostRoomPage() {
           >
             {countdown}
           </motion.div>
-          <h2 className="text-3xl font-bold text-[#ff6bff] pixel-text glow-pink mt-4">Game Starting...</h2>
-          <p className="text-xl text-gray-400 pixel-text glow-pink-subtle">Get ready to race!</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className={`min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font ${isGlitch ? 'glitch-effect' : ''}`}>
+    <div className={`min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font`}>
       {/* Preload Background GIFs */}
       {backgroundGifs.map((gif, index) => (
         <link key={index} rel="preload" href={gif} as="image" />
+      ))}
+      {Object.values(carGifMap).map((gif, idx) => (
+        <link key={`car-${idx}`} rel="preload" href={gif} as="image" />
       ))}
 
       {/* Background Image with Smooth Transition */}
@@ -361,29 +347,44 @@ export default function HostRoomPage() {
 
             <div className="space-y-4 mb-8">
               {players.length === 0 ? (
-                <div className="text-center py-8 text-gray-400 pixel-text glow-pink-subtle">
+                <div className="text-center py-8 text-gray-400 pixel-text">
                   <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>Waiting for players to join...</p>
                 </div>
               ) : (
-                players.map((player) => (
-                  <motion.div
-                    key={player.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="flex items-center space-x-4 p-4 bg-[#0a0a0f]/50 border-2 border-[#6a4c93] rounded-lg"
-                  >
-                    <div className={`w-8 h-6 ${getCarColor(player.car)} rounded-sm`}></div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-[#00ffff] pixel-text glow-cyan">{player.nickname}</div>
-                      <div className="text-sm text-gray-400 pixel-text glow-pink-subtle">
-                        Joined {new Date(player.joined_at).toLocaleTimeString()}
+                <div className="grid grid-cols-5 gap-4">
+                  {players.map((player) => (
+                    <motion.div
+                      key={player.id}
+                      className="relative group glow-pink-subtle"
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div
+                        className="p-4 rounded-xl border-4 border-double transition-all duration-300 
+                   bg-transparent backdrop-blur-sm 
+                   border-[#ff6bff]/70 hover:border-[#ff6bff]"
+                      >
+                        {/* Car GIF */}
+                        <div className="relative mb-3">
+                          <img
+                            src={carGifMap[player.car] || '/images/car/car5.gif'}
+                            alt={`${player.car} car`}
+                            className="h-28 w-40 mx-auto object-contain animate-neon-bounce
+                       filter brightness-125 contrast-150"
+                          />
+                        </div>
+
+                        {/* Player Nickname */}
+                        <div className="text-center">
+                          <h3 className="font-bold text-white pixel-text text-sm leading-tight glow-text">
+                            {player.nickname}
+                          </h3>
+                        </div>
                       </div>
-                    </div>
-                    <Badge className="bg-[#ff6bff] text-black pixel-text glow-pink">{player.car} car</Badge>
-                  </motion.div>
-                ))
+                    </motion.div>
+                  ))}
+                </div>
               )}
             </div>
           </Card>
@@ -452,9 +453,6 @@ export default function HostRoomPage() {
           z-index: 4;
           pointer-events: none;
         }
-        .glitch-effect {
-          animation: glitch 0.3s linear;
-        }
         .glow-pink {
           animation: glow-pink 1.5s ease-in-out infinite;
         }
@@ -475,14 +473,6 @@ export default function HostRoomPage() {
         @keyframes scanline {
           0% { background-position: 0 0; }
           100% { background-position: 0 100%; }
-        }
-        @keyframes glitch {
-          0% { transform: translate(0); }
-          20% { transform: translate(-2px, 2px); }
-          40% { transform: translate(-2px, -2px); }
-          60% { transform: translate(2px, 2px); }
-          80% { transform: translate(2px, -2px); }
-          100% { transform: translate(0); }
         }
         @keyframes glow-cyan {
           0%, 100% { filter: drop-shadow(0 0 5px #00ffff); }
@@ -505,6 +495,33 @@ export default function HostRoomPage() {
             padding: 0.5rem;
           }
         }
+        
+        @keyframes neon-bounce {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-8px); }
+        }
+
+        /* Neon pulse animation for borders */
+@keyframes neon-pulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 255, 0.7), 0 0 20px rgba(0, 255, 255, 0.5); }
+  50% { box-shadow: 0 0 15px rgba(0, 255, 255, 1), 0 0 30px rgba(0, 255, 255, 0.8); }
+}
+@keyframes neon-pulse-pink {
+  0%, 100% { box-shadow: 0 0 10px rgba(255, 107, 255, 0.7), 0 0 20px rgba(255, 107, 255, 0.5); }
+  50% { box-shadow: 0 0 15px rgba(255, 107, 255, 1), 0 0 30px rgba(255, 107, 255, 0.8); }
+}
+.glow-text {
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));
+}
+.glow-green {
+  filter: drop-shadow(0 0 10px rgba(0, 255, 0, 0.8));
+}
+.animate-neon-pulse {
+  animation: neon-pulse 1.5s ease-in-out infinite;
+}
+.glow-pink-subtle {
+  animation: neon-pulse-pink 1.5s ease-in-out infinite;
+}
       `}</style>
       <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
     </div>
