@@ -136,31 +136,59 @@ export default function QuizGamePage() {
     return () => clearInterval(bgInterval)
   }, [])
 
-  const handleAnswerSelect = (answerIndex: number) => {
-  if (isAnswered) return;
+  const handleAnswerSelect = async (answerIndex: number) => {
+    if (isAnswered) return
 
-  // 1. tandai sudah dijawab
-  setSelectedAnswer(answerIndex);
-  setIsAnswered(true);
-  setShowResult(true);
+    // Mark question as answered
+    setSelectedAnswer(answerIndex)
+    setIsAnswered(true)
+    setShowResult(true)
 
-  // 2. simpan jawaban
-  const newAnswers = [...answers];
-  newAnswers[currentQuestionIndex] = answerIndex;
-  setAnswers(newAnswers);
+    // Update answers array
+    const newAnswers = [...answers]
+    newAnswers[currentQuestionIndex] = answerIndex
+    setAnswers(newAnswers)
 
-  // 3. otomatis next setelah 2,5 detik
-  setTimeout(() => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-      setSelectedAnswer(null);
-      setIsAnswered(false);
-      setShowResult(false);
-    } else {
-      router.push(`/join/${roomCode}/result`);
+    // Calculate progress
+    const isCorrect = answerIndex === currentQuestion.correctAnswer
+    const newCorrectAnswers = correctAnswers + (isCorrect ? 1 : 0)
+    setCorrectAnswers(newCorrectAnswers)
+    const accuracy = (newCorrectAnswers / totalQuestions) * 100
+
+    // Update player result in Supabase
+    const updatedResult = {
+      score: newCorrectAnswers * 10, // Points per correct answer
+      correct: newCorrectAnswers,
+      accuracy: accuracy.toFixed(2),
+      duration: questions[currentQuestionIndex].timeLimit, // Time spent so far
+      total_question: totalQuestions,
+      current_question: currentQuestionIndex + 1 < totalQuestions ? currentQuestionIndex + 1 : totalQuestions, // Next question or null if finished
     }
-  }, 500);
-}
+
+    const { error } = await supabase
+      .from('players')
+      .update({
+        result: [updatedResult],
+        completion: currentQuestionIndex + 1 === totalQuestions,
+      })
+      .eq('id', playerId)
+
+    if (error) {
+      console.error('Error updating player result:', error)
+    }
+
+    // Move to next question or result page
+    setTimeout(() => {
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex((prev) => prev + 1)
+        setSelectedAnswer(null)
+        setIsAnswered(false)
+        setShowResult(false)
+      } else {
+        router.push(`/join/${roomCode}/result`)
+      }
+    }, 500)
+  }
 
   const getOptionStyle = (optionIndex: number) => {
     if (!showResult) {
@@ -243,23 +271,23 @@ export default function QuizGamePage() {
       <div className="relative z-10 max-w-7xl mx-auto pt-8 px-4">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-6xl font-bold text-[#00ffff] pixel-text glow-cyan mb-4 tracking-wider">
+          <h1 className="text-5xl sm:text-6xl font-bold text-[#00ffff] pixel-text glow-cyan tracking-wider">
             CRAZY RACE
           </h1>
         </div>
 
         {/* Timer and Progress */}
-        <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 pixel-card my-8 px-4 py-3">
+        <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 pixel-card my-8 px-4 py-2">
           <CardContent className="px-0">
             <div className="flex sm:items-center justify-between gap-4">
               {/* Bagian Kiri */}
               <div className="flex items-center space-x-3 sm:space-x-4">
                 <Clock
-                  className={`h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 lg:h-10 lg:w-10 ${getTimeColor()}`}
+                  className={`h-5 w-5 sm:h-7 sm:w-7 md:h-8 md:w-8 lg:h-10 lg:w-10 ${getTimeColor()}`}
                 />
                 <div>
                   <div
-                    className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold ${getTimeColor()}`}
+                    className={`text-base sm:text-xl md:text-2xl lg:text-3xl font-bold ${getTimeColor()}`}
                   >
                     {formatTime(totalTimeRemaining)}
                   </div>
@@ -270,7 +298,7 @@ export default function QuizGamePage() {
               <div className="flex items-center">
                 <Badge
                   className="bg-[#1a0a2a]/50 border-[#00ffff] text-[#00ffff] 
-                   px-3 py-1 sm:px-4 sm:py-2 text-base sm:text-lg md:text-xl lg:text-2xl
+                   px-3 sm:px-4 sm:py-2 text-base sm:text-lg md:text-xl lg:text-2xl
                    pixel-text glow-cyan"
                 >
                   {currentQuestionIndex + 1}/{totalQuestions}
@@ -283,19 +311,19 @@ export default function QuizGamePage() {
 
         {/* Question */}
         <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 pixel-card">
-          <CardContent className="">
-            <div className="text-center py-6">
-              <h2 className="text-2xl font-bold text-[#00ffff] pixel-text glow-cyan text-balance">
-                {currentQuestion.question}
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <CardHeader className="text-center">
+            <h2 className="text-lg sm:text-2xl font-bold text-[#00ffff] pixel-text glow-cyan text-balance">
+              {currentQuestion.question}
+            </h2>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {currentQuestion.options.map((option, index) => (
                 <motion.button
                   key={index}
                   onClick={() => handleAnswerSelect(index)}
                   disabled={isAnswered}
-                  className={`p-6 rounded-xl border-4 border-double transition-all duration-200 text-left bg-[#1a0a2a]/50 ${getOptionStyle(index)}`}
+                  className={`p-3 sm:p-4  rounded-xl border-4 border-double transition-all duration-200 text-left bg-[#1a0a2a]/50 ${getOptionStyle(index)}`}
                   whileHover={{ scale: isAnswered ? 1 : 1.01 }}
                   whileTap={{ scale: isAnswered ? 1 : 0.99 }}
                 >
@@ -304,7 +332,7 @@ export default function QuizGamePage() {
                       <div className="w-8 h-8 rounded-full bg-[#ff6bff]/20 flex items-center justify-center font-bold text-[#ff6bff] pixel-text glow-pink-subtle">
                         {String.fromCharCode(65 + index)}
                       </div>
-                      <span className="text-lg font-medium text-white pixel-text glow-text">{option}</span>
+                      <span className="text-base sm:text-lg font-medium text-white pixel-text glow-text">{option}</span>
                     </div>
                   </div>
                 </motion.button>
