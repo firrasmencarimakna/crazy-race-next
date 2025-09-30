@@ -153,7 +153,7 @@ export default function QuizGamePage() {
     const isCorrect = answerIndex === currentQuestion.correctAnswer
     const newCorrectAnswers = correctAnswers + (isCorrect ? 1 : 0)
     setCorrectAnswers(newCorrectAnswers)
-    const accuracy = (newCorrectAnswers / totalQuestions) * 100
+    const accuracy = (newCorrectAnswers / (currentQuestionIndex + 1)) * 100
 
     // Update player result in Supabase
     const updatedResult = {
@@ -162,7 +162,7 @@ export default function QuizGamePage() {
       accuracy: accuracy.toFixed(2),
       duration: questions[currentQuestionIndex].timeLimit, // Time spent so far
       total_question: totalQuestions,
-      current_question: currentQuestionIndex + 1 < totalQuestions ? currentQuestionIndex + 1 : totalQuestions, // Next question or null if finished
+      current_question: currentQuestionIndex + 1 < totalQuestions ? currentQuestionIndex + 1 : tota, // Next question or null if finished
     }
 
     const { error } = await supabase
@@ -198,10 +198,10 @@ export default function QuizGamePage() {
     }
 
     if (optionIndex === selectedAnswer) {
-    return optionIndex === currentQuestion.correctAnswer
-      ? "border-[#00ff00] bg-[#00ff00]/10 text-[#00ff00] glow-green"
-      : "border-red-500 bg-red-500/10 text-red-500";
-  }
+      return optionIndex === currentQuestion.correctAnswer
+        ? "border-[#00ff00] bg-[#00ff00]/10 text-[#00ff00] glow-green"
+        : "border-red-500 bg-red-500/10 text-red-500";
+    }
     return "border-[#ff6bff]/50 bg-[#1a0a2a]/50 opacity-60"
   }
 
