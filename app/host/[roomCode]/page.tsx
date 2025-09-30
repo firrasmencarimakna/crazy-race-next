@@ -83,24 +83,29 @@ export default function HostRoomPage() {
 
       // Set up real-time subscription for players
       const subscription = supabase
-        .channel(`players:room=${roomCode}`)
+        .channel(`host-${roomCode}`)
         .on(
-          "postgres_changes",
+          'postgres_changes',
           {
-            event: "INSERT",
-            schema: "public",
-            table: "players",
+            event: '*', // <-- INSERT, UPDATE, DELETE
+            schema: 'public',
+            table: 'players',
             filter: `room_id=eq.${roomData.id}`,
           },
           (payload) => {
-            setPlayers((prev) => [...prev, {
-              id: payload.new.id,
-              nickname: payload.new.nickname,
-              joined_at: new Date(payload.new.joined_at),
-            }])
+            if (payload.eventType === 'INSERT') {
+              setPlayers((prev) => {
+                const exists = prev.some((p) => p.id === payload.new.id);
+                if (exists) return prev;
+                return [...prev, payload.new];
+              });
+            }
+            if (payload.eventType === 'DELETE') {
+              setPlayers((prev) => prev.filter((p) => p.id !== payload.old.id));
+            }
           }
         )
-        .subscribe()
+        .subscribe();
 
       return () => {
         supabase.removeChannel(subscription)
