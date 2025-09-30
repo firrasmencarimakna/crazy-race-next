@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,10 +15,128 @@
       color: #e2e8f0;
       font-family: 'Inter', sans-serif;
     }
-    #canvas {
-      display: block;
+    #game-container {
+      position: relative;
       width: 100vw;
       height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #screen-area {
+      flex: 1;
+      width: 100%;
+      max-height: calc(100vh - 120px); /* Reserve space for controls + bezel */
+      position: relative;
+      background: #000;
+      border: 8px solid #333;
+      border-radius: 12px;
+      margin: 8px;
+      box-sizing: border-box;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+    }
+    @media (min-width: 768px) {
+      #screen-area {
+        border: 20px solid #2d3748;
+        margin: 20px;
+        max-height: none;
+      }
+    }
+    #canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 4px; /* Slight rounding inside bezel */
+    }
+    #controls-area {
+      width: 100%;
+      height: 120px;
+      background: linear-gradient(to top, #1a202c, #2d3748);
+      border-top: 4px solid #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.5);
+    }
+    #mobile-controls {
+      display: none; /* Default hidden */
+      position: relative; /* Changed from fixed to relative for separation */
+      bottom: auto;
+      left: auto;
+      right: auto;
+      z-index: 10;
+      padding: 0.5rem 2rem; /* Adjusted padding */
+      height: 100%;
+      pointer-events: none;
+      background: none; /* Remove gradient for clean separation */
+      justify-content: space-between;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    #mobile-controls button {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: none;
+      font-size: 1.2rem;
+      color: #fff;
+      background: rgba(45, 55, 72, 0.95);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      transition: all 0.15s ease;
+      pointer-events: auto;
+      touch-action: manipulation;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 0.25rem;
+    }
+    #mobile-controls button:active {
+      background: rgba(45, 55, 72, 1);
+      transform: scale(0.95);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+    #accel-brake-controls {
+      display: flex;
+      justify-content: flex-start;
+      width: 60%;
+      height: 100%;
+      align-items: flex-end;
+      gap: 0.5rem;
+    }
+    #steering-controls {
+      display: flex;
+      justify-content: space-between;
+      width: 40%;
+      height: 100%;
+      align-items: flex-end;
+    }
+    #left, #right {
+      background: rgba(59, 130, 246, 0.9); /* Soft blue */
+    }
+    #accel {
+      background: rgba(34, 197, 94, 0.9); /* Soft green */
+    }
+    #brake {
+      background: rgba(239, 68, 68, 0.9); /* Soft red */
+    }
+    /* Hide on desktop, show on mobile via JS */
+    @media (min-width: 768px) {
+      #mobile-controls {
+        display: none !important;
+      }
+      #controls-area {
+        display: none;
+      }
+      #screen-area {
+        flex: none;
+        height: 100vh;
+        margin: 0;
+        border: none;
+        border-radius: 0;
+      }
     }
     #controls {
       position: fixed;
@@ -158,120 +275,88 @@
       background: rgba(45, 55, 72, 0.95);
       border-radius: 0.5rem;
     }
-    #mobile-controls {
-      display: none;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      z-index: 10;
-      padding: 1rem;
-      pointer-events: none;
-    }
-    #mobile-controls button {
-      font-size: 2rem;
-      padding: 1rem;
-      border-radius: 50%;
-      background: rgba(45, 55, 72, 0.7);
-      color: white;
-      border: none;
-      width: 60px;
-      height: 60px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: auto;
-      touch-action: manipulation;
-    }
-    #steering-controls {
-      display: flex;
-      justify-content: space-between;
-      width: 50%;
-    }
-    #accel-brake-controls {
-      display: flex;
-      flex-direction: column-reverse;
-      align-items: flex-end;
-    }
-    #accel {
-      margin-bottom: 1rem;
-    }
   </style>
 </head>
 <body>
-  <button id="controls-toggle" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition">Controls</button>
-  <table id="controls" class="hidden">
-    <tr><td id="fps" colspan="2" class="text-right text-sm text-gray-400"></td></tr>
-    <tr>
-      <th><label for="resolution">Resolution:</label></th>
-      <td>
-        <select id="resolution">
-          <option value="fine">Fine (1280x960)</option>
-          <option selected value="high">High (1024x768)</option>
-          <option value="medium">Medium (640x480)</option>
-          <option value="low">Low (480x360)</option>
-        </select>
-      </td>
-    </tr>
-    <tr>
-      <th><label for="lanes">Lanes:</label></th>
-      <td>
-        <select id="lanes">
-          <option>1</option>
-          <option>2</option>
-          <option selected>3</option>
-          <option>4</option>
-        </select>
-      </td>
-    </tr>
-    <tr>
-      <th><label for="roadWidth">Road Width (<span id="currentRoadWidth"></span>):</label></th>
-      <td><input id="roadWidth" type="range" min="500" max="3000" title="integer (500-3000)"></td>
-    </tr>
-    <tr>
-      <th><label for="cameraHeight">Camera Height (<span id="currentCameraHeight"></span>):</label></th>
-      <td><input id="cameraHeight" type="range" min="500" max="5000" title="integer (500-5000)"></td>
-    </tr>
-    <tr>
-      <th><label for="drawDistance">Draw Distance (<span id="currentDrawDistance"></span>):</label></th>
-      <td><input id="drawDistance" type="range" min="100" max="500" title="integer (100-500)"></td>
-    </tr>
-    <tr>
-      <th><label for="fieldOfView">Field of View (<span id="currentFieldOfView"></span>):</label></th>
-      <td><input id="fieldOfView" type="range" min="80" max="140" title="integer (80-140)"></td>
-    </tr>
-    <tr>
-      <th><label for="fogDensity">Fog Density (<span id="currentFogDensity"></span>):</label></th>
-      <td><input id="fogDensity" type="range" min="0" max="50" title="integer (0-50)"></td>
-    </tr>
-  </table>
+  <div id="game-container">
+    <div id="screen-area">
+      <button id="controls-toggle" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition">Controls</button>
+      <table id="controls" class="hidden">
+        <tr><td id="fps" colspan="2" class="text-right text-sm text-gray-400"></td></tr>
+        <tr>
+          <th><label for="resolution">Resolution:</label></th>
+          <td>
+            <select id="resolution">
+              <option value="fine">Fine (1280x960)</option>
+              <option selected value="high">High (1024x768)</option>
+              <option value="medium">Medium (640x480)</option>
+              <option value="low">Low (480x360)</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <th><label for="lanes">Lanes:</label></th>
+          <td>
+            <select id="lanes">
+              <option>1</option>
+              <option>2</option>
+              <option selected>3</option>
+              <option>4</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <th><label for="roadWidth">Road Width (<span id="currentRoadWidth"></span>):</label></th>
+          <td><input id="roadWidth" type="range" min="500" max="3000" title="integer (500-3000)"></td>
+        </tr>
+        <tr>
+          <th><label for="cameraHeight">Camera Height (<span id="currentCameraHeight"></span>):</label></th>
+          <td><input id="cameraHeight" type="range" min="500" max="5000" title="integer (500-5000)"></td>
+        </tr>
+        <tr>
+          <th><label for="drawDistance">Draw Distance (<span id="currentDrawDistance"></span>):</label></th>
+          <td><input id="drawDistance" type="range" min="100" max="500" title="integer (100-500)"></td>
+        </tr>
+        <tr>
+          <th><label for="fieldOfView">Field of View (<span id="currentFieldOfView"></span>):</label></th>
+          <td><input id="fieldOfView" type="range" min="80" max="140" title="integer (80-140)"></td>
+        </tr>
+        <tr>
+          <th><label for="fogDensity">Fog Density (<span id="currentFogDensity"></span>):</label></th>
+          <td><input id="fogDensity" type="range" min="0" max="50" title="integer (0-50)"></td>
+        </tr>
+      </table>
 
-  <div id="racer">
-    <div id="hud">
-      <span id="speed" class="hud">Speed: <span id="speed_value" class="value">0</span> mph</span>
-      <span id="current_lap_time" class="hud">Time: <span id="current_lap_time_value" class="value">0.0</span></span>
-      <span id="last_lap_time" class="hud">Last Lap: <span id="last_lap_time_value" class="value">0.0</span></span>
-      <span id="fast_lap_time" class="hud">Fastest Lap: <span id="fast_lap_time_value" class="value">0.0</span></span>
+      <div id="racer">
+        <div id="hud">
+          <span id="speed" class="hud">Speed: <span id="speed_value" class="value">0</span> mph</span>
+          <span id="current_lap_time" class="hud">Time: <span id="current_lap_time_value" class="value">0.0</span></span>
+          <span id="last_lap_time" class="hud">Last Lap: <span id="last_lap_time_value" class="value">0.0</span></span>
+          <span id="fast_lap_time" class="hud">Fastest Lap: <span id="fast_lap_time_value" class="value">0.0</span></span>
+        </div>
+        <canvas id="canvas">
+          Sorry, this example cannot be run because your browser does not support the &lt;canvas&gt; element
+        </canvas>
+      </div>
     </div>
-    <canvas id="canvas">
-      Sorry, this example cannot be run because your browser does not support the &lt;canvas&gt; element
-    </canvas>
+    <div id="controls-area">
+      <div id="mobile-controls">
+        <div id="accel-brake-controls">
+          <button id="brake" title="Brake">↓</button>
+          <button id="accel" title="Accelerate">↑</button>
+        </div>
+        <div id="steering-controls">
+          <button id="left" title="Steer Left">←</button>
+          <button id="right" title="Steer Right">→</button>
+        </div>
+      </div>
+    </div>
   </div>
   <audio id="music" loop>
     <source src="music/racer.ogg">
     <source src="music/racer.mp3">
   </audio>
   <span id="mute" class="text-sm">🔇</span>
-  <div id="mobile-controls" class="flex justify-between">
-    <div id="steering-controls">
-      <button id="left">←</button>
-      <button id="right">→</button>
-    </div>
-    <div id="accel-brake-controls">
-      <button id="brake">↓</button>
-      <button id="accel">↑</button>
-    </div>
-  </div>
   <script src="stats.js"></script>
   <script src="common.js"></script>
   <script>
@@ -329,6 +414,30 @@
       last_lap_time: { value: null, dom: Dom.get('last_lap_time_value') },
       fast_lap_time: { value: null, dom: Dom.get('fast_lap_time_value') }
     };
+
+    // Fungsi untuk haptic feedback (kompatibel dengan perangkat yang mendukung)
+    function triggerHapticFeedback(intensity = 'light') {
+      if (navigator.vibrate) {
+        switch (intensity) {
+          case 'light': navigator.vibrate(10); break;
+          case 'medium': navigator.vibrate(50); break;
+          case 'strong': navigator.vibrate(100); break;
+        }
+      }
+    }
+
+    // Fungsi untuk handle touch events dengan pencegahan default dan haptic
+    function handleTouchStart(e, flagSetter) {
+      e.preventDefault();
+      flagSetter(true);
+      triggerHapticFeedback('light');
+    }
+
+    function handleTouchEnd(e, flagSetter) {
+      e.preventDefault();
+      flagSetter(false);
+      triggerHapticFeedback('light');
+    }
 
     function update(dt) {
       var n, car, carW, sprite, spriteW;
@@ -762,10 +871,11 @@
       Dom.get('mute').textContent = audio.muted ? '🔊' : '🔇';
     });
 
-    // Full-screen canvas resizing
+    // Full-screen canvas resizing - Adjusted for new layout
     function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      const screenArea = document.getElementById('screen-area');
+      canvas.width = screenArea.clientWidth;
+      canvas.height = screenArea.clientHeight;
       width = canvas.width;
       height = canvas.height;
       resolution = height/480;
@@ -774,8 +884,12 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // Mobile touch controls
-    if ('ontouchstart' in window) {
+    // Mobile Controls - Only show on mobile devices
+    function isMobile() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+    }
+
+    if (isMobile()) {
       const mobileControls = document.getElementById('mobile-controls');
       mobileControls.style.display = 'flex';
 
@@ -784,17 +898,25 @@
       const accelBtn = document.getElementById('accel');
       const brakeBtn = document.getElementById('brake');
 
-      leftBtn.addEventListener('touchstart', (e) => { e.preventDefault(); keyLeft = true; });
-      leftBtn.addEventListener('touchend', (e) => { e.preventDefault(); keyLeft = false; });
+      // Use handle functions for consistency and haptic
+      leftBtn.addEventListener('touchstart', (e) => handleTouchStart(e, () => { keyLeft = true; }));
+      leftBtn.addEventListener('touchend', (e) => handleTouchEnd(e, () => { keyLeft = false; }));
 
-      rightBtn.addEventListener('touchstart', (e) => { e.preventDefault(); keyRight = true; });
-      rightBtn.addEventListener('touchend', (e) => { e.preventDefault(); keyRight = false; });
+      rightBtn.addEventListener('touchstart', (e) => handleTouchStart(e, () => { keyRight = true; }));
+      rightBtn.addEventListener('touchend', (e) => handleTouchEnd(e, () => { keyRight = false; }));
 
-      accelBtn.addEventListener('touchstart', (e) => { e.preventDefault(); keyFaster = true; });
-      accelBtn.addEventListener('touchend', (e) => { e.preventDefault(); keyFaster = false; });
+      accelBtn.addEventListener('touchstart', (e) => handleTouchStart(e, () => { keyFaster = true; }));
+      accelBtn.addEventListener('touchend', (e) => handleTouchEnd(e, () => { keyFaster = false; }));
 
-      brakeBtn.addEventListener('touchstart', (e) => { e.preventDefault(); keySlower = true; });
-      brakeBtn.addEventListener('touchend', (e) => { e.preventDefault(); keySlower = false; });
+      brakeBtn.addEventListener('touchstart', (e) => handleTouchStart(e, () => { keySlower = true; }));
+      brakeBtn.addEventListener('touchend', (e) => handleTouchEnd(e, () => { keySlower = false; }));
+
+      // Prevent zoom and scroll on touch
+      document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+      document.addEventListener('gesturestart', (e) => e.preventDefault());
+
+      // Adjust canvas height after enabling mobile controls
+      resizeCanvas();
     }
   </script>
 
