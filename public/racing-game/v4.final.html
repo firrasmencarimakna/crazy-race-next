@@ -383,8 +383,7 @@
   <!-- Finish Screen Overlay -->
   <div id="finish-screen">
     <h2>Race Completed!</h2>
-    <p>Congratulations! You have finished the mini race. Proceed to the next challenge.</p>
-    <button id="finish-button" class="retro-button">Finish & Continue</button>
+    <p>Congratulations! You have finished the mini race. Returning to quiz in a moment...</p>
   </div>
 
   <audio id="music" loop>
@@ -547,6 +546,16 @@
           // Set game as finished after one lap
           gameFinished = true;
           document.getElementById('finish-screen').style.display = 'flex';
+
+          // Otomatis redirect setelah 2 detik
+          setTimeout(() => {
+            if (roomCode && startIndex) {
+              window.location.href = `/join/${roomCode}/game?startIndex=${startIndex}`;
+            } else {
+              // Fallback if no params
+              window.history.back();
+            }
+          }, 2000);
         } else {
           currentLapTime += dt;
         }
@@ -919,16 +928,6 @@
     Dom.get('mute').addEventListener('click', function() {
       audio.muted = !audio.muted;
       Dom.get('mute').textContent = audio.muted ? '🔊' : '🔇';
-    });
-
-    // Finish button handler
-    document.getElementById('finish-button').addEventListener('click', function() {
-      if (roomCode && startIndex) {
-        window.location.href = `/join/${roomCode}/quiz?startIndex=${startIndex}`;
-      } else {
-        // Fallback if no params
-        window.history.back();
-      }
     });
 
     // Full-screen canvas resizing - Adjusted for new layout
