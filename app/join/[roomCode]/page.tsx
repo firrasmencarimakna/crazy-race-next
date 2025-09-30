@@ -162,13 +162,6 @@ export default function LobbyPage() {
   }, [])
 
   useEffect(() => {
-    if (gamePhase === "quiz" && !gameStarting) {
-      setGameStarting(true)
-      setCountdown(10)
-    }
-  }, [gamePhase, gameStarting])
-
-  useEffect(() => {
     if (countdown > 0) {
       const timer = setInterval(() => {
         setCountdown((prev) => {
