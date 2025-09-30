@@ -10,46 +10,14 @@ import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
 
-// Type definitions
-type QuizQuestion = {
-  question: string
-  options: string[]
-  correct: number  // Index of correct answer
-}
-
-type Player = {
-  id: string
-  nickname: string
-  car: string
-  result: number[] | null[]  // Array of answers (e.g., [0, 1, null, 2])
-  joined_at: string
-  completion: boolean
-}
-
-type GameRoom = {
-  id: string
-  room_code: string
-  status: 'waiting' | 'countdown' | 'playing' | 'finished'
-  questions: QuizQuestion[]
-  settings: any
-}
-
-// Extended player progress type (computed)
-type PlayerProgress = {
-  id: string
-  nickname: string
-  car: string
-  questionsAnswered: number
-  correctAnswers: number
-  currentlyAnswering: boolean
-  timeRemaining: number
-  score: number
-  racingProgress: number
-}
-
 // Background GIFs
 const backgroundGifs = [
+  // "/images/lobbyphase/gif1.gif",
+  // "/images/lobbyphase/gif2.gif",
+  // "/images/lobbyphase/gif3.gif",
+  // "/images/lobbyphase/gif4.gif",
   "/images/lobbyphase/gif5.gif",
+  // "/images/lobbyphase/gif6.gif",
 ]
 
 // Mapping warna mobil ke file GIF mobil
@@ -66,148 +34,58 @@ export default function HostMonitorPage() {
   const params = useParams()
   const router = useRouter()
   const roomCode = params.roomCode as string
-  const [players, setPlayers] = useState<PlayerProgress[]>([])
-  const [questions, setQuestions] = useState<QuizQuestion[]>([])
-  const [currentQuestion, setCurrentQuestion] = useState(8)  // Bisa di-sync dari shared state
-  const [totalQuestions, setTotalQuestions] = useState(10)
+  const [players, setPlayers] = useState<any[]>([]);
+  const [roomId, setRoomId] = useState<string>("");
+  const [currentQuestion, setCurrentQuestion] = useState(8)
+  const [totalQuestions] = useState(10)
   const [gamePhase, setGamePhase] = useState<"quiz" | "racing" | "finished">("quiz")
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [gameRoom, setGameRoom] = useState<GameRoom | null>(null)
 
-  // Fetch game room and players
+  // Fetch initial player data
   useEffect(() => {
-    const fetchData = async () => {
-      if (!roomCode) return
+    const fetchInitial = async () => {
+      setLoading(true);
 
-      setLoading(true)
-      setError(null)
+      /* ambil roomId */
+      const { data: room } = await supabase
+        .from("game_rooms")
+        .select("id")
+        .eq("room_code", roomCode)
+        .single();
+      if (!room) { setLoading(false); return; }
+      setRoomId(room.id);
 
-      try {
-        // Fetch game room
-        const { data: roomData, error: roomError } = await supabase
-          .from("game_rooms")
-          .select("id, room_code, status, questions, settings")
-          .eq("room_code", roomCode)
-          .single()
+      /* ambil players */
+      const { data, error } = await supabase
+        .from("players")
+        .select("id, nickname, result, completion, car")
+        .eq("room_id", room.id);
+      if (!error && data) setPlayers(data);
+      setLoading(false);
+    };
+    fetchInitial();
+  }, [roomCode]);
 
-        if (roomError || !roomData) {
-          throw new Error("Room not found")
-        }
-
-        setGameRoom(roomData)
-        const parsedQuestions = roomData.questions || []
-        setQuestions(parsedQuestions)
-        setTotalQuestions(parsedQuestions.length || 10)
-
-        // Map status to phase
-        const statusToPhase: Record<string, "quiz" | "racing" | "finished"> = {
-          waiting: "quiz",
-          countdown: "quiz",
-          playing: "quiz",  // Adjust if racing is separate
-          finished: "finished"
-        }
-        setGamePhase(statusToPhase[roomData.status] || "quiz")
-
-        // Fetch players
-        const { data: playersData, error: playersError } = await supabase
-          .from("players")
-          .select("id, nickname, car, result, joined_at, completion")
-          .eq("room_id", roomData.id)
-
-        if (playersError) {
-          throw new Error("Failed to fetch players")
-        }
-
-        // Compute progress for each player
-        const computedPlayers: PlayerProgress[] = playersData.map((player: Player) => {
-          const answers = player.result || []
-          const questionsAnswered = answers.filter(a => a !== null).length
-          let correctAnswers = 0
-          answers.forEach((answer, idx) => {
-            if (answer !== null && parsedQuestions[idx]?.correct === answer) {
-              correctAnswers++
-            }
-          })
-          const score = correctAnswers * 100
-          const racingProgress = parsedQuestions.length > 0 ? (questionsAnswered / parsedQuestions.length) * 100 : 0
-
-          return {
-            id: player.id,
-            nickname: player.nickname,
-            car: player.car || "red",  // Default car
-            questionsAnswered,
-            correctAnswers,
-            currentlyAnswering: !player.completion && gameRoom?.status === "playing",  // Simulate based on status
-            timeRemaining: player.completion ? 0 : 30,  // Simulate; bisa dari shared timer
-            score,
-            racingProgress: Math.min(100, racingProgress),
-          }
-        })
-
-        setPlayers(computedPlayers)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load data")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [roomCode])
-
-  // Realtime subscription for players updates
+  // Subscribe to real-time player updates
   useEffect(() => {
-    if (!gameRoom?.id) return
+    if (!roomId) return;
 
-    const channel = supabase
-      .channel(`room:${roomCode}`)
+    const sub = supabase
+      .channel(`room:${roomId}`)
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "players",
-          filter: `room_id=eq.${gameRoom.id}`,
-        },
+        { event: "UPDATE", schema: "public", table: "players", filter: `room_id=eq.${roomId}` },
         (payload) => {
-          console.log("Player update:", payload)
-          // Re-fetch or update specific player
-          fetchData()  // Simple: re-fetch all for now
+          setPlayers((prev) =>
+            prev.map((p) => (p.id === payload.new.id ? payload.new : p))
+          );
         }
       )
-      .subscribe()
+      .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [gameRoom?.id, roomCode])
-
-  // Simulate real-time updates (timeRemaining, etc.)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPlayers((prev) =>
-        prev.map((player) => ({
-          ...player,
-          timeRemaining: player.currentlyAnswering ? Math.max(0, player.timeRemaining - 1) : 0,
-        }))
-      )
-
-      // Simulate phase changes (bisa di-trigger manual atau dari DB)
-      if (currentQuestion >= totalQuestions && gamePhase === "quiz") {
-        setGamePhase("racing")
-        // Update status in DB if needed
-        supabase
-          .from("game_rooms")
-          .update({ status: "finished" })  // Example
-          .eq("room_code", roomCode)
-        setTimeout(() => setGamePhase("finished"), 30000)
-      }
-    }, 1000)
-
-    return () => clearInterval(interval)
-  }, [currentQuestion, gamePhase, totalQuestions, roomCode])
+    return () => { supabase.removeChannel(sub); };
+  }, [roomId]);
 
   // Background image cycling
   useEffect(() => {
@@ -216,87 +94,6 @@ export default function HostMonitorPage() {
     }, 5000)
     return () => clearInterval(bgInterval)
   }, [])
-
-  const getCarColor = (car: string) => {
-    const colors = {
-      red: "bg-red-500",
-      blue: "bg-blue-500",
-      green: "bg-green-500",
-      yellow: "bg-yellow-500",
-      purple: "bg-purple-500",
-      orange: "bg-orange-500",
-    }
-    return colors[car as keyof typeof colors] || "bg-gray-500"
-  }
-
-  const getAccuracy = (correct: number, total: number) => {
-    return total > 0 ? Math.round((correct / total) * 100) : 0
-  }
-
-  const handleEndGame = async () => {
-    if (gameRoom) {
-      await supabase
-        .from("game_rooms")
-        .update({ status: "finished", end: new Date().toISOString() })
-        .eq("id", gameRoom.id)
-    }
-    router.push(`/host/leaderboard/${roomCode}`)
-  }
-
-  const getPhaseIcon = () => {
-    switch (gamePhase) {
-      case "quiz":
-        return <CheckCircle className="h-5 w-5" />
-      case "racing":
-        return <Flag className="h-5 w-5" />
-      case "finished":
-        return <Trophy className="h-5 w-5" />
-      default:
-        return <Clock className="h-5 w-5" />
-    }
-  }
-
-  const getPhaseColor = () => {
-    switch (gamePhase) {
-      case "quiz":
-        return "bg-[#00ff00]/20 border-[#00ff00]/50 text-[#00ff00]"
-      case "racing":
-        return "bg-[#ff6bff]/20 border-[#ff6bff]/50 text-[#ff6bff]"
-      case "finished":
-        return "bg-red-500/20 border-red-500/50 text-red-500"
-      default:
-        return "bg-gray-500/20 border-gray-500/50 text-gray-500"
-    }
-  }
-
-  const getPhaseText = () => {
-    switch (gamePhase) {
-      case "quiz":
-        return "Quiz Phase"
-      case "racing":
-        return "Racing Phase"
-      case "finished":
-        return "Finished"
-      default:
-        return "Unknown"
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#1a0a2a] flex items-center justify-center">
-        <div className="text-white">Loading players...</div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-[#1a0a2a] flex items-center justify-center">
-        <div className="text-red-500">Error: {error}</div>
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
@@ -354,67 +151,64 @@ export default function HostMonitorPage() {
           <h1 className="text-6xl font-bold text-[#00ffff] pixel-text glow-cyan mb-4 tracking-wider">
             CRAZY RACE
           </h1>
-
+          {/* <p className="text-muted-foreground text-sm md:text-lg">Room: {roomCode}</p> */}
         </div>
 
-        {/* Host Controls - Simplified */}
+        {/* Host Controls - Simplified to only show player count, compact design */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 pixel-card mb-4 p-4">
-            <div className="flex justify-between items-center">
-              <div className="text-white">
-                <Users className="h-5 w-5 inline mr-2" />
-                {players.length} Players 
-              </div>
-              {gamePhase === "finished" && (
-                <Button onClick={handleEndGame} className="pixel-button-large">
-                  View Leaderboard
-                </Button>
-              )}
-            </div>
-          </Card>
+
         </motion.div>
 
-        {/* Player Progress - Monitor untuk player yang sedang bermain */}
+        {/* Player Progress - Full width, below host controls */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
         >
           <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 pixel-card p-4 md:p-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+              {players.map((player, index) => {
+            const questionsAnswered = player.result[0]?.current_question ?? 0
+            const currentlyAnswering = player.result[0]?.current_question !== null && !player.completion
 
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
-                {players.map((player, index) => (
-                  <motion.div
-                    key={player.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                    whileHover={{ scale: 1.02 }}
-                    className={`group ${player.currentlyAnswering ? 'glow-cyan animate-neon-pulse' : 'glow-pink-subtle'}`}
-                  >
-                    <Card className={`p-2 md:p-3 bg-[#1a0a2a]/50 border-2 border-double ${player.currentlyAnswering ? 'border-[#00ffff]/70' : 'border-[#ff6bff]/70'} transition-all duration-300 h-full`}>
-                      <div className="mb-2 md:mb-3">
-                        <h3 className="font-bold text-white pixel-text text-xs md:text-sm leading-tight glow-text text-center mb-2">{player.nickname}</h3>
-                        <Progress 
-                          value={player.racingProgress} 
-                          className="h-2 md:h-3 bg-[#1a0a2a]/50 border border-[#00ffff]/30" 
-                        />
-                      </div>
-                    </Card>
-                  </motion.div>
-                ))}
-                {players.length === 0 && (
-                  <div className="col-span-full text-center text-white/50 py-8">
-                    No players joined yet...
+            return (
+              <motion.div
+                key={player.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                whileHover={{ scale: 1.02 }}
+                className={`group ${currentlyAnswering ? "glow-cyan animate-neon-pulse" : "glow-pink-subtle"}`}
+              >
+                <Card
+                  className={`p-2 md:p-3 bg-[#1a0a2a]/50 border-2 border-double ${
+                    currentlyAnswering ? "border-[#00ffff]/70" : "border-[#ff6bff]/70"
+                  } transition-all duration-300 h-full`}
+                >
+                  <div className="mb-2 md:mb-3">
+                    <h3 className="font-bold text-white pixel-text text-xs md:text-sm leading-tight glow-text text-center mb-2">
+                      {player.nickname}
+                    </h3>
+                    <div className="flex justify-between text-xs mb-1 pixel-text text-white/70">
+                      <span>Progress</span>
+                      <span>
+                        {questionsAnswered}/{totalQuestions}
+                      </span>
+                    </div>
+                    <Progress
+                      value={(questionsAnswered / totalQuestions) * 100}
+                      className="h-2 md:h-3 bg-[#1a0a2a]/50 border border-[#00ffff]/30"
+                    />
                   </div>
-                )}
-              </div>
-            </CardContent>
+                </Card>
+              </motion.div>
+            )
+          })}
+            </div>
           </Card>
         </motion.div>
       </div>
@@ -512,8 +306,4 @@ export default function HostMonitorPage() {
       <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
     </div>
   )
-}
-
-function fetchData() {
-  throw new Error("Function not implemented.")
 }
