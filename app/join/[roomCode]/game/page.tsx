@@ -153,7 +153,7 @@ export default function QuizGamePage() {
     const isCorrect = answerIndex === currentQuestion.correctAnswer
     const newCorrectAnswers = correctAnswers + (isCorrect ? 1 : 0)
     setCorrectAnswers(newCorrectAnswers)
-    const accuracy = (newCorrectAnswers / (currentQuestionIndex + 1)) * 100
+    const accuracy = (newCorrectAnswers / totalQuestions) * 100
 
     // Update player result in Supabase
     const updatedResult = {
@@ -162,7 +162,7 @@ export default function QuizGamePage() {
       accuracy: accuracy.toFixed(2),
       duration: questions[currentQuestionIndex].timeLimit, // Time spent so far
       total_question: totalQuestions,
-      current_question: currentQuestionIndex + 1 < totalQuestions ? currentQuestionIndex + 1 : tota, // Next question or null if finished
+      current_question: currentQuestionIndex + 1 < totalQuestions ? currentQuestionIndex + 1 : totalQuestions, // Next question or null if finished
     }
 
     const { error } = await supabase
