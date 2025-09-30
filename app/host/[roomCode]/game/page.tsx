@@ -12,12 +12,7 @@ import { supabase } from "@/lib/supabase"
 
 // Background GIFs
 const backgroundGifs = [
-  // "/images/lobbyphase/gif1.gif",
-  // "/images/lobbyphase/gif2.gif",
-  // "/images/lobbyphase/gif3.gif",
-  // "/images/lobbyphase/gif4.gif",
   "/images/lobbyphase/gif5.gif",
-  // "/images/lobbyphase/gif6.gif",
 ]
 
 // Mapping warna mobil ke file GIF mobil
