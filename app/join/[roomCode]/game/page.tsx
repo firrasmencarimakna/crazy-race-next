@@ -137,29 +137,30 @@ export default function QuizGamePage() {
   }, [])
 
   const handleAnswerSelect = (answerIndex: number) => {
-    if (isAnswered) return;
+  if (isAnswered) return;
 
-    // 1. tandai sudah dijawab
-    setSelectedAnswer(answerIndex);
-    setIsAnswered(true);
-    setShowResult(true);
+  // 1. tandai sudah dijawab
+  setSelectedAnswer(answerIndex);
+  setIsAnswered(true);
+  setShowResult(true);
 
-    // 2. simpan jawaban
-    const newAnswers = [...answers];
-    newAnswers[currentQuestionIndex] = answerIndex;
-    setAnswers(newAnswers);
+  // 2. simpan jawaban
+  const newAnswers = [...answers];
+  newAnswers[currentQuestionIndex] = answerIndex;
+  setAnswers(newAnswers);
 
-    setTimeout(() => {
-      if (currentQuestionIndex < questions.length - 1) {
-        setCurrentQuestionIndex(prev => prev + 1);
-        setSelectedAnswer(null);
-        setIsAnswered(false);
-        setShowResult(false);
-      } else {
-        router.push(`/join/${roomCode}/result`);
-      }
-    }, 500);
-  }
+  // 3. otomatis next setelah 2,5 detik
+  setTimeout(() => {
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+      setSelectedAnswer(null);
+      setIsAnswered(false);
+      setShowResult(false);
+    } else {
+      router.push(`/join/${roomCode}/result`);
+    }
+  }, 500);
+}
 
   const getOptionStyle = (optionIndex: number) => {
     if (!showResult) {
@@ -169,10 +170,10 @@ export default function QuizGamePage() {
     }
 
     if (optionIndex === selectedAnswer) {
-      return optionIndex === currentQuestion.correctAnswer
-        ? "border-[#00ff00] bg-[#00ff00]/10 text-[#00ff00] glow-green"
-        : "border-red-500 bg-red-500/10 text-red-500";
-    }
+    return optionIndex === currentQuestion.correctAnswer
+      ? "border-[#00ff00] bg-[#00ff00]/10 text-[#00ff00] glow-green"
+      : "border-red-500 bg-red-500/10 text-red-500";
+  }
     return "border-[#ff6bff]/50 bg-[#1a0a2a]/50 opacity-60"
   }
 
