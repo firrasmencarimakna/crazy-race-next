@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Clock, Trophy, CheckCircle, XCircle, Zap, Users, Activity } from "lucide-react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { useMultiplayer } from "@/hooks/use-multiplayer"
 import { motion, AnimatePresence } from "framer-motion"
@@ -46,6 +46,7 @@ type QuizQuestion = {
 export default function QuizGamePage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const roomCode = params.roomCode as string
 
   const [playerId, setPlayerId] = useState<string>("")
@@ -70,6 +71,17 @@ export default function QuizGamePage() {
   const currentQuestion = questions[currentQuestionIndex]
   const totalQuestions = questions.length
 
+  // Handle starting from a specific question index (after mini game)
+  useEffect(() => {
+    const startIndexParam = searchParams.get('startIndex')
+    if (startIndexParam && questions.length > 0) {
+      const startIndex = parseInt(startIndexParam, 10)
+      if (!isNaN(startIndex) && startIndex >= 0 && startIndex < totalQuestions) {
+        setCurrentQuestionIndex(startIndex)
+      }
+    }
+  }, [searchParams, totalQuestions, questions.length])
+
   // Fetch game room data from Supabase
   useEffect(() => {
     const fetchGameRoom = async () => {
@@ -89,7 +101,6 @@ export default function QuizGamePage() {
 
       const { settings, questions: rawQuestions } = data
       const parsedSettings = typeof settings === "string" ? JSON.parse(settings) : settings
-
 
       const formattedQuestions: QuizQuestion[] = rawQuestions.map((q: any, index: number) => ({
         id: `${roomCode}-${index}`,
@@ -177,14 +188,22 @@ export default function QuizGamePage() {
       console.error('Error updating player result:', error)
     }
 
-    // Move to next question or result page
+    // Move to next question, mini game, or result
     setTimeout(() => {
-      if (currentQuestionIndex < questions.length - 1) {
-        setCurrentQuestionIndex((prev) => prev + 1)
-        setSelectedAnswer(null)
-        setIsAnswered(false)
-        setShowResult(false)
+      const nextIndex = currentQuestionIndex + 1
+      if (nextIndex < totalQuestions) {
+        if (nextIndex % 7 === 0) {
+          // Redirect to mini game setelah setiap 7 soal, dengan parameter untuk melanjutkan
+          window.location.href = `/racing-game/v4.final.html?startIndex=${nextIndex}&roomCode=${roomCode}`
+        } else {
+          // Lanjut ke soal berikutnya
+          setCurrentQuestionIndex(nextIndex)
+          setSelectedAnswer(null)
+          setIsAnswered(false)
+          setShowResult(false)
+        }
       } else {
+        // Selesai semua soal, ke halaman result
         router.push(`/join/${roomCode}/result`)
       }
     }, 500)

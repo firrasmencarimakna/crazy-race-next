@@ -275,6 +275,33 @@
       background: rgba(45, 55, 72, 0.95);
       border-radius: 0.5rem;
     }
+    #finish-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      flex-direction: column;
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+    }
+    #finish-screen h2 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: #ffeb3b;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+    #finish-screen p {
+      font-size: 1.2rem;
+      margin-bottom: 2rem;
+      text-align: center;
+      max-width: 80%;
+    }
   </style>
 </head>
 <body>
@@ -352,6 +379,14 @@
       </div>
     </div>
   </div>
+
+  <!-- Finish Screen Overlay -->
+  <div id="finish-screen">
+    <h2>Race Completed!</h2>
+    <p>Congratulations! You have finished the mini race. Proceed to the next challenge.</p>
+    <button id="finish-button" class="retro-button">Finish & Continue</button>
+  </div>
+
   <audio id="music" loop>
     <source src="music/racer.ogg">
     <source src="music/racer.mp3">
@@ -360,6 +395,11 @@
   <script src="stats.js"></script>
   <script src="common.js"></script>
   <script>
+    // Parse URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const startIndex = urlParams.get('startIndex');
+    const roomCode = urlParams.get('roomCode');
+
     // Original game JavaScript code (unchanged)
     var fps = 60;
     var step = 1/fps;
@@ -404,6 +444,7 @@
     var totalCars = 200;
     var currentLapTime = 0;
     var lastLapTime = null;
+    var gameFinished = false; // New flag for finish
     var keyLeft = false;
     var keyRight = false;
     var keyFaster = false;
@@ -440,6 +481,11 @@
     }
 
     function update(dt) {
+      if (gameFinished) {
+        speed = 0; // Stop the car
+        return; // Pause updates
+      }
+
       var n, car, carW, sprite, spriteW;
       var playerSegment = findSegment(position+playerZ);
       var playerW = SPRITES.PLAYER_STRAIGHT.w * SPRITES.SCALE;
@@ -497,6 +543,10 @@
           }
           updateHud('last_lap_time', formatTime(lastLapTime));
           Dom.show('last_lap_time');
+
+          // Set game as finished after one lap
+          gameFinished = true;
+          document.getElementById('finish-screen').style.display = 'flex';
         } else {
           currentLapTime += dt;
         }
@@ -791,10 +841,10 @@
       canvas: canvas, render: render, update: update, stats: stats, step: step,
       images: ["background", "sprites"],
       keys: [
-        { keys: [KEY.LEFT, KEY.A], mode: 'down', action: function() { keyLeft = true; } },
-        { keys: [KEY.RIGHT, KEY.D], mode: 'down', action: function() { keyRight = true; } },
-        { keys: [KEY.UP, KEY.W], mode: 'down', action: function() { keyFaster = true; } },
-        { keys: [KEY.DOWN, KEY.S], mode: 'down', action: function() { keySlower = true; } },
+        { keys: [KEY.LEFT, KEY.A], mode: 'down', action: function() { if (!gameFinished) keyLeft = true; } },
+        { keys: [KEY.RIGHT, KEY.D], mode: 'down', action: function() { if (!gameFinished) keyRight = true; } },
+        { keys: [KEY.UP, KEY.W], mode: 'down', action: function() { if (!gameFinished) keyFaster = true; } },
+        { keys: [KEY.DOWN, KEY.S], mode: 'down', action: function() { if (!gameFinished) keySlower = true; } },
         { keys: [KEY.LEFT, KEY.A], mode: 'up', action: function() { keyLeft = false; } },
         { keys: [KEY.RIGHT, KEY.D], mode: 'up', action: function() { keyRight = false; } },
         { keys: [KEY.UP, KEY.W], mode: 'up', action: function() { keyFaster = false; } },
@@ -871,6 +921,16 @@
       Dom.get('mute').textContent = audio.muted ? '🔊' : '🔇';
     });
 
+    // Finish button handler
+    document.getElementById('finish-button').addEventListener('click', function() {
+      if (roomCode && startIndex) {
+        window.location.href = `/join/${roomCode}/quiz?startIndex=${startIndex}`;
+      } else {
+        // Fallback if no params
+        window.history.back();
+      }
+    });
+
     // Full-screen canvas resizing - Adjusted for new layout
     function resizeCanvas() {
       const screenArea = document.getElementById('screen-area');
@@ -899,16 +959,16 @@
       const brakeBtn = document.getElementById('brake');
 
       // Use handle functions for consistency and haptic
-      leftBtn.addEventListener('touchstart', (e) => handleTouchStart(e, () => { keyLeft = true; }));
+      leftBtn.addEventListener('touchstart', (e) => handleTouchStart(e, () => { if (!gameFinished) keyLeft = true; }));
       leftBtn.addEventListener('touchend', (e) => handleTouchEnd(e, () => { keyLeft = false; }));
 
-      rightBtn.addEventListener('touchstart', (e) => handleTouchStart(e, () => { keyRight = true; }));
+      rightBtn.addEventListener('touchstart', (e) => handleTouchStart(e, () => { if (!gameFinished) keyRight = true; }));
       rightBtn.addEventListener('touchend', (e) => handleTouchEnd(e, () => { keyRight = false; }));
 
-      accelBtn.addEventListener('touchstart', (e) => handleTouchStart(e, () => { keyFaster = true; }));
+      accelBtn.addEventListener('touchstart', (e) => handleTouchStart(e, () => { if (!gameFinished) keyFaster = true; }));
       accelBtn.addEventListener('touchend', (e) => handleTouchEnd(e, () => { keyFaster = false; }));
 
-      brakeBtn.addEventListener('touchstart', (e) => handleTouchStart(e, () => { keySlower = true; }));
+      brakeBtn.addEventListener('touchstart', (e) => handleTouchStart(e, () => { if (!gameFinished) keySlower = true; }));
       brakeBtn.addEventListener('touchend', (e) => handleTouchEnd(e, () => { keySlower = false; }));
 
       // Prevent zoom and scroll on touch
