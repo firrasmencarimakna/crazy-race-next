@@ -217,10 +217,10 @@ export default function QuizGamePage() {
     }
 
     if (optionIndex === selectedAnswer) {
-    return optionIndex === currentQuestion.correctAnswer
-      ? "border-[#00ff00] bg-[#00ff00]/10 text-[#00ff00] glow-green"
-      : "border-red-500 bg-red-500/10 text-red-500";
-  }
+      return optionIndex === currentQuestion.correctAnswer
+        ? "border-[#00ff00] bg-[#00ff00]/10 text-[#00ff00] glow-green"
+        : "border-red-500 bg-red-500/10 text-red-500";
+    }
     return "border-[#ff6bff]/50 bg-[#1a0a2a]/50 opacity-60"
   }
 
