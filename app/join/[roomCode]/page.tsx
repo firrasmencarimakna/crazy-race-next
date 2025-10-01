@@ -13,22 +13,22 @@ import LoadingRetro from "@/components/loadingRetro"
 
 // Background GIFs
 const backgroundGifs = [
-  "/images/lobbyphase/gif1.gif",
-  "/images/lobbyphase/gif2.gif",
-  "/images/lobbyphase/gif3.gif",
-  "/images/lobbyphase/gif4.gif",
-  "/images/lobbyphase/gif5.gif",
-  "/images/lobbyphase/gif6.gif",
+  "/assets/gif/host/1.gif",
+  "/assets/gif/host/2.gif",
+  "/assets/gif/host/3.gif",
+  "/assets/gif/host/4.gif",
+  "/assets/gif/host/5.gif",
+  "/assets/gif/host/7.gif",
 ]
 
 // Mapping warna mobil ke file GIF mobil
 const carGifMap: Record<string, string> = {
-  red: "/images/car/car1.gif",
-  blue: "/images/car/car2.gif",
-  green: "/images/car/car3.gif",
-  yellow: "/images/car/car4.gif",
-  purple: "/images/car/car5.gif",
-  orange: "/images/car/car5.gif",
+  red: "/assets/car/car1.gif",
+  blue: "/assets/car/car2.gif",
+  green: "/assets/car/car3.gif",
+  yellow: "/assets/car/car4.gif",
+  purple: "/assets/car/car5.gif",
+  orange: "/assets/car/car5.gif",
 }
 
 export default function LobbyPage() {
@@ -300,7 +300,7 @@ export default function LobbyPage() {
                       {/* Car GIF - Enhanced visuals */}
                       <div className="relative mb-3">
                         <img
-                          src={carGifMap[player.car] || '/images/car/car5.gif'}
+                          src={carGifMap[player.car] || '/assets/car/car5.gif'}
                           alt={`${player.car} car`}
                           className="h-28 w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
                         />

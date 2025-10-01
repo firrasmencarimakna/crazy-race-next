@@ -86,7 +86,7 @@ export default function HomePage() {
       {/* Background Image */}
       <div
         className="absolute inset-0 w-full h-full bg-cover bg-center"
-        style={{ backgroundImage: "url('/images/carbackground.gif')" }}
+        style={{ backgroundImage: "url('/assets/gif/1.gif/')" }}
       />
 
       {/* CRT Monitor Effect */}
