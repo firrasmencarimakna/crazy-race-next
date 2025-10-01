@@ -333,7 +333,6 @@ export default function HostRoomPage() {
           >
             {countdown}
           </motion.div>
-          <p className="text-[#00ffff] pixel-text mt-4">Game starting...</p>
         </div>
 
         {/* Back Button - Fixed Top Left */}

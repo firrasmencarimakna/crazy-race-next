@@ -217,7 +217,6 @@ export default function LobbyPage() {
           >
             {countdown}
           </motion.div>
-          <p className="text-[#00ffff] pixel-text mt-4">Game starting...</p>
         </div>
       </div>
     )
