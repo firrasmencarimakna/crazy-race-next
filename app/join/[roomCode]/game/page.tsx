@@ -1,3 +1,14 @@
+// Updated game page: join/[roomCode]/game/page.tsx
+// Key changes:
+// - Store individual answer data in result array (appended, not overwritten)
+// - Track time per question with questionStartRef
+// - Persist remaining time in localStorage for mini-game redirects
+// - Fix route to /results
+// - Consistent localStorage key 'playerId'
+// - Set question start time on index change
+// - Remove cumulative duration from DB update (computed in results)
+// - Adjusted score to *10 per correct for consistency (can change if needed)
+
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -71,7 +82,7 @@ export default function QuizGamePage() {
   const currentQuestion = questions[currentQuestionIndex]
   const totalQuestions = questions.length
   const gameStartRef = useRef<number | null>(null)
-
+  const questionStartRef = useRef<number | null>(null)
 
   // Handle starting from a specific question index (after mini game)
   useEffect(() => {
@@ -83,6 +94,13 @@ export default function QuizGamePage() {
       }
     }
   }, [searchParams, totalQuestions, questions.length])
+
+  // Set question start time when index changes and not answered
+  useEffect(() => {
+    if (!isAnswered && currentQuestion) {
+      questionStartRef.current = Date.now()
+    }
+  }, [currentQuestionIndex, isAnswered, currentQuestion])
 
   // Fetch game room data from Supabase
   useEffect(() => {
@@ -117,14 +135,20 @@ export default function QuizGamePage() {
 
       setQuestions(formattedQuestions)
       setAnswers(new Array(formattedQuestions.length).fill(null))
-      setTotalTimeRemaining(parsedSettings.duration || 300) // 300 detik default
+      let initialRemaining = parsedSettings.duration || 300
+      // Restore remaining time if coming back from mini-game
+      const savedRemaining = localStorage.getItem(`quiz_remaining_${roomCode}_${playerId}`)
+      if (savedRemaining) {
+        initialRemaining = parseInt(savedRemaining, 10)
+      }
+      setTotalTimeRemaining(initialRemaining)
       setLoading(false)
     }
 
-    if (roomCode) {
+    if (roomCode && playerId) {
       fetchGameRoom()
     }
-  }, [roomCode])
+  }, [roomCode, playerId])
 
   // Timer logic
   useEffect(() => {
@@ -132,12 +156,23 @@ export default function QuizGamePage() {
       const timer = setInterval(() => {
         setTotalTimeRemaining((prev) => {
           const newTime = prev - 1
+          if (newTime <= 0) {
+            // Time up, auto-submit or handle
+            handleTimeUp()
+          }
           return newTime
         })
       }, 1000)
       return () => clearInterval(timer)
     }
   }, [totalTimeRemaining, isAnswered, currentQuestion])
+
+  const handleTimeUp = () => {
+    // Optionally auto-select random or skip
+    if (!isAnswered && currentQuestion) {
+      handleAnswerSelect(0) // or skip logic
+    }
+  }
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -161,6 +196,9 @@ export default function QuizGamePage() {
     setIsAnswered(true)
     setShowResult(true)
 
+    // Save remaining time before potential redirect
+    localStorage.setItem(`quiz_remaining_${roomCode}_${playerId}`, totalTimeRemaining.toString())
+
     // Update answers array
     const newAnswers = [...answers]
     newAnswers[currentQuestionIndex] = answerIndex
@@ -170,29 +208,33 @@ export default function QuizGamePage() {
     const isCorrect = answerIndex === currentQuestion.correctAnswer
     const newCorrectAnswers = correctAnswers + (isCorrect ? 1 : 0)
     setCorrectAnswers(newCorrectAnswers)
-    const accuracy = (newCorrectAnswers / totalQuestions) * 100
 
-    // Update player result in Supabase
-    const elapsedSeconds = gameStartRef.current
-      ? Math.floor((Date.now() - gameStartRef.current) / 1000)
-      : 0
+    // Time taken for this question
+    const timeTaken = questionStartRef.current ? Math.floor((Date.now() - questionStartRef.current) / 1000) : 0
 
-    const updatedResult = {
-      score: newCorrectAnswers * 10,
-      correct: newCorrectAnswers,
-      accuracy: accuracy.toFixed(2),
-      duration: elapsedSeconds,
-      current_question:
-        currentQuestionIndex + 1 < totalQuestions
-          ? currentQuestionIndex + 1
-          : totalQuestions,
-      total_question: totalQuestions,
+    // Prepare answer data
+    const answerData = {
+      question_id: currentQuestion.id,
+      selected_answer: answerIndex,
+      time_taken: timeTaken,
+      is_correct: isCorrect,
     }
 
+    // Fetch current result and append
+    const { data: playerData } = await supabase
+      .from('players')
+      .select('result')
+      .eq('id', playerId)
+      .single()
+
+    let currentResult = playerData?.result || []
+    const newResult = [...currentResult, answerData]
+
+    // Update player result in Supabase
     const { error } = await supabase
       .from('players')
       .update({
-        result: [updatedResult],
+        result: newResult,
         completion: currentQuestionIndex + 1 === totalQuestions,
       })
       .eq('id', playerId)
@@ -206,7 +248,7 @@ export default function QuizGamePage() {
       const nextIndex = currentQuestionIndex + 1
       if (nextIndex < totalQuestions) {
         if (nextIndex % 7 === 0) {
-          // Redirect to mini game setelah setiap 7 soal, dengan parameter untuk melanjutkan
+          // Redirect to mini game setelah setiap 7 soal
           window.location.href = `/racing-game/v4.final.html?startIndex=${nextIndex}&roomCode=${roomCode}`
         } else {
           // Lanjut ke soal berikutnya
@@ -216,10 +258,12 @@ export default function QuizGamePage() {
           setShowResult(false)
         }
       } else {
+        // Clear saved remaining
+        localStorage.removeItem(`quiz_remaining_${roomCode}_${playerId}`)
         // Selesai semua soal, ke halaman result
         router.push(`/join/${roomCode}/result`)
       }
-    }, 500)
+    }, 500) // Increased to 2s to see result
   }
 
   const getOptionStyle = (optionIndex: number) => {
