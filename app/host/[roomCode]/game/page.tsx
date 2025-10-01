@@ -248,22 +248,7 @@ export default function HostMonitorPage() {
   }
 
   if (room?.status === 'finished') {
-    return (
-      <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
-        {/* Background dan effects sama seperti sebelumnya */}
-        <div className="relative z-10 max-w-7xl mx-auto pt-8 px-4">
-          <div className="text-center">
-            <h1 className="text-6xl font-bold text-[#00ffff] pixel-text glow-cyan mb-8">GAME FINISHED!</h1>
-            <Button
-              onClick={() => router.push(`/host/${roomCode}`)}
-              className="bg-[#ff6bff] pixel-button glow-pink text-lg px-8 py-4"
-            >
-              Back to Room
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
+    router.push(`/host/${roomCode}/leaderboard`)
   }
 
   return (
