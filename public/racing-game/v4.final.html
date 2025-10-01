@@ -29,7 +29,11 @@
       width: 100%;
       max-height: calc(100vh - 120px); /* Reserve space for controls + bezel */
       position: relative;
-      background: #000;
+      /* Background diganti ke 6.gif */
+      background-image: url('images/background/6.gif');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
       border: 8px solid #333;
       border-radius: 12px;
       margin: 8px;
@@ -406,18 +410,13 @@
     var height = 768;
     var centrifugal = 0.3;
     var offRoadDecel = 0.99;
-    var skySpeed = 0.001;
-    var hillSpeed = 0.002;
-    var treeSpeed = 0.003;
-    var skyOffset = 0;
-    var hillOffset = 0;
-    var treeOffset = 0;
+    // Hapus variabel background yang tidak diperlukan: skySpeed, hillSpeed, treeSpeed, skyOffset, hillOffset, treeOffset
     var segments = [];
     var cars = [];
     var stats = Game.stats('fps');
     var canvas = Dom.get('canvas');
     var ctx = canvas.getContext('2d');
-    var background = null;
+    // background = null; // Tidak lagi diperlukan
     var sprites = null;
     var resolution = null;
     var roadWidth = 2000;
@@ -524,9 +523,7 @@
       }
       playerX = Util.limit(playerX, -3, 3);
       speed = Util.limit(speed, 0, maxSpeed);
-      skyOffset = Util.increase(skyOffset, skySpeed * playerSegment.curve * (position-startPosition)/segmentLength, 1);
-      hillOffset = Util.increase(hillOffset, hillSpeed * playerSegment.curve * (position-startPosition)/segmentLength, 1);
-      treeOffset = Util.increase(treeOffset, treeSpeed * playerSegment.curve * (position-startPosition)/segmentLength, 1);
+      // Hapus update offset background karena tidak diperlukan
       if (position > playerZ) {
         if (currentLapTime && (startPosition < playerZ)) {
           lastLapTime = currentLapTime;
@@ -633,9 +630,7 @@
       var x = 0;
       var dx = - (baseSegment.curve * basePercent);
       ctx.clearRect(0, 0, width, height);
-      Render.background(ctx, background, width, height, BACKGROUND.SKY, skyOffset, resolution * skySpeed * playerY);
-      Render.background(ctx, background, width, height, BACKGROUND.HILLS, hillOffset, resolution * hillSpeed * playerY);
-      Render.background(ctx, background, width, height, BACKGROUND.TREES, treeOffset, resolution * treeSpeed * playerY);
+      // Hapus Render.background untuk SKY, HILLS, TREES karena background sekarang via CSS
       var n, i, segment, car, sprite, spriteScale, spriteX, spriteY;
       for(n = 0 ; n < drawDistance ; n++) {
         segment = segments[(baseSegment.index + n) % segments.length];
@@ -848,7 +843,7 @@
 
     Game.run({
       canvas: canvas, render: render, update: update, stats: stats, step: step,
-      images: ["background", "sprites"],
+      images: ["sprites"],  // Hapus "background"
       keys: [
         { keys: [KEY.LEFT, KEY.A], mode: 'down', action: function() { if (!gameFinished) keyLeft = true; } },
         { keys: [KEY.RIGHT, KEY.D], mode: 'down', action: function() { if (!gameFinished) keyRight = true; } },
@@ -860,8 +855,8 @@
         { keys: [KEY.DOWN, KEY.S], mode: 'up', action: function() { keySlower = false; } }
       ],
       ready: function(images) {
-        background = images[0];
-        sprites = images[1];
+        // background = images[0]; // Hapus ini
+        sprites = images[0];  // Sekarang sprites dari index 0
         reset();
         Dom.storage.fast_lap_time = Dom.storage.fast_lap_time || 180;
         updateHud('fast_lap_time', formatTime(Util.toFloat(Dom.storage.fast_lap_time)));
