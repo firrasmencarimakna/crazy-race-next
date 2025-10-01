@@ -21,6 +21,11 @@ export default function HomePage() {
   const [nickname, setNickname] = useState("")
 
   useEffect(() => {
+    localStorage.removeItem("nickname")
+    localStorage.removeItem("playerId")
+  }, [])
+
+  useEffect(() => {
     const code = searchParams.get("code")
     if (code) {
       setRoomCode(code.toUpperCase())
