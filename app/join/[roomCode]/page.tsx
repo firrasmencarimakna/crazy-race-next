@@ -10,6 +10,7 @@ import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
 import LoadingRetro from "@/components/loadingRetro"
+import { calculateCountdown } from "@/utils/countdown"
 
 // Background GIFs
 const backgroundGifs = [
@@ -47,31 +48,74 @@ export default function LobbyPage() {
   const [quizTitle, setQuizTitle] = useState("")
   const [gamePhase, setGamePhase] = useState("waiting")
   const [countdown, setCountdown] = useState(0)
-  const [gameStarting, setGameStarting] = useState(false)
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [loading, setLoading] = useState(true)
 
+  // Effect untuk sinkronisasi countdown
   useEffect(() => {
-    if (!roomCode) return // guard saja, nickname bisa kosong dulu
+    if (!room?.countdown_start || room.status !== 'countdown') return;
+
+    const syncAndStartCountdown = () => {
+      const remaining = calculateCountdown(room.countdown_start, 10);
+      setCountdown(remaining);
+
+      if (remaining <= 0) {
+        // Countdown sudah selesai, langsung pindah ke game
+        router.push(`/join/${roomCode}/game`);
+        return;
+      }
+
+      // Start countdown timer
+      const timer = setInterval(() => {
+        setCountdown(prev => {
+          const newCountdown = prev - 1;
+          if (newCountdown <= 0) {
+            clearInterval(timer);
+            router.push(`/join/${roomCode}/game`);
+            return 0;
+          }
+          return newCountdown;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    };
+
+    const timerCleanup = syncAndStartCountdown();
+    return timerCleanup;
+  }, [room?.countdown_start, room?.status, roomCode, router]);
+
+  useEffect(() => {
+    if (!roomCode) return;
 
     let roomId = ''
-    let myNick = ''
 
     const bootstrap = async () => {
-      // 1. Dapatkan roomId dari roomCode
+      // 1. Dapatkan roomId dari roomCode dengan countdown_start
       const { data: room, error: roomErr } = await supabase
         .from('game_rooms')
-        .select('id, quiz_id, status, settings')
+        .select('id, quiz_id, status, settings, countdown_start')
         .eq('room_code', roomCode)
         .single()
 
       if (roomErr || !room) {
-        router.replace('/') // room tidak ada
+        console.log('Player: Room not found', roomErr);
+        router.replace('/')
         return
       }
+
+      console.log('Player: Room data loaded', room);
+
       roomId = room.id
       setRoom(room)
       setGamePhase(room.status)
+
+      // Sync countdown jika sudah mulai
+      if (room.status === 'countdown' && room.countdown_start) {
+        const remaining = calculateCountdown(room.countdown_start, 10);
+        console.log('Player: Initial countdown sync, remaining:', remaining);
+        setCountdown(remaining);
+      }
 
       // 2. Ambil judul quiz
       const { data: quiz } = await supabase
@@ -93,16 +137,17 @@ export default function LobbyPage() {
       }
 
       // 4. Dari list itu tentukan player mana saya
-      myNick = localStorage.getItem('nickname') || ''
+      const myNick = localStorage.getItem('nickname') || ''
       const me = allPlayers?.find(p => p.nickname === myNick)
       if (!me) {
-        router.replace('/') // belum join
+        router.replace('/')
         return
       }
+
       setCurrentPlayer({ id: me.id, nickname: me.nickname, car: me.car || 'blue' })
       localStorage.setItem('playerId', me.id);
 
-      // 5. Baru buka subscription untuk perubahan SELANJUTNYA
+      // 5. Subscription untuk perubahan players
       const playerChannel = supabase
         .channel(`players:${roomCode}`)
         .on(
@@ -121,22 +166,28 @@ export default function LobbyPage() {
         )
         .subscribe()
 
+      // 6. Subscription untuk perubahan room dengan countdown_start
       const roomChannel = supabase
         .channel(`room:${roomCode}`)
         .on(
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'game_rooms', filter: `room_code=eq.${roomCode}` },
           payload => {
-            setGamePhase(payload.new.status)
-            setRoom((r: any) => ({ ...r, status: payload.new.status }))
+            const newRoomData = payload.new;
+            setGamePhase(newRoomData.status)
+            setRoom(newRoomData)
+
+            // Jika status berubah menjadi countdown, sync countdown
+            if (newRoomData.status === 'countdown' && newRoomData.countdown_start) {
+              const remaining = calculateCountdown(newRoomData.countdown_start, 10);
+              setCountdown(remaining);
+            }
           }
         )
         .subscribe()
 
-      // 6. Matikan loading
       setLoading(false)
 
-      // cleanup
       return () => {
         supabase.removeChannel(playerChannel)
         supabase.removeChannel(roomChannel)
@@ -146,13 +197,6 @@ export default function LobbyPage() {
     bootstrap()
   }, [roomCode, router])
 
-  useEffect(() => {
-    if (gamePhase === "countdown" && !gameStarting) {
-      setGameStarting(true)
-      setCountdown(10)
-    }
-  }, [gamePhase, gameStarting])
-
   // Background image cycling
   useEffect(() => {
     const bgInterval = setInterval(() => {
@@ -161,22 +205,7 @@ export default function LobbyPage() {
     return () => clearInterval(bgInterval)
   }, [])
 
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer)
-            router.push(`/join/${roomCode}/game`)
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-      return () => clearInterval(timer)
-    }
-  }, [countdown, router, roomCode])
-
+  // Countdown display component
   if (countdown > 0) {
     return (
       <div className={`min-h-screen bg-[#1a0a2a] flex items-center justify-center pixel-font`}>
@@ -188,6 +217,7 @@ export default function LobbyPage() {
           >
             {countdown}
           </motion.div>
+          <p className="text-[#00ffff] pixel-text mt-4">Game starting...</p>
         </div>
       </div>
     )

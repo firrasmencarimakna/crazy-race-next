@@ -26,6 +26,11 @@ export default function HomePage() {
   const audioRef = useRef<HTMLAudioElement>(null)
 
   useEffect(() => {
+    localStorage.removeItem("nickname")
+    localStorage.removeItem("playerId")
+  }, [])
+
+  useEffect(() => {
     const code = searchParams.get("code")
     if (code) {
       setRoomCode(code.toUpperCase())

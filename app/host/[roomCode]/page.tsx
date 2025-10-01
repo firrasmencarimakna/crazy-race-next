@@ -11,6 +11,8 @@ import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
 import QRCode from "react-qr-code";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { calculateCountdown } from "@/utils/countdown"
+import LoadingRetro from "@/components/loadingRetro"
 import { Slider } from "@/components/ui/slider"
 
 // List of background GIFs (same as previous pages for consistency)
@@ -33,7 +35,6 @@ export default function HostRoomPage() {
   const roomCode = params.roomCode as string
   const [players, setPlayers] = useState<any[]>([])
   const [room, setRoom] = useState<any>(null)
-  const [isConnected, setIsConnected] = useState(true)
   const [gameStarted, setGameStarted] = useState(false)
   const [countdown, setCountdown] = useState(0)
   const [isMuted, setIsMuted] = useState(false)
@@ -44,6 +45,7 @@ export default function HostRoomPage() {
   const [joinLink, setJoinLink] = useState('')
   const [copiedRoom, setCopiedRoom] = useState(false);
   const [copiedJoin, setCopiedJoin] = useState(false);
+  const [loading, setLoading] = useState(true)
   const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
   const audioRef = useRef<HTMLAudioElement>(null)
 
@@ -78,31 +80,110 @@ export default function HostRoomPage() {
     }
   }
 
-  // Base URL for the join link (replace with your app's URL)
+  // Base URL for the join link
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setJoinLink(`${window.location.origin}/?code=${roomCode}`)
     }
   }, [roomCode])
 
-  // Fetch room details and set up real-time player subscription
+  // Effect untuk sinkronisasi countdown
+  useEffect(() => {
+    if (!room?.countdown_start || room.status !== 'countdown') {
+      console.log('No countdown needed:', {
+        hasCountdownStart: !!room?.countdown_start,
+        status: room?.status
+      });
+      return;
+    }
+
+    console.log('Starting countdown sync for host:', room.countdown_start);
+
+    const syncAndStartCountdown = () => {
+      const remaining = calculateCountdown(room.countdown_start, 10);
+      console.log('Host countdown remaining:', remaining);
+
+      setCountdown(remaining);
+
+      if (remaining <= 0) {
+        console.log('Host countdown finished, moving to game');
+        // Countdown sudah selesai, langsung pindah ke game
+        supabase.from("game_rooms")
+          .update({
+            status: "playing",
+            start: new Date().toISOString(),
+            countdown_start: null
+          })
+          .eq("room_code", roomCode)
+          .then(() => {
+            console.log('Host updated to playing status');
+            router.push(`/host/${roomCode}/game`);
+          });
+        return;
+      }
+
+      // Start countdown timer
+      const timer = setInterval(() => {
+        setCountdown(prev => {
+          const newCountdown = prev - 1;
+          console.log('Host countdown tick:', newCountdown);
+
+          if (newCountdown <= 0) {
+            clearInterval(timer);
+            console.log('Host countdown completed');
+            // Update status ke playing dan redirect
+            supabase.from("game_rooms")
+              .update({
+                status: "playing",
+                start: new Date().toISOString(),
+                countdown_start: null
+              })
+              .eq("room_code", roomCode)
+              .then(() => {
+                console.log('Host updated to playing status after countdown');
+                setLoading(true)
+                router.push(`/host/${roomCode}/game`);
+              });
+            return 0;
+          }
+          return newCountdown;
+        });
+      }, 1000);
+
+      return () => {
+        console.log('Cleaning up host countdown timer');
+        clearInterval(timer);
+      };
+    };
+
+    const timerCleanup = syncAndStartCountdown();
+    return timerCleanup;
+  }, [room?.countdown_start, room?.status, roomCode, router]);
+
+  // Fetch room details and set up real-time subscriptions
   useEffect(() => {
     const fetchRoomAndPlayers = async () => {
       // Fetch room details
       const { data: roomData, error: roomError } = await supabase
         .from("game_rooms")
-        .select("id, settings, questions, status")
+        .select("id, settings, questions, status, countdown_start, start")
         .eq("room_code", roomCode)
         .single()
 
       if (roomError || !roomData) {
         console.error("Error fetching room:", roomError)
-        setIsConnected(false)
+        setLoading(false)
         return
       }
 
       setRoom(roomData)
-      setIsConnected(true)
+      setLoading(false)
+
+      // Jika room sudah dalam status countdown, sync countdown
+      if (roomData.status === 'countdown' && roomData.countdown_start) {
+        const remaining = calculateCountdown(roomData.countdown_start, 10);
+        setCountdown(remaining);
+      }
 
       // Fetch initial players
       const { data: playersData, error: playersError } = await supabase
@@ -117,12 +198,12 @@ export default function HostRoomPage() {
       }
 
       // Set up real-time subscription for players
-      const subscription = supabase
-        .channel(`host-${roomCode}`)
+      const playersSubscription = supabase
+        .channel(`host-players-${roomCode}`)
         .on(
           'postgres_changes',
           {
-            event: '*', // <-- INSERT, UPDATE, DELETE
+            event: '*',
             schema: 'public',
             table: 'players',
             filter: `room_id=eq.${roomData.id}`,
@@ -142,8 +223,37 @@ export default function HostRoomPage() {
         )
         .subscribe();
 
+      // Di useEffect fetchRoomAndPlayers, perbaiki room subscription:
+      const roomSubscription = supabase
+        .channel(`host-room-${roomCode}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'game_rooms',
+            filter: `room_code=eq.${roomCode}`,
+          },
+          (payload) => {
+            const newRoomData = payload.new;
+            console.log('Host received room update:', newRoomData);
+
+            setRoom(newRoomData);
+
+            // Jika status berubah menjadi countdown, trigger countdown
+            if (newRoomData.status === 'countdown' && newRoomData.countdown_start) {
+              console.log('Host detected countdown start:', newRoomData.countdown_start);
+              const remaining = calculateCountdown(newRoomData.countdown_start, 10);
+              console.log('Setting host countdown to:', remaining);
+              setCountdown(remaining);
+            }
+          }
+        )
+        .subscribe();
+
       return () => {
-        supabase.removeChannel(subscription)
+        supabase.removeChannel(playersSubscription)
+        supabase.removeChannel(roomSubscription)
       }
     }
 
@@ -152,7 +262,7 @@ export default function HostRoomPage() {
     }
   }, [roomCode])
 
-  // Background image cycling (same as previous pages)
+  // Background image cycling
   useEffect(() => {
     const bgInterval = setInterval(() => {
       setIsTransitioning(true)
@@ -186,35 +296,32 @@ export default function HostRoomPage() {
     }
   };
 
+  // Alternatif yang lebih robust - convert ke format ISO tanpa timezone
   const startGame = async () => {
-    if (players.length === 0 || !room) return
+  console.log('Host starting game...');
 
-    // Update room status to countdown
-    const { error } = await supabase
-      .from("game_rooms")
-      .update({ status: "countdown" })
-      .eq("room_code", roomCode)
+  // Untuk timestamp with time zone, gunakan ISO string langsung
+  const countdownStart = new Date().toISOString();
+  console.log('Setting countdown_start to (ISO):', countdownStart);
 
-    if (error) {
-      console.error("Error starting game:", error)
-      return
-    }
+  const { error } = await supabase
+    .from("game_rooms")
+    .update({
+      status: "countdown",
+      countdown_start: countdownStart
+    })
+    .eq("room_code", roomCode);
 
-    setGameStarted(true)
-    setCountdown(10)
-
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer)
-          router.push(`/host/${roomCode}/game`)
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
+  if (error) {
+    console.error("startGame error:", error);
+    return;
   }
 
+  console.log('Game countdown started successfully');
+  setGameStarted(true);
+};
+
+  // Countdown display component
   if (countdown > 0) {
     return (
       <div className="min-h-screen bg-[#1a0a2a] flex items-center justify-center pixel-font pt-20"> {/* pt-20 untuk ruang burger */}
@@ -226,6 +333,7 @@ export default function HostRoomPage() {
           >
             {countdown}
           </motion.div>
+          <p className="text-[#00ffff] pixel-text mt-4">Game starting...</p>
         </div>
 
         {/* Back Button - Fixed Top Left */}
@@ -303,6 +411,10 @@ export default function HostRoomPage() {
         />
       </div>
     )
+  }
+
+  if (loading) {
+    return <LoadingRetro />
   }
 
   return (

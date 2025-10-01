@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -70,6 +70,8 @@ export default function QuizGamePage() {
 
   const currentQuestion = questions[currentQuestionIndex]
   const totalQuestions = questions.length
+  const gameStartRef = useRef<number | null>(null)
+
 
   // Handle starting from a specific question index (after mini game)
   useEffect(() => {
@@ -85,6 +87,10 @@ export default function QuizGamePage() {
   // Fetch game room data from Supabase
   useEffect(() => {
     const fetchGameRoom = async () => {
+      if (!gameStartRef.current) {
+        gameStartRef.current = Date.now()
+      }
+
       setLoading(true)
       const { data, error } = await supabase
         .from("game_rooms")
@@ -167,13 +173,20 @@ export default function QuizGamePage() {
     const accuracy = (newCorrectAnswers / totalQuestions) * 100
 
     // Update player result in Supabase
+    const elapsedSeconds = gameStartRef.current
+      ? Math.floor((Date.now() - gameStartRef.current) / 1000)
+      : 0
+
     const updatedResult = {
-      score: newCorrectAnswers * 10, // Points per correct answer
+      score: newCorrectAnswers * 10,
       correct: newCorrectAnswers,
       accuracy: accuracy.toFixed(2),
-      duration: questions[currentQuestionIndex].timeLimit, // Time spent so far
+      duration: elapsedSeconds,
+      current_question:
+        currentQuestionIndex + 1 < totalQuestions
+          ? currentQuestionIndex + 1
+          : totalQuestions,
       total_question: totalQuestions,
-      current_question: currentQuestionIndex + 1 < totalQuestions ? currentQuestionIndex + 1 : totalQuestions, // Next question or null if finished
     }
 
     const { error } = await supabase
