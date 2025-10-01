@@ -29,7 +29,11 @@
       width: 100%;
       max-height: calc(100vh - 120px); /* Reserve space for controls + bezel */
       position: relative;
-      background: #000;
+      /* Background diganti ke 6.gif */
+      background-image: url('images/background/6.gif');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
       border: 8px solid #333;
       border-radius: 12px;
       margin: 8px;
@@ -275,6 +279,33 @@
       background: rgba(45, 55, 72, 0.95);
       border-radius: 0.5rem;
     }
+    #finish-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      flex-direction: column;
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+    }
+    #finish-screen h2 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: #ffeb3b;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+    #finish-screen p {
+      font-size: 1.2rem;
+      margin-bottom: 2rem;
+      text-align: center;
+      max-width: 80%;
+    }
   </style>
 </head>
 <body>
@@ -352,6 +383,13 @@
       </div>
     </div>
   </div>
+
+  <!-- Finish Screen Overlay -->
+  <div id="finish-screen">
+    <h2>Race Completed!</h2>
+    <p>Congratulations! You have finished the mini race. Returning to quiz in a moment...</p>
+  </div>
+
   <audio id="music" loop>
     <source src="music/racer.ogg">
     <source src="music/racer.mp3">
@@ -360,6 +398,11 @@
   <script src="stats.js"></script>
   <script src="common.js"></script>
   <script>
+    // Parse URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const startIndex = urlParams.get('startIndex');
+    const roomCode = urlParams.get('roomCode');
+
     // Original game JavaScript code (unchanged)
     var fps = 60;
     var step = 1/fps;
@@ -367,18 +410,13 @@
     var height = 768;
     var centrifugal = 0.3;
     var offRoadDecel = 0.99;
-    var skySpeed = 0.001;
-    var hillSpeed = 0.002;
-    var treeSpeed = 0.003;
-    var skyOffset = 0;
-    var hillOffset = 0;
-    var treeOffset = 0;
+    // Hapus variabel background yang tidak diperlukan: skySpeed, hillSpeed, treeSpeed, skyOffset, hillOffset, treeOffset
     var segments = [];
     var cars = [];
     var stats = Game.stats('fps');
     var canvas = Dom.get('canvas');
     var ctx = canvas.getContext('2d');
-    var background = null;
+    // background = null; // Tidak lagi diperlukan
     var sprites = null;
     var resolution = null;
     var roadWidth = 2000;
@@ -404,6 +442,7 @@
     var totalCars = 200;
     var currentLapTime = 0;
     var lastLapTime = null;
+    var gameFinished = false; // New flag for finish
     var keyLeft = false;
     var keyRight = false;
     var keyFaster = false;
@@ -440,6 +479,11 @@
     }
 
     function update(dt) {
+      if (gameFinished) {
+        speed = 0; // Stop the car
+        return; // Pause updates
+      }
+
       var n, car, carW, sprite, spriteW;
       var playerSegment = findSegment(position+playerZ);
       var playerW = SPRITES.PLAYER_STRAIGHT.w * SPRITES.SCALE;
@@ -479,9 +523,7 @@
       }
       playerX = Util.limit(playerX, -3, 3);
       speed = Util.limit(speed, 0, maxSpeed);
-      skyOffset = Util.increase(skyOffset, skySpeed * playerSegment.curve * (position-startPosition)/segmentLength, 1);
-      hillOffset = Util.increase(hillOffset, hillSpeed * playerSegment.curve * (position-startPosition)/segmentLength, 1);
-      treeOffset = Util.increase(treeOffset, treeSpeed * playerSegment.curve * (position-startPosition)/segmentLength, 1);
+      // Hapus update offset background karena tidak diperlukan
       if (position > playerZ) {
         if (currentLapTime && (startPosition < playerZ)) {
           lastLapTime = currentLapTime;
@@ -497,6 +539,20 @@
           }
           updateHud('last_lap_time', formatTime(lastLapTime));
           Dom.show('last_lap_time');
+
+          // Set game as finished after one lap
+          gameFinished = true;
+          document.getElementById('finish-screen').style.display = 'flex';
+
+          // Otomatis redirect setelah 2 detik
+          setTimeout(() => {
+            if (roomCode && startIndex) {
+              window.location.href = `/join/${roomCode}/game?startIndex=${startIndex}`;
+            } else {
+              // Fallback if no params
+              window.history.back();
+            }
+          }, 2000);
         } else {
           currentLapTime += dt;
         }
@@ -574,9 +630,7 @@
       var x = 0;
       var dx = - (baseSegment.curve * basePercent);
       ctx.clearRect(0, 0, width, height);
-      Render.background(ctx, background, width, height, BACKGROUND.SKY, skyOffset, resolution * skySpeed * playerY);
-      Render.background(ctx, background, width, height, BACKGROUND.HILLS, hillOffset, resolution * hillSpeed * playerY);
-      Render.background(ctx, background, width, height, BACKGROUND.TREES, treeOffset, resolution * treeSpeed * playerY);
+      // Hapus Render.background untuk SKY, HILLS, TREES karena background sekarang via CSS
       var n, i, segment, car, sprite, spriteScale, spriteX, spriteY;
       for(n = 0 ; n < drawDistance ; n++) {
         segment = segments[(baseSegment.index + n) % segments.length];
@@ -789,20 +843,20 @@
 
     Game.run({
       canvas: canvas, render: render, update: update, stats: stats, step: step,
-      images: ["background", "sprites"],
+      images: ["sprites"],  // Hapus "background"
       keys: [
-        { keys: [KEY.LEFT, KEY.A], mode: 'down', action: function() { keyLeft = true; } },
-        { keys: [KEY.RIGHT, KEY.D], mode: 'down', action: function() { keyRight = true; } },
-        { keys: [KEY.UP, KEY.W], mode: 'down', action: function() { keyFaster = true; } },
-        { keys: [KEY.DOWN, KEY.S], mode: 'down', action: function() { keySlower = true; } },
+        { keys: [KEY.LEFT, KEY.A], mode: 'down', action: function() { if (!gameFinished) keyLeft = true; } },
+        { keys: [KEY.RIGHT, KEY.D], mode: 'down', action: function() { if (!gameFinished) keyRight = true; } },
+        { keys: [KEY.UP, KEY.W], mode: 'down', action: function() { if (!gameFinished) keyFaster = true; } },
+        { keys: [KEY.DOWN, KEY.S], mode: 'down', action: function() { if (!gameFinished) keySlower = true; } },
         { keys: [KEY.LEFT, KEY.A], mode: 'up', action: function() { keyLeft = false; } },
         { keys: [KEY.RIGHT, KEY.D], mode: 'up', action: function() { keyRight = false; } },
         { keys: [KEY.UP, KEY.W], mode: 'up', action: function() { keyFaster = false; } },
         { keys: [KEY.DOWN, KEY.S], mode: 'up', action: function() { keySlower = false; } }
       ],
       ready: function(images) {
-        background = images[0];
-        sprites = images[1];
+        // background = images[0]; // Hapus ini
+        sprites = images[0];  // Sekarang sprites dari index 0
         reset();
         Dom.storage.fast_lap_time = Dom.storage.fast_lap_time || 180;
         updateHud('fast_lap_time', formatTime(Util.toFloat(Dom.storage.fast_lap_time)));
@@ -899,16 +953,16 @@
       const brakeBtn = document.getElementById('brake');
 
       // Use handle functions for consistency and haptic
-      leftBtn.addEventListener('touchstart', (e) => handleTouchStart(e, () => { keyLeft = true; }));
+      leftBtn.addEventListener('touchstart', (e) => handleTouchStart(e, () => { if (!gameFinished) keyLeft = true; }));
       leftBtn.addEventListener('touchend', (e) => handleTouchEnd(e, () => { keyLeft = false; }));
 
-      rightBtn.addEventListener('touchstart', (e) => handleTouchStart(e, () => { keyRight = true; }));
+      rightBtn.addEventListener('touchstart', (e) => handleTouchStart(e, () => { if (!gameFinished) keyRight = true; }));
       rightBtn.addEventListener('touchend', (e) => handleTouchEnd(e, () => { keyRight = false; }));
 
-      accelBtn.addEventListener('touchstart', (e) => handleTouchStart(e, () => { keyFaster = true; }));
+      accelBtn.addEventListener('touchstart', (e) => handleTouchStart(e, () => { if (!gameFinished) keyFaster = true; }));
       accelBtn.addEventListener('touchend', (e) => handleTouchEnd(e, () => { keyFaster = false; }));
 
-      brakeBtn.addEventListener('touchstart', (e) => handleTouchStart(e, () => { keySlower = true; }));
+      brakeBtn.addEventListener('touchstart', (e) => handleTouchStart(e, () => { if (!gameFinished) keySlower = true; }));
       brakeBtn.addEventListener('touchend', (e) => handleTouchEnd(e, () => { keySlower = false; }));
 
       // Prevent zoom and scroll on touch

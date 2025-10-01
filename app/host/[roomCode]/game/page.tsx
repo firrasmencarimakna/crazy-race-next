@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Trophy, Users, Clock, CheckCircle, XCircle, ArrowRight, Flag, Crown, Award, SkipForward } from "lucide-react"
+import { Trophy, Users, Clock, CheckCircle, XCircle, ArrowRight, Flag, Crown, Award, SkipForward, Menu, X, Volume2, VolumeX } from "lucide-react"
+import { Slider } from "@/components/ui/slider"
 import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
@@ -13,17 +14,17 @@ import { sortPlayersByProgress, formatTime, calculateRemainingTime } from "@/uti
 
 // Background GIFs
 const backgroundGifs = [
-  "/images/lobbyphase/gif5.gif",
+  "/assets/gif/host/4.gif",
 ]
 
 // Mapping warna mobil ke file GIF mobil
 const carGifMap: Record<string, string> = {
-  red: "/images/car/car1.gif",
-  blue: "/images/car/car2.gif",
-  green: "/images/car/car3.gif",
-  yellow: "/images/car/car4.gif",
-  purple: "/images/car/car5.gif",
-  orange: "/images/car/car5.gif",
+  red: "/assets/car/car1.gif",
+  blue: "/assets/car/car2.gif",
+  green: "/assets/car/car3.gif",
+  yellow: "/assets/car/car4.gif",
+  purple: "/assets/car/car5.gif",
+  orange: "/assets/car/car5.gif",
 }
 
 export default function HostMonitorPage() {
@@ -38,6 +39,41 @@ export default function HostMonitorPage() {
   const [gameDuration, setGameDuration] = useState(300)
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [isMuted, setIsMuted] = useState(false)
+  const [volume, setVolume] = useState(50) // 0-100, default 50%
+  const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
+  const audioRef = useRef<HTMLAudioElement>(null)
+
+  // Inisialisasi audio: play otomatis dengan volume default
+  useEffect(() => {
+    if (audioRef.current) {
+      const initialVolume = volume / 100
+      audioRef.current.volume = isMuted ? 0 : initialVolume
+      audioRef.current.play().catch((e) => {
+        console.log("Autoplay dicegah oleh browser:", e)
+      })
+    }
+  }, [])
+
+  // Update audio volume berdasarkan state volume dan isMuted
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : (volume / 100)
+    }
+  }, [volume, isMuted])
+
+  // Handle toggle mute/unmute
+  const handleMuteToggle = () => {
+    setIsMuted(!isMuted)
+  }
+
+  // Handle volume change
+  const handleVolumeChange = (value: number[]) => {
+    setVolume(value[0])
+    if (isMuted && value[0] > 0) {
+      setIsMuted(false) // Auto unmute jika volume dinaikkan
+    }
+  }
 
   // Fetch initial game data
   useEffect(() => {
@@ -231,7 +267,7 @@ export default function HostMonitorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
+    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font pt-20"> {/* pt-20 untuk ruang burger */}
       {/* Preload GIFs */}
       {backgroundGifs.map((gif, index) => (
         <link key={index} rel="preload" href={gif} as="image" />
@@ -257,6 +293,58 @@ export default function HostMonitorPage() {
       <div className="crt-effect"></div>
       <div className="noise-effect"></div>
       <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none"></div>
+
+      {/* Burger Menu Button - Fixed Top Right */}
+      <motion.button
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        whileHover={{ scale: 1.05 }}
+        onClick={() => setIsMenuOpen(!isMenuOpen)}
+        className="fixed top-4 right-4 z-40 p-3 bg-[#ff6bff] border-2 border-white pixel-button hover:bg-[#ff8aff] glow-pink rounded-lg shadow-lg shadow-[#ff6bff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
+        aria-label="Toggle menu"
+      >
+        {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
+      </motion.button>
+
+      {/* Menu Dropdown - Muncul saat burger diklik, dari kanan */}
+      {isMenuOpen && (
+        <motion.div
+          initial={{ opacity: 0, x: 300 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 300 }}
+          className="fixed top-20 right-4 z-30 w-64 bg-[#1a0a2a]/90 border border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm"
+        >
+          <div className="space-y-4">
+            {/* Mute Toggle */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-white pixel-text">Audio</span>
+              <button
+                onClick={handleMuteToggle}
+                className="p-2 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded"
+                aria-label={isMuted ? "Unmute" : "Mute"}
+              >
+                {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              </button>
+            </div>
+
+            {/* Volume Slider */}
+            <div className="space-y-2">
+              <span className="text-xs text-[#ff6bff] pixel-text">Volume</span>
+              <div className="bg-[#1a0a2a]/60 border border-[#ff6bff]/50 rounded px-2 py-1">
+                <Slider
+                  value={[volume]}
+                  onValueChange={handleVolumeChange}
+                  max={100}
+                  min={0}
+                  step={1}
+                  className="w-full"
+                  orientation="horizontal"
+                />
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Corner Decorations */}
       <div className="absolute top-4 left-4 opacity-30">
@@ -439,6 +527,15 @@ export default function HostMonitorPage() {
           </Button>
         </div>
       </div>
+
+      {/* Audio Element untuk Background Music */}
+      <audio
+        ref={audioRef}
+        src="/assets/music/robbers.mp3"
+        loop
+        preload="auto"
+        className="hidden"
+      />
 
       <style jsx>{`
         .pixel-font {

@@ -17,7 +17,7 @@ var Dom = {
     ele = Dom.get(ele);
     var classes = ele.className.split(' ');
     var n = classes.indexOf(name);
-    on = (typeof on == 'undefined') ? (n < 0) : on;
+  on = (typeof on == 'undefined') ? (n < 0) : on;
     if (on && (n < 0))
       classes.push(name);
     else if (!on && (n >= 0))

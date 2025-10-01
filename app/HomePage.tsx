@@ -3,9 +3,10 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Flag, Volume2, VolumeX, Settings, Users } from "lucide-react"
+import { Slider } from "@/components/ui/slider"
+import { Flag, Volume2, VolumeX, Settings, Users, Menu, X } from "lucide-react"
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { motion } from "framer-motion"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
@@ -17,8 +18,12 @@ export default function HomePage() {
 
   const [joining, setJoining] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
+  const [volume, setVolume] = useState(50) // 0-100, default 50%
   const [roomCode, setRoomCode] = useState("")
   const [nickname, setNickname] = useState("")
+  const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
+
+  const audioRef = useRef<HTMLAudioElement>(null)
 
   useEffect(() => {
     localStorage.removeItem("nickname")
@@ -34,6 +39,37 @@ export default function HomePage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Inisialisasi audio: play otomatis dengan volume default
+  useEffect(() => {
+    if (audioRef.current) {
+      const initialVolume = volume / 100
+      audioRef.current.volume = isMuted ? 0 : initialVolume
+      audioRef.current.play().catch((e) => {
+        console.log("Autoplay dicegah oleh browser:", e)
+      })
+    }
+  }, [])
+
+  // Update audio volume berdasarkan state volume dan isMuted
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : (volume / 100)
+    }
+  }, [volume, isMuted])
+
+  // Handle toggle mute/unmute
+  const handleMuteToggle = () => {
+    setIsMuted(!isMuted)
+  }
+
+  // Handle volume change
+  const handleVolumeChange = (value: number[]) => {
+    setVolume(value[0])
+    if (isMuted && value[0] > 0) {
+      setIsMuted(false) // Auto unmute jika volume dinaikkan
+    }
+  }
 
   const handleJoin = async () => {
     if (!roomCode || !nickname || joining) return;
@@ -87,11 +123,11 @@ export default function HomePage() {
   }
 
   return (
-    <div className={`min-h-[100dvh] w-full relative overflow-hidden pixel-font p-2`}>
+    <div className="min-h-[100dvh] w-full relative overflow-hidden pixel-font p-2">
       {/* Background Image */}
       <div
         className="absolute inset-0 w-full h-full bg-cover bg-center"
-        style={{ backgroundImage: "url('/images/carbackground.gif')" }}
+        style={{ backgroundImage: "url('/assets/gif/1.gif/')" }}
       />
 
       {/* CRT Monitor Effect */}
@@ -103,21 +139,70 @@ export default function HomePage() {
       {/* Purple Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none"></div>
 
-      {/* Header Controls (Volume, Settings) */}
-      <div className="absolute top-3 right-3 z-20 flex gap-2">
-        {/* kiri di mobile, kanan di desktop */}
-        <button
-          onClick={() => setIsMuted(!isMuted)}
-          className="p-1.5 sm:p-2 bg-[#ff6bff] border-2 border-white pixel-button hover:bg-[#ff8aff] glow-pink"
-        >
-          {isMuted ? <VolumeX size={14} className="sm:w-4 sm:h-4" /> : <Volume2 size={14} className="sm:w-4 sm:h-4" />}
-        </button>
-        <button className="p-1.5 sm:p-2 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan">
-          <Settings size={14} className="sm:w-4 sm:h-4" />
-        </button>
-      </div>
+      {/* Burger Menu Button - Fixed Top Right */}
+      <motion.button
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        whileHover={{ scale: 1.05 }}
+        onClick={() => setIsMenuOpen(!isMenuOpen)}
+        className="fixed top-4 right-4 z-40 p-3 bg-[#ff6bff] border-2 border-white pixel-button hover:bg-[#ff8aff] glow-pink rounded-lg shadow-lg shadow-[#ff6bff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
+        aria-label="Toggle menu"
+      >
+        {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
+      </motion.button>
 
-      <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
+      {/* Menu Dropdown - Muncul saat burger diklik, dari kanan */}
+      {isMenuOpen && (
+        <motion.div
+          initial={{ opacity: 0, x: 300 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 300 }}
+          className="fixed top-20 right-4 z-30 w-64 bg-[#1a0a2a]/90 border border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm"
+        >
+          <div className="space-y-4">
+            {/* Mute Toggle */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-white pixel-text">Audio</span>
+              <button
+                onClick={handleMuteToggle}
+                className="p-2 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded"
+                aria-label={isMuted ? "Unmute" : "Mute"}
+              >
+                {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              </button>
+            </div>
+
+            {/* Volume Slider */}
+            <div className="space-y-2">
+              <span className="text-xs text-[#ff6bff] pixel-text">Volume</span>
+              <div className="bg-[#1a0a2a]/60 border border-[#ff6bff]/50 rounded px-2 py-1">
+                <Slider
+                  value={[volume]}
+                  onValueChange={handleVolumeChange}
+                  max={100}
+                  min={0}
+                  step={1}
+                  className="w-full"
+                  orientation="horizontal"
+                />
+              </div>
+            </div>
+
+            {/* Settings Button */}
+            <button 
+              className="w-full p-2 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded text-center"
+              aria-label="Settings"
+            >
+              <div className="flex items-center justify-center gap-2">
+                <Settings size={16} />
+                <span className="text-sm">Settings</span>
+              </div>
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      <div className="relative z-10 flex flex-col items-center justify-center h-full w-full pt-20"> {/* pt-20 untuk ruang burger */}
         {/* Main Title dengan efek pixel art */}
         <div className="text-center relative pb-5 sm:pt-3 pt-16 space-y-3">
           {/* Title Border */}
@@ -132,7 +217,7 @@ export default function HomePage() {
 
           {/* Subtitle dengan pixel border */}
           <div className="pixel-border-small inline-block">
-            <p className="text-sm md:text-base text-purple px-4 py-2 bg-[#] pixel-text">
+            <p className="text-sm md:text-base text-purple px-4 py-2 bg-[#1a0a2a] pixel-text">
               ANSWER • RACE • WIN
             </p>
           </div>
@@ -259,6 +344,15 @@ export default function HomePage() {
           <div className="w-6 h-6 border-2 border-[#ff6bff]"></div>
         </div>
       </div>
+
+      {/* Audio Element untuk Background Music */}
+      <audio
+        ref={audioRef}
+        src="/assets/music/resonance.mp3"
+        loop
+        preload="auto"
+        className="hidden"
+      />
 
       <style jsx>{`
           .pixel-font {
@@ -397,7 +491,7 @@ export default function HomePage() {
             filter: drop-shadow(0 0 3px rgba(0, 255, 255, 0.5));
           }
 
-          @politics: scanline {
+          @keyframes scanline {
             0% { background-position: 0 0; }
             100% { background-position: 0 100%; }
           }
@@ -433,12 +527,14 @@ export default function HomePage() {
               font-size: 0.9rem;
             }
 
-            
+            /* Kontrol mobile lebih besar */
+            .pixel-button {
+              min-width: 52px;
+              min-height: 52px;
+            }
           }
             
         `}</style>
-
-
     </div>
   )
-}
+} 

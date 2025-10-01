@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Clock, Hash, Play, Volume2, VolumeX } from "lucide-react"
+import { Slider } from "@/components/ui/slider"
+import { ArrowLeft, Clock, Hash, Play, Volume2, VolumeX, Menu, X, Settings } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
@@ -14,7 +15,7 @@ import LoadingRetro from "@/components/loadingRetro"
 
 // List of background GIFs (same as QuestionListPage for consistency)
 const backgroundGifs = [
-  "/images/lobbyphase/gif8.gif",
+  "/assets/gif/host/7.gif",
 ]
 
 export default function HostSettingsPage() {
@@ -26,9 +27,43 @@ export default function HostSettingsPage() {
   const [quiz, setQuiz] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [isMuted, setIsMuted] = useState(false)
+  const [volume, setVolume] = useState(50) // 0-100, default 50%
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
+  const audioRef = useRef<HTMLAudioElement>(null)
+
+  // Inisialisasi audio: play otomatis dengan volume default
+  useEffect(() => {
+    if (audioRef.current) {
+      const initialVolume = volume / 100
+      audioRef.current.volume = isMuted ? 0 : initialVolume
+      audioRef.current.play().catch((e) => {
+        console.log("Autoplay dicegah oleh browser:", e)
+      })
+    }
+  }, [])
+
+  // Update audio volume berdasarkan state volume dan isMuted
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : (volume / 100)
+    }
+  }, [volume, isMuted])
+
+  // Handle toggle mute/unmute
+  const handleMuteToggle = () => {
+    setIsMuted(!isMuted)
+  }
+
+  // Handle volume change
+  const handleVolumeChange = (value: number[]) => {
+    setVolume(value[0])
+    if (isMuted && value[0] > 0) {
+      setIsMuted(false) // Auto unmute jika volume dinaikkan
+    }
+  }
 
   // Generate dynamic question count options
   const totalQuestions = quiz?.questions?.length || 0
@@ -108,7 +143,7 @@ export default function HostSettingsPage() {
     const shuffled = [...array]
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
-        ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
     }
     return shuffled
   }
@@ -146,7 +181,7 @@ export default function HostSettingsPage() {
   }
 
   return (
-    <div className={`min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font`}>
+    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font pt-20"> {/* pt-20 untuk ruang burger */}
       {/* Preload Background GIFs */}
       {backgroundGifs.map((gif, index) => (
         <link key={index} rel="preload" href={gif} as="image" />
@@ -172,6 +207,82 @@ export default function HostSettingsPage() {
       {/* Purple Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none"></div>
 
+      {/* Back Button - Fixed Top Left */}
+      <motion.button
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        whileHover={{ scale: 1.05 }}
+        className="fixed top-4 left-4 z-40 p-3 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded-lg shadow-lg shadow-[#00ffff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
+        aria-label="Back to Host"
+      >
+        <Link href="/host">
+          <ArrowLeft size={20} className="text-white" />
+        </Link>
+      </motion.button>
+
+      {/* Burger Menu Button - Fixed Top Right */}
+      <motion.button
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        whileHover={{ scale: 1.05 }}
+        onClick={() => setIsMenuOpen(!isMenuOpen)}
+        className="fixed top-4 right-4 z-40 p-3 bg-[#ff6bff] border-2 border-white pixel-button hover:bg-[#ff8aff] glow-pink rounded-lg shadow-lg shadow-[#ff6bff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
+        aria-label="Toggle menu"
+      >
+        {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
+      </motion.button>
+
+      {/* Menu Dropdown - Muncul saat burger diklik, dari kanan */}
+      {isMenuOpen && (
+        <motion.div
+          initial={{ opacity: 0, x: 300 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 300 }}
+          className="fixed top-20 right-4 z-30 w-64 bg-[#1a0a2a]/90 border border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm"
+        >
+          <div className="space-y-4">
+            {/* Mute Toggle */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-white pixel-text">Audio</span>
+              <button
+                onClick={handleMuteToggle}
+                className="p-2 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded"
+                aria-label={isMuted ? "Unmute" : "Mute"}
+              >
+                {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              </button>
+            </div>
+
+            {/* Volume Slider */}
+            <div className="space-y-2">
+              <span className="text-xs text-[#ff6bff] pixel-text">Volume</span>
+              <div className="bg-[#1a0a2a]/60 border border-[#ff6bff]/50 rounded px-2 py-1">
+                <Slider
+                  value={[volume]}
+                  onValueChange={handleVolumeChange}
+                  max={100}
+                  min={0}
+                  step={1}
+                  className="w-full"
+                  orientation="horizontal"
+                />
+              </div>
+            </div>
+
+            {/* Settings Button */}
+            <button 
+              className="w-full p-2 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded text-center"
+              aria-label="Settings"
+            >
+              <div className="flex items-center justify-center gap-2">
+                <Settings size={16} />
+                <span className="text-sm">Settings</span>
+              </div>
+            </button>
+          </div>
+        </motion.div>
+      )}
+
       {/* Corner Decorations */}
       <div className="absolute top-4 left-4 opacity-30">
         <div className="w-6 h-6 border-2 border-[#00ffff]"></div>
@@ -193,35 +304,18 @@ export default function HostSettingsPage() {
           ))}
         </div>
       </div>
-      {saving && (
-          <LoadingRetro />
-      )}
+      {saving && <LoadingRetro />}
 
-      {/* Header Controls */}
-      <div className="absolute top-6 right-6 z-20 flex gap-3">
-        <Button
-          onClick={() => setIsMuted(!isMuted)}
-          className="p-2 bg-[#ff6bff] border-4 border-white pixel-button hover:bg-[#ff8aff] glow-pink"
-        >
-          {isMuted ? <VolumeX size={16} className="text-white" /> : <Volume2 size={16} className="text-white" />}
-        </Button>
-        <Link href="/host">
-          <Button className="p-2 bg-[#00ffff] border-4 border-white pixel-button hover:bg-[#33ffff] glow-cyan">
-            <ArrowLeft size={16} className="text-white" />
-          </Button>
-        </Link>
-      </div>
-
-      <div className="relative z-10 container mx-auto px-6 py-8 max-w-6xl">
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-4xl">
         {/* Title */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-12"
+          className="text-center mb-8 sm:mb-12"
         >
-          <div className="p-6">
-            <h1 className="text-4xl md:text-6xl font-bold text-[#00ffff] pixel-text glow-cyan">
+          <div className="p-4 sm:p-6">
+            <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-[#00ffff] pixel-text glow-cyan">
               Game Settings
             </h1>
           </div>
@@ -235,7 +329,7 @@ export default function HostSettingsPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
-            className="text-center text-gray-400 pixel-text glow-pink-subtle"
+            className="text-center text-gray-400 pixel-text glow-pink-subtle text-sm sm:text-base"
           >
             ERROR: QUIZ NOT FOUND
           </motion.p>
@@ -245,27 +339,31 @@ export default function HostSettingsPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <Card className="bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 pixel-card glow-pink-subtle p-8">
-              <div className="space-y-8">
+            <Card className="bg-[#1a0a2a]/60 border-2 sm:border-4 border-[#ff6bff]/50 pixel-card glow-pink-subtle p-6 sm:p-8">
+              <div className="space-y-6 sm:space-y-8">
                 {/* Selected Quiz */}
-                <div className="p-4 bg-[#0a0a0f] border-4 border-[#6a4c93] rounded-lg">
-                  <p className="text-lg text-gray-200 pixel-text font-semibold line-clamp-2">{quiz.title}</p>
-                  <p className="text-gray-400 pixel-text text-sm mt-1">{quiz.description}</p>
+                <div className="p-3 sm:p-4 bg-[#0a0a0f] border-2 sm:border-4 border-[#6a4c93] rounded-lg">
+                  <p className="text-base sm:text-lg text-gray-200 pixel-text font-semibold line-clamp-2">
+                    {quiz.title}
+                  </p>
+                  <p className="text-gray-400 pixel-text text-xs sm:text-sm mt-1 line-clamp-2">
+                    {quiz.description}
+                  </p>
                 </div>
 
                 {/* Settings Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6">
                   {/* Duration */}
-                  <div className="space-y-3">
-                    <Label className="text-lg font-semibold flex items-center text-[#00ffff] pixel-text glow-cyan">
-                      <Clock className="mr-2 h-5 w-5" />
-                      Duration 
+                  <div className="space-y-2 sm:space-y-3">
+                    <Label className="text-base sm:text-lg font-semibold flex items-center text-[#00ffff] pixel-text glow-cyan">
+                      <Clock className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                      Duration
                     </Label>
                     <Select value={duration} onValueChange={setDuration}>
-                      <SelectTrigger className="text-lg p-5 w-110 bg-[#0a0a0f] border-4 border-[#6a4c93] text-white pixel-text focus:border-[#00ffff]">
+                      <SelectTrigger className="text-base sm:text-lg p-3 sm:p-5 bg-[#0a0a0f] border-2 sm:border-4 border-[#6a4c93] text-white pixel-text focus:border-[#00ffff] w-full">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#0a0a0f] border-4 border-[#6a4c93] text-white pixel-text">
+                      <SelectContent className="bg-[#0a0a0f] border-2 sm:border-4 border-[#6a4c93] text-white pixel-text">
                         {Array.from({ length: 6 }, (_, i) => (i + 1) * 5).map((min) => (
                           <SelectItem key={min} value={(min * 60).toString()}>
                             {min} Minutes
@@ -276,16 +374,16 @@ export default function HostSettingsPage() {
                   </div>
 
                   {/* Number of Questions */}
-                  <div className="space-y-3">
-                    <Label className="text-lg font-semibold flex items-center text-[#00ffff] pixel-text glow-cyan">
-                      <Hash className="mr-2 h-5 w-5" />
+                  <div className="space-y-2 sm:space-y-3">
+                    <Label className="text-base sm:text-lg font-semibold flex items-center text-[#00ffff] pixel-text glow-cyan">
+                      <Hash className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                       Questions
                     </Label>
                     <Select value={questionCount} onValueChange={setQuestionCount}>
-                      <SelectTrigger className="text-lg p-4 w-110 bg-[#0a0a0f] border-4 border-[#6a4c93] text-white pixel-text focus:border-[#00ffff]">
+                      <SelectTrigger className="text-base sm:text-lg p-3 sm:p-5 bg-[#0a0a0f] border-2 sm:border-4 border-[#6a4c93] text-white pixel-text focus:border-[#00ffff] w-full">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#0a0a0f] border-4 border-[#6a4c93] text-white pixel-text">
+                      <SelectContent className="bg-[#0a0a0f] border-2 sm:border-4 border-[#6a4c93] text-white pixel-text">
                         {questionCountOptions.map((count) => (
                           <SelectItem key={count} value={count.toString()}>
                             {count === totalQuestions ? `${count} (All)` : count}
@@ -300,9 +398,9 @@ export default function HostSettingsPage() {
                 <Button
                   onClick={handleCreateRoom}
                   disabled={saving}
-                  className="w-full text-xl py-6 bg-[#00ffff] border-4 border-white pixel-button hover:bg-[#33ffff] glow-cyan text-black font-bold disabled:bg-[#6a4c93] disabled:cursor-not-allowed"
+                  className="w-full text-base sm:text-xl py-4 sm:py-6 bg-[#00ffff] border-2 sm:border-4 border-white pixel-button hover:bg-[#33ffff] glow-cyan text-black font-bold disabled:bg-[#6a4c93] disabled:cursor-not-allowed"
                 >
-                  <Play className="mr-2 h-6 w-6" />
+                  <Play className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
                   CONTINUE
                 </Button>
               </div>
@@ -310,6 +408,15 @@ export default function HostSettingsPage() {
           </motion.div>
         )}
       </div>
+
+      {/* Audio Element untuk Background Music */}
+      <audio
+        ref={audioRef}
+        src="/assets/music/resonance.mp3"
+        loop
+        preload="auto"
+        className="hidden"
+      />
 
       <style jsx>{`
         .pixel-font {
@@ -328,21 +435,6 @@ export default function HostSettingsPage() {
         .pixel-button:hover:not(:disabled) {
           transform: translate(2px, 2px);
           box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.8);
-        }
-        .pixel-border-large {
-          border: 4px solid #00ffff;
-          background: linear-gradient(45deg, #1a0a2a, #2d1b69);
-          box-shadow: 0 0 20px rgba(255, 107, 255, 0.3);
-        }
-        .pixel-border-large::before {
-          content: '';
-          position: absolute;
-          top: -8px;
-          left: -8px;
-          right: -8px;
-          bottom: -8px;
-          border: 2px solid #ff6bff;
-          z-index: -1;
         }
         .pixel-card {
           box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.8), 0 0 15px rgba(255, 107, 255, 0.2);
@@ -397,15 +489,27 @@ export default function HostSettingsPage() {
         }
         @keyframes glow-pink {
           0%, 100% { filter: drop-shadow(0 0 5px #ff6bff); }
-          51% { filter: drop-shadow(0 0 15px #ff6bff); }
+          50% { filter: drop-shadow(0 0 15px #ff6bff); }
         }
         /* Responsive */
         @media (max-width: 768px) {
           .pixel-border-large {
-            padding: 1rem;
+            padding: 0.75rem;
           }
           .pixel-button {
             padding: 0.5rem;
+            font-size: 0.875rem;
+          }
+          .pixel-card {
+            padding: 1rem !important;
+          }
+          .crt-effect,
+          .noise-effect {
+            background-size: 100% 2px;
+          }
+          .glow-pink,
+          .glow-cyan {
+            animation-duration: 2s;
           }
         }
       `}</style>
