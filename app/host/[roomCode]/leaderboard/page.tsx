@@ -1,10 +1,3 @@
-// Leaderboard page: host/[roomCode]/leaderboard/page.tsx
-// Updated to emphasize top 3 champions:
-// - Top 3: Larger, staggered vertical layout for podium effect (1st centered taller, 2nd/3rd smaller on sides)
-// - Enhanced animations, glows, and sizing to make them stand out
-// - Others: Compact horizontal list below, unchanged styling
-// - Retained pixel theme, no icons, consistent with player results
-
 "use client"
 
 import { Button } from "@/components/ui/button"
@@ -32,6 +25,15 @@ const backgroundGifs = [
   "/assets/gif/host/4.gif",
   // Add more if available, or cycle this one
 ]
+
+const carGifMap: Record<string, string> = {
+  red: "/assets/car/car1.gif",
+  blue: "/assets/car/car2.gif",
+  green: "/assets/car/car3.gif",
+  yellow: "/assets/car/car4.gif",
+  purple: "/assets/car/car5.gif",
+  orange: "/assets/car/car5.gif",
+}
 
 export default function HostLeaderboardPage() {
   const params = useParams()
@@ -63,6 +65,15 @@ export default function HostLeaderboardPage() {
     const finalScore = correct * 10 + 50 // Standardized to match player results
 
     return { finalScore, correctAnswers, totalQuestions, accuracy, totalTime }
+
+          {/* Preload Background GIFs */}
+      {backgroundGifs.map((gif, index) => (
+        <link key={index} rel="preload" href={gif} as="image" />
+      ))}
+      {Object.values(carGifMap).map((gif, idx) => (
+        <link key={`car-${idx}`} rel="preload" href={gif} as="image" />
+      ))}
+
   }
 
   useEffect(() => {
@@ -135,7 +146,7 @@ export default function HostLeaderboardPage() {
     if (roomCode) {
       fetchData()
     }
-  }, [roomCode, supabase])
+  }, [roomCode])
 
   // Background cycling
   useEffect(() => {
@@ -148,11 +159,11 @@ export default function HostLeaderboardPage() {
   const getRankColor = (rank: number) => {
     switch (rank) {
       case 1:
-        return "text-yellow-500 glow-yellow"
+        return "text-yellow-400 glow-gold"
       case 2:
-        return "text-gray-400"
+        return "text-gray-300 glow-silver"
       case 3:
-        return "text-amber-600"
+        return "text-amber-600 glow-bronze"
       default:
         return "text-[#00ffff]"
     }
@@ -175,20 +186,18 @@ export default function HostLeaderboardPage() {
         <div className="crt-effect"></div>
         <div className="noise-effect"></div>
         <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none"></div>
-        <div className="relative z-10 max-w-4xl mx-auto p-4">
+        <div className="relative z-10 max-w-5xl mx-auto p-4">
           <div className="text-center">
-            <Skeleton className="h-6 w-48 mx-auto mb-2 bg-[#ff6bff]/30" />
-            <Skeleton className="h-3 w-80 mx-auto bg-[#00ffff]/30" />
+            <Skeleton className="h-8 w-56 mx-auto mb-2 bg-[#ff6bff]/30" />
+            <Skeleton className="h-4 w-96 mx-auto bg-[#00ffff]/30" />
           </div>
           {/* Podium skeleton */}
-          <div className="flex flex-col items-center mb-8">
-            <Skeleton className="h-80 w-64 bg-[#ff6bff]/20 mb-4" />
-            <div className="flex gap-4">
-              <Skeleton className="h-64 w-48 bg-[#00ffff]/20" />
-              <Skeleton className="h-64 w-48 bg-[#00ffff]/20" />
-            </div>
+          <div className="flex justify-center items-end gap-4 mt-8 mb-8">
+            <Skeleton className="h-96 w-72 bg-[#ff6bff]/20" />
+            <Skeleton className="h-80 w-56 bg-[#00ffff]/20" />
+            <Skeleton className="h-64 w-56 bg-[#00ffff]/20" />
           </div>
-          <div className="space-y-4 mb-4">
+          <div className="space-y-4">
             {Array.from({ length: 5 }).map((_, i) => (
               <Skeleton key={i} className="h-16 p-4 bg-[#ff6bff]/20" />
             ))}
@@ -280,107 +289,98 @@ export default function HostLeaderboardPage() {
         </div>
       </div>
 
-      <div className="relative z-10 max-w-4xl mx-auto p-4">
-        <div className="text-center mb-4">
+      <div className="relative z-10 max-w-5xl mx-auto p-4">
+        <div className="text-center mb-18">
           <motion.h1 
-            className="text-3xl md:text-4xl font-bold mb-2 text-[#00ffff] pixel-text glow-cyan tracking-wider animate-neon-glow"
+            className="text-4xl md:text-5xl font-bold mb-2 text-[#00ffff] pixel-text glow-cyan tracking-wider animate-neon-glow"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-             <span className="text-[#ff6bff] glow-pink">Leaderboard</span>
+            <span className="text-[#ff6bff] glow-pink">Leaderboard</span>
           </motion.h1>
-          {/* <p className="text-lg text-[#ff6bff] pixel-text">Leaderboard for room {roomCode}</p> */}
         </div>
 
-        {/* Podium - Top 3: Staggered vertical for emphasis */}
+        {/* Podium - Top 3: Staggered steps */}
         <motion.div
-          className="flex flex-col items-center mb-8"
+          className="flex justify-center items-end gap-6 mb-12"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          {/* 1st Place - Taller and centered */}
-          <motion.div
-            className="w-full max-w-md mb-6"
-            initial={{ scale: 0.9, y: 20 }}
-            animate={{ scale: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-          >
-            <Card className="p-6 text-center pixel-card animate-neon-pulse-pink border-[#ff6bff]/50 bg-[#1a0a2a]/60">
-              <div className={`text-4xl md:text-5xl font-bold mb-2 ${getRankColor(1)} pixel-text`}>
-                #1
-              </div>
-              <div className="mb-3">
-                <h3 className="text-2xl md:text-3xl font-bold text-white pixel-text glow-text">{topThree[0]?.nickname}</h3>
-              </div>
-              <div className="text-3xl md:text-4xl font-bold text-[#00ffff] mb-2 pixel-text glow-cyan animate-neon-glow">
-                {topThree[0]?.finalScore}
-              </div>
-              <div className="text-sm text-[#ff6bff] pixel-text mb-4">points</div>
-              <div className="grid grid-cols-1 gap-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-[#ff6bff] pixel-text">Correct</span>
-                  <span className="font-bold text-[#00ffff] glow-cyan">{topThree[0]?.correctAnswers}/{topThree[0]?.totalQuestions}</span>
+          {/* 2nd Place - Left, slightly lower */}
+          {topThree[1] && (
+            <motion.div
+              className="w-64 order-1"
+              initial={{ scale: 0.8, y: 50 }}
+              animate={{ scale: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+            >
+              <Card className="p-5 text-center pixel-card border-gray-300/50 bg-[#1a0a2a]/70 animate-pulse-silver">
+                <div className={`text-3xl font-bold mb-2 ${getRankColor(2)} pixel-text`}>#2</div>
+                   <img
+                    src={carGifMap[topThree[1].car] || '/assets/car/car5.gif'}
+                    alt={`${carGifMap[topThree[1].car]} car`}
+                    className="h-16 sm:h-20 md:h-24 lg:h-28 w-20 sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce
+                    filter brightness-125 contrast-150"
+                     />
+                <h3 className="text-xl font-bold text-white pixel-text glow-text mb-2">{topThree[1].nickname}</h3>
+                <div className="text-2xl font-bold text-[#00ffff] mb-2 pixel-text glow-cyan">{topThree[1].finalScore}</div>
+                <div className="text-xs text-[#ff6bff] pixel-text mb-3">points</div>
+                <div className="grid grid-cols-1 gap-1 text-sm">
+ 
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-[#ff6bff] pixel-text">Accuracy</span>
-                  <span className="font-bold text-[#ff6bff] glow-pink">{topThree[0]?.accuracy}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#ff6bff] pixel-text">Time</span>
-                  <span className="font-bold text-[#00ffff] glow-cyan">{topThree[0]?.totalTime}</span>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
+              </Card>
+            </motion.div>
+          )}
 
-          {/* 2nd and 3rd Place - Side by side below */}
-          <motion.div
-            className="flex gap-4 w-full max-w-2xl justify-center"
-            initial={{ scale: 0.9 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.5 }}
-          >
-            {topThree.slice(1).map((player, idx) => (
-              <motion.div
-                key={player.nickname}
-                className="flex-1"
-                initial={{ y: 20 }}
-                animate={{ y: 0 }}
-                transition={{ duration: 0.8, delay: 0.5 + idx * 0.1 }}
-              >
-                <Card className={`p-4 text-center pixel-card ${
-                  player.rank === 2 ? 'border-gray-400/50 bg-[#1a0a2a]/60' : 'border-amber-600/50 bg-[#1a0a2a]/60'
-                }`}>
-                  <div className={`text-2xl md:text-3xl font-bold mb-2 ${getRankColor(player.rank)} pixel-text`}>
-                    #{player.rank}
-                  </div>
-                  <div className="mb-2">
-                    <h3 className="text-lg md:text-xl font-bold text-white pixel-text glow-text">{player.nickname}</h3>
-                  </div>
-                  <div className="text-xl md:text-2xl font-bold text-[#00ffff] mb-1 pixel-text glow-cyan">
-                    {player.finalScore}
-                  </div>
-                  <div className="text-xs text-[#ff6bff] pixel-text mb-2">points</div>
-                  <div className="grid grid-cols-1 gap-1 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-[#ff6bff] pixel-text">Correct</span>
-                      <span className="font-bold text-[#00ffff]">{player.correctAnswers}/{player.totalQuestions}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#ff6bff] pixel-text">Acc.</span>
-                      <span className="font-bold text-[#ff6bff]">{player.accuracy}%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#ff6bff] pixel-text">Time</span>
-                      <span className="font-bold text-[#00ffff]">{player.totalTime}</span>
-                    </div>
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
-          </motion.div>
+          {/* 1st Place - Center, tallest */}
+          {topThree[0] && (
+            <motion.div
+              className="w-80 order-2"
+              initial={{ scale: 0.9, y: 80 }}
+              animate={{ scale: 1.1, y: 0 }}
+              transition={{ duration: 1, delay: 0.3 }}
+            >
+              <Card className="p-6 text-center pixel-card border-yellow-400/70 bg-[#1a0a2a]/80 animate-pulse-gold">
+                <div className={`text-5xl font-bold mb-3 ${getRankColor(1)} pixel-text`}>#1</div>
+                <img
+                src={carGifMap[topThree[0].car] || '/assets/car/car5.gif'}
+                alt={`${topThree[0].car} car`}
+                className="h-16 sm:h-20 md:h-24 lg:h-28 w-20 sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce
+                filter brightness-125 contrast-150"
+                  />
+                <h3 className="text-3xl font-bold text-white pixel-text glow-text mb-3">{topThree[0].nickname}</h3>
+                <div className="text-4xl font-bold text-[#00ffff] mb-2 pixel-text glow-cyan ">{topThree[0].finalScore}</div>
+                <div className="text-sm text-[#ff6bff] pixel-text mb-4">points</div>
+
+              </Card>
+            </motion.div>
+          )}
+
+          {/* 3rd Place - Right, lowest */}
+          {topThree[2] && (
+            <motion.div
+              className="w-64 order-3"
+              initial={{ scale: 0.8, y: 50 }}
+              animate={{ scale: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.5 }}
+            >
+              <Card className="p-5 text-center pixel-card border-amber-600/50 bg-[#1a0a2a]/70 animate-pulse-bronze">
+                <div className={`text-3xl font-bold mb-2 ${getRankColor(3)} pixel-text`}>#3</div>
+                 <img
+                    src={carGifMap[topThree[2].car] || '/assets/car/car5.gif'}
+                    alt={`${carGifMap[topThree[2].car]} car`}
+                    className="h-16 sm:h-20 md:h-24 lg:h-28 w-20 sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce
+                    filter brightness-125 contrast-150"
+                  />
+                <h3 className="text-xl font-bold text-white pixel-text glow-text mb-2">{topThree[2].nickname}</h3>
+                <div className="text-2xl font-bold text-[#00ffff] mb-2 pixel-text glow-cyan">{topThree[2].finalScore}</div>
+                <div className="text-xs text-[#ff6bff] pixel-text mb-3">points</div>
+
+              </Card>
+            </motion.div>
+          )}
         </motion.div>
 
         {/* Other Players */}
@@ -495,8 +495,14 @@ export default function HostLeaderboardPage() {
         .glow-pink {
           filter: drop-shadow(0 0 10px #ff6bff);
         }
-        .glow-yellow {
-          filter: drop-shadow(0 0 10px #ffd700);
+        .glow-gold {
+          filter: drop-shadow(0 0 15px #ffd700);
+        }
+        .glow-silver {
+          filter: drop-shadow(0 0 12px #d1d5db);
+        }
+        .glow-bronze {
+          filter: drop-shadow(0 0 12px #b45309);
         }
         .glow-text {
           filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));
@@ -505,9 +511,17 @@ export default function HostLeaderboardPage() {
           0% { background-position: 0 0; }
           100% { background-position: 0 100%; }
         }
-        @keyframes neon-pulse-pink {
-          0%, 100% { box-shadow: 0 0 10px rgba(255, 107, 255, 0.7), 0 0 20px rgba(255, 107, 255, 0.5); }
-          50% { box-shadow: 0 0 15px rgba(255, 107, 255, 1), 0 0 30px rgba(255, 107, 255, 0.8); }
+        @keyframes neon-pulse-gold {
+          0%, 100% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.7), 0 0 30px rgba(255, 215, 0, 0.5); }
+          50% { box-shadow: 0 0 25px rgba(255, 215, 0, 1), 0 0 50px rgba(255, 215, 0, 0.8); }
+        }
+        @keyframes neon-pulse-silver {
+          0%, 100% { box-shadow: 0 0 12px rgba(209, 213, 219, 0.7), 0 0 24px rgba(209, 213, 219, 0.5); }
+          50% { box-shadow: 0 0 20px rgba(209, 213, 219, 1), 0 0 40px rgba(209, 213, 219, 0.8); }
+        }
+        @keyframes neon-pulse-bronze {
+          0%, 100% { box-shadow: 0 0 12px rgba(180, 83, 9, 0.7), 0 0 24px rgba(180, 83, 9, 0.5); }
+          50% { box-shadow: 0 0 20px rgba(180, 83, 9, 1), 0 0 40px rgba(180, 83, 9, 0.8); }
         }
         @keyframes neon-glow {
           0%, 100% { 
@@ -519,8 +533,14 @@ export default function HostLeaderboardPage() {
             text-shadow: 2px 2px 0px #000, 0 0 20px #00ffff, 0 0 30px #00ffff;
           }
         }
-        .animate-neon-pulse-pink {
-          animation: neon-pulse-pink 2s ease-in-out infinite;
+        .animate-pulse-gold {
+          animation: neon-pulse-gold 2s ease-in-out infinite;
+        }
+        .animate-pulse-silver {
+          animation: neon-pulse-silver 2s ease-in-out infinite;
+        }
+        .animate-pulse-bronze {
+          animation: neon-pulse-bronze 2s ease-in-out infinite;
         }
         .animate-neon-glow {
           animation: neon-glow 2s ease-in-out infinite;
