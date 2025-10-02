@@ -28,16 +28,15 @@ export default function HomePage() {
   useEffect(() => {
     localStorage.removeItem("nickname")
     localStorage.removeItem("playerId")
+    localStorage.removeItem("nextQuestionIndex")
   }, [])
 
   useEffect(() => {
     const code = searchParams.get("code")
     if (code) {
       setRoomCode(code.toUpperCase())
-      // hapus query string
-      router.replace(pathname, undefined) // <--- ini otomatis bersih
+      router.replace(pathname, undefined)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Inisialisasi audio: play otomatis dengan volume default
@@ -124,20 +123,20 @@ export default function HomePage() {
 
   return (
     <div className="min-h-[100dvh] w-full relative overflow-hidden pixel-font p-2">
+      {/* Audio Element untuk Background Music */}
+      <audio
+        ref={audioRef}
+        src="/assets/music/resonance.mp3"
+        loop
+        preload="auto"
+        className="hidden"
+      />
+
       {/* Background Image */}
       <div
         className="absolute inset-0 w-full h-full bg-cover bg-center"
         style={{ backgroundImage: "url('/assets/gif/1.gif/')" }}
       />
-
-      {/* CRT Monitor Effect */}
-      <div className="crt-effect"></div>
-
-      {/* Static Noise */}
-      <div className="noise-effect"></div>
-
-      {/* Purple Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none"></div>
 
       {/* Burger Menu Button - Fixed Top Right */}
       <motion.button
@@ -226,7 +225,7 @@ export default function HomePage() {
         {/* Action Cards */}
         <div className="
         grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-4xl w-full px-4
-        sm:grid-rows-1 grid-rows-2 sm:grid-flow-row grid-flow-dense
+        grid-rows-none sm:grid-flow-row grid-flow-dense
         max-sm:[grid-template-areas:'join'_'host']">
           {/* Host Game Card */}
           <motion.div
@@ -237,7 +236,7 @@ export default function HomePage() {
             className="group max-sm:[grid-area:host]"
           >
             <Link href="/host">
-              <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 hover:border-[#ff6bff] transition-all duration-300 h-full shadow-[0_0_15px_rgba(255,107,255,0.3)] pixel-card">
+              <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 hover:border-[#ff6bff] transition-all duration-300 sm:h-full shadow-[0_0_15px_rgba(255,107,255,0.3)] pixel-card">
                 <CardHeader className="text-center">
                   <motion.div
                     className="w-16 h-16 bg-gradient-to-br from-[#ff6bff] to-[#1a0a2a] border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-[0_0_15px_rgba(255,107,255,0.7)] transition-all duration-300"
@@ -318,41 +317,7 @@ export default function HomePage() {
             </Card>
           </motion.div>
         </div>
-
-        {/* Pixel Art Decoration */}
-        <div className="absolute bottom-4 left-4 opacity-40">
-          <div className="flex gap-1">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="w-3 h-3 bg-[#00ffff]"></div>
-            ))}
-          </div>
-        </div>
-
-        <div className="absolute bottom-4 right-4 opacity-40">
-          <div className="flex flex-col gap-1">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="w-3 h-3 bg-[#ff6bff]"></div>
-            ))}
-          </div>
-        </div>
-
-        {/* Corner Decorations */}
-        <div className="absolute top-4 left-4 opacity-30">
-          <div className="w-6 h-6 border-2 border-[#00ffff]"></div>
-        </div>
-        <div className="absolute top-4 right-4 opacity-30">
-          <div className="w-6 h-6 border-2 border-[#ff6bff]"></div>
-        </div>
       </div>
-
-      {/* Audio Element untuk Background Music */}
-      <audio
-        ref={audioRef}
-        src="/assets/music/resonance.mp3"
-        loop
-        preload="auto"
-        className="hidden"
-      />
 
       <style jsx>{`
           .pixel-font {

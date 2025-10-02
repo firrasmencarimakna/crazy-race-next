@@ -194,18 +194,11 @@ export default function HostSettingsPage() {
           className="absolute inset-0 w-full h-full bg-cover bg-center"
           style={{ backgroundImage: `url(${backgroundGifs[currentBgIndex]})` }}
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          animate={{ opacity: 0.5 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 1, ease: "easeInOut" }}
         />
       </AnimatePresence>
-
-      {/* CRT Monitor Effect */}
-      <div className="crt-effect"></div>
-      {/* Static Noise */}
-      <div className="noise-effect"></div>
-      {/* Purple Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none"></div>
 
       {/* Back Button - Fixed Top Left */}
       <motion.button
@@ -283,36 +276,15 @@ export default function HostSettingsPage() {
         </motion.div>
       )}
 
-      {/* Corner Decorations */}
-      <div className="absolute top-4 left-4 opacity-30">
-        <div className="w-6 h-6 border-2 border-[#00ffff]"></div>
-      </div>
-      <div className="absolute top-4 right-4 opacity-30">
-        <div className="w-6 h-6 border-2 border-[#ff6bff]"></div>
-      </div>
-      <div className="absolute bottom-4 left-4 opacity-40">
-        <div className="flex gap-1">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="w-3 h-3 bg-[#00ffff]"></div>
-          ))}
-        </div>
-      </div>
-      <div className="absolute bottom-4 right-4 opacity-40">
-        <div className="flex flex-col gap-1">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="w-3 h-3 bg-[#ff6bff]"></div>
-          ))}
-        </div>
-      </div>
       {saving && <LoadingRetro />}
 
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-4xl">
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 py-6 max-w-4xl">
         {/* Title */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-8 sm:mb-12"
+          className="text-center mb-8"
         >
           <div className="p-4 sm:p-6">
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-[#00ffff] pixel-text glow-cyan">

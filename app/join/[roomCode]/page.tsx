@@ -250,31 +250,7 @@ export default function LobbyPage() {
       </AnimatePresence>
 
       {/* Overlay Effects */}
-      <div className="crt-effect"></div>
-      <div className="noise-effect"></div>
-      <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none"></div>
-
-      {/* Corner Decorations */}
-      <div className="absolute top-4 left-4 opacity-30">
-        <div className="w-6 h-6 border-2 border-[#00ffff]"></div>
-      </div>
-      <div className="absolute top-4 right-4 opacity-30">
-        <div className="w-6 h-6 border-2 border-[#ff6bff]"></div>
-      </div>
-      <div className="absolute bottom-4 left-4 opacity-40">
-        <div className="flex gap-1">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="w-3 h-3 bg-[#00ffff]"></div>
-          ))}
-        </div>
-      </div>
-      <div className="absolute bottom-4 right-4 opacity-40">
-        <div className="flex flex-col gap-1">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="w-3 h-3 bg-[#ff6bff]"></div>
-          ))}
-        </div>
-      </div>
+      {/* <div className="crt-effect"></div> */}
 
       {/* Header */}
       <div className="relative z-10 max-w-7xl mx-auto pt-8 px-4">
