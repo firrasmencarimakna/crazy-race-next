@@ -195,7 +195,7 @@ export default function PlayerResultsPage() {
     )
   }
 
-  const { finalScore, correctAnswers, totalQuestions, accuracy, totalTime, rank, totalPlayers, nickname, car } = currentPlayerStats
+  const { finalScore, correctAnswers, totalQuestions, accuracy, totalTime, rank, nickname, car } = currentPlayerStats
 
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
@@ -218,16 +218,18 @@ export default function PlayerResultsPage() {
       </AnimatePresence>
 
       <div className="relative z-10 max-w-4xl mx-auto p-4">
-        <div className="text-center mb-4">
-          <motion.h1
-            className="text-3xl md:text-4xl font-bold mb-2 text-[#00ffff] pixel-text glow-cyan tracking-wider"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            Result
-          </motion.h1>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center pb-4 sm:pb-5"
+        >
+          <div className="inline-block p-4 sm:p-6">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#00ffff] pixel-text glow-cyan">
+              Crazy Race
+            </h1>
+          </div>
+        </motion.div>
 
         {/* Main Result Card */}
         <motion.div
