@@ -1,61 +1,48 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Clock, Trophy, CheckCircle, XCircle, Zap, Users, Activity } from "lucide-react"
-import { useParams, useRouter, useSearchParams } from "next/navigation"
+import { Clock } from "lucide-react"
+import { useParams, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import { useMultiplayer } from "@/hooks/use-multiplayer"
 import { motion, AnimatePresence } from "framer-motion"
 import LoadingRetro from "@/components/loadingRetro"
+import { formatTime } from "@/utils/game"
 
-// Background GIFs (same as LobbyPage)
+// Background GIFs
 const backgroundGifs = [
   "/assets/gif/host/1.gif",
   "/assets/gif/host/2.gif",
   "/assets/gif/host/3.gif",
   "/assets/gif/host/4.gif",
-  "/assets/gif/host/5.gif", 
+  "/assets/gif/host/5.gif",
   "/assets/gif/host/7.gif",
 ]
 
-// Mapping warna mobil ke file GIF mobil (same as LobbyPage)
+// Car GIF mappings
 const carGifMap: Record<string, string> = {
   red: "/assets/car/car1.gif",
   blue: "/assets/car/car2.gif",
   green: "/assets/car/car3.gif",
   yellow: "/assets/car/car4.gif",
   purple: "/assets/car/car5.gif",
-  orange: "/assets/car/car5.gif",
+  orange: "/assets/car/car6.gif",
 }
 
-// Define QuizQuestion type to match expected structure
 type QuizQuestion = {
   id: string
   question: string
   options: string[]
   correctAnswer: number
-  timeLimit: number
-  difficulty: string
-  points: number
-  category: string
 }
 
 export default function QuizGamePage() {
   const params = useParams()
   const router = useRouter()
-  const searchParams = useSearchParams()
   const roomCode = params.roomCode as string
 
   const [playerId, setPlayerId] = useState<string>("")
-  useEffect(() => {
-    const pid = localStorage.getItem("playerId") || ""
-    if (!pid) router.replace(`/join/${roomCode}`)
-    else setPlayerId(pid)
-  }, [roomCode, router])
-
   const [questions, setQuestions] = useState<QuizQuestion[]>([])
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
@@ -67,67 +54,93 @@ export default function QuizGamePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
+  const gameStartRef = useRef<number | null>(null)
 
   const currentQuestion = questions[currentQuestionIndex]
   const totalQuestions = questions.length
-  const gameStartRef = useRef<number | null>(null)
 
-
-  // Handle starting from a specific question index (after mini game)
+  // Initialize playerId and check session
   useEffect(() => {
-    const startIndexParam = searchParams.get('startIndex')
-    if (startIndexParam && questions.length > 0) {
-      const startIndex = parseInt(startIndexParam, 10)
-      if (!isNaN(startIndex) && startIndex >= 0 && startIndex < totalQuestions) {
-        setCurrentQuestionIndex(startIndex)
-      }
+    const pid = localStorage.getItem("playerId") || ""
+    if (!pid) {
+      router.replace(`/join/${roomCode}`)
+    } else {
+      setPlayerId(pid)
     }
-  }, [searchParams, totalQuestions, questions.length])
+  }, [roomCode, router])
 
-  // Fetch game room data from Supabase
+  // Fetch game room and player data from Supabase
   useEffect(() => {
-    const fetchGameRoom = async () => {
-      if (!gameStartRef.current) {
-        gameStartRef.current = Date.now()
-      }
-
+    const fetchGameData = async () => {
       setLoading(true)
-      const { data, error } = await supabase
-        .from("game_rooms")
-        .select("settings, questions")
-        .eq("room_code", roomCode)
-        .single()
+      try {
+        // Fetch game room data
+        const { data: roomData, error: roomError } = await supabase
+          .from("game_rooms")
+          .select("id, settings, questions, status")
+          .eq("room_code", roomCode)
+          .single()
 
-      if (error || !data) {
-        console.error("Error fetching game room:", error)
-        setError("Failed to load quiz data")
+        if (roomError || !roomData) {
+          throw new Error("Failed to load game room data")
+        }
+
+        // Parse settings and questions
+        const settings = typeof roomData.settings === "string" ? JSON.parse(roomData.settings) : roomData.settings
+        const formattedQuestions: QuizQuestion[] = roomData.questions.map((q: any, index: number) => ({
+          id: `${roomCode}-${index}`,
+          question: q.question,
+          options: q.options,
+          correctAnswer: q.correct,
+        }))
+
+        // Fetch player progress
+        const { data: playerData, error: playerError } = await supabase
+          .from("players")
+          .select("result, completion")
+          .eq("id", playerId)
+          .single()
+
+        if (playerError || !playerData) {
+          throw new Error("Failed to load player data")
+        }
+
+        const result = playerData.result && playerData.result[0] ? playerData.result[0] : {}
+        const savedAnswers = result.answers || new Array(formattedQuestions.length).fill(null)
+        const currentIndex = playerData.completion ? formattedQuestions.length : (result.current_question || 0)
+        const savedCorrect = result.correct || 0
+        const savedDuration = result.duration || 0
+        const remainingTime = settings.duration - savedDuration > 0 ? settings.duration - savedDuration : 0
+
+        setQuestions(formattedQuestions)
+        setAnswers(savedAnswers)
+        setCurrentQuestionIndex(currentIndex)
+        setCorrectAnswers(savedCorrect)
+        setTotalTimeRemaining(remainingTime)
+        if (!gameStartRef.current) {
+          gameStartRef.current = Date.now() - savedDuration * 1000
+        }
         setLoading(false)
-        return
+      } catch (err: any) {
+        console.error("Error fetching game data:", err)
+        setError(err.message)
+        setLoading(false)
       }
-
-      const { settings, questions: rawQuestions } = data
-      const parsedSettings = typeof settings === "string" ? JSON.parse(settings) : settings
-
-      const formattedQuestions: QuizQuestion[] = rawQuestions.map((q: any, index: number) => ({
-        id: `${roomCode}-${index}`,
-        question: q.question,
-        options: q.options,
-        correctAnswer: q.correct,
-      }))
-
-      setQuestions(formattedQuestions)
-      setAnswers(new Array(formattedQuestions.length).fill(null))
-      setTotalTimeRemaining(parsedSettings.duration || 300) // 300 detik default
-      setLoading(false)
     }
 
-    if (roomCode) {
-      fetchGameRoom()
+    if (roomCode && playerId) {
+      fetchGameData()
     }
-  }, [roomCode])
+  }, [roomCode, playerId])
 
-  // Timer logic
+  // Timer logic and end-game on timeout
   useEffect(() => {
+    if (totalTimeRemaining <= 0 && !loading && questions.length > 0) {
+      // Time's up, save progress and redirect to result
+      saveProgressAndRedirect()
+      return
+    }
+
     if (totalTimeRemaining > 0 && !isAnswered && currentQuestion) {
       const timer = setInterval(() => {
         setTotalTimeRemaining((prev) => {
@@ -137,13 +150,32 @@ export default function QuizGamePage() {
       }, 1000)
       return () => clearInterval(timer)
     }
-  }, [totalTimeRemaining, isAnswered, currentQuestion])
+  }, [totalTimeRemaining, isAnswered, currentQuestion, loading, questions.length])
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
-  }
+  // Subscribe to game_rooms status changes
+  useEffect(() => {
+    const subscription = supabase
+      .channel(`game_rooms:${roomCode}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "game_rooms",
+          filter: `room_code=eq.${roomCode}`,
+        },
+        (payload) => {
+          if (payload.new.status === "finished") {
+            saveProgressAndRedirect()
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(subscription)
+    }
+  }, [roomCode, playerId, answers, correctAnswers, questions])
 
   // Background image cycling
   useEffect(() => {
@@ -152,6 +184,37 @@ export default function QuizGamePage() {
     }, 5000)
     return () => clearInterval(bgInterval)
   }, [])
+
+  // Save progress and redirect to result page
+  const saveProgressAndRedirect = async () => {
+    const elapsedSeconds = gameStartRef.current
+      ? Math.floor((Date.now() - gameStartRef.current) / 1000)
+      : 0
+    const accuracy = totalQuestions > 0 ? ((correctAnswers / totalQuestions) * 100).toFixed(2) : "0.00"
+    const updatedResult = {
+      score: correctAnswers * 10,
+      correct: correctAnswers,
+      accuracy,
+      duration: elapsedSeconds,
+      current_question: currentQuestionIndex + 1,
+      total_question: totalQuestions,
+      answers,
+    }
+
+    const { error } = await supabase
+      .from("players")
+      .update({
+        result: [updatedResult],
+        completion: true,
+      })
+      .eq("id", playerId)
+
+    if (error) {
+      console.error("Error saving progress:", error)
+    }
+
+    router.push(`/join/${roomCode}/result`)
+  }
 
   const handleAnswerSelect = async (answerIndex: number) => {
     if (isAnswered) return
@@ -170,57 +233,65 @@ export default function QuizGamePage() {
     const isCorrect = answerIndex === currentQuestion.correctAnswer
     const newCorrectAnswers = correctAnswers + (isCorrect ? 1 : 0)
     setCorrectAnswers(newCorrectAnswers)
-    const accuracy = (newCorrectAnswers / totalQuestions) * 100
-
-    // Update player result in Supabase
+    const accuracy = totalQuestions > 0 ? ((newCorrectAnswers / totalQuestions) * 100).toFixed(2) : "0.00"
     const elapsedSeconds = gameStartRef.current
       ? Math.floor((Date.now() - gameStartRef.current) / 1000)
       : 0
 
+    // Save progress to Supabase
     const updatedResult = {
       score: newCorrectAnswers * 10,
       correct: newCorrectAnswers,
-      accuracy: accuracy.toFixed(2),
+      accuracy,
       duration: elapsedSeconds,
-      current_question:
-        currentQuestionIndex + 1 < totalQuestions
-          ? currentQuestionIndex + 1
-          : totalQuestions,
+      current_question: currentQuestionIndex + 1,
       total_question: totalQuestions,
+      answers: newAnswers,
     }
 
     const { error } = await supabase
-      .from('players')
+      .from("players")
       .update({
         result: [updatedResult],
         completion: currentQuestionIndex + 1 === totalQuestions,
       })
-      .eq('id', playerId)
+      .eq("id", playerId)
 
     if (error) {
-      console.error('Error updating player result:', error)
+      console.error("Error updating player result:", error)
     }
 
-    // Move to next question, mini game, or result
+    // Move to next question, mini-game, or result
     setTimeout(() => {
       const nextIndex = currentQuestionIndex + 1
       if (nextIndex < totalQuestions) {
         if (nextIndex % 7 === 0) {
-          // Redirect to mini game setelah setiap 7 soal, dengan parameter untuk melanjutkan
-          window.location.href = `/racing-game/v4.final.html?startIndex=${nextIndex}&roomCode=${roomCode}`
+          // Save next index for mini-game return
+          localStorage.setItem("nextQuestionIndex", nextIndex.toString())
+          window.location.href = `/racing-game/v4.final.html?roomCode=${roomCode}`
         } else {
-          // Lanjut ke soal berikutnya
           setCurrentQuestionIndex(nextIndex)
           setSelectedAnswer(null)
           setIsAnswered(false)
           setShowResult(false)
         }
       } else {
-        // Selesai semua soal, ke halaman result
-        router.push(`/join/${roomCode}/result`)
+        saveProgressAndRedirect()
       }
     }, 500)
   }
+
+  // Resume from mini-game
+  useEffect(() => {
+    const nextIndex = localStorage.getItem("nextQuestionIndex")
+    if (nextIndex && questions.length > 0) {
+      const index = parseInt(nextIndex, 10)
+      if (!isNaN(index) && index >= 0 && index < totalQuestions) {
+        setCurrentQuestionIndex(index)
+        localStorage.removeItem("nextQuestionIndex")
+      }
+    }
+  }, [questions.length, totalQuestions])
 
   const getOptionStyle = (optionIndex: number) => {
     if (!showResult) {
@@ -232,9 +303,11 @@ export default function QuizGamePage() {
     if (optionIndex === selectedAnswer) {
       return optionIndex === currentQuestion.correctAnswer
         ? "border-[#00ff00] bg-[#00ff00]/10 text-[#00ff00] glow-green"
-        : "border-red-500 bg-red-500/10 text-red-500";
+        : "border-red-500 bg-red-500/10 text-red-500"
     }
-    return "border-[#ff6bff]/50 bg-[#1a0a2a]/50 opacity-60"
+    return optionIndex === currentQuestion.correctAnswer
+      ? "border-[#00ff00] bg-[#00ff00]/10 text-[#00ff00] glow-green"
+      : "border-[#ff6bff]/50 bg-[#1a0a2a]/50 opacity-60"
   }
 
   const getTimeColor = () => {
@@ -244,9 +317,7 @@ export default function QuizGamePage() {
   }
 
   if (loading || error || !currentQuestion) {
-    return (
-      <LoadingRetro />
-    )
+    return <LoadingRetro />
   }
 
   return (
@@ -273,28 +344,28 @@ export default function QuizGamePage() {
       </AnimatePresence>
 
       {/* Overlay Effects */}
-      <div className="crt-effect"></div>
-      <div className="noise-effect"></div>
-      <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none"></div>
+      <div className="crt-effect" />
+      <div className="noise-effect" />
+      <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none" />
 
       {/* Corner Decorations */}
       <div className="absolute top-4 left-4 opacity-30">
-        <div className="w-6 h-6 border-2 border-[#00ffff]"></div>
+        <div className="w-6 h-6 border-2 border-[#00ffff]" />
       </div>
       <div className="absolute top-4 right-4 opacity-30">
-        <div className="w-6 h-6 border-2 border-[#ff6bff]"></div>
+        <div className="w-6 h-6 border-2 border-[#ff6bff]" />
       </div>
       <div className="absolute bottom-4 left-4 opacity-40">
         <div className="flex gap-1">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="w-3 h-3 bg-[#00ffff]"></div>
+            <div key={i} className="w-3 h-3 bg-[#00ffff]" />
           ))}
         </div>
       </div>
       <div className="absolute bottom-4 right-4 opacity-40">
         <div className="flex flex-col gap-1">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="w-3 h-3 bg-[#ff6bff]"></div>
+            <div key={i} className="w-3 h-3 bg-[#ff6bff]" />
           ))}
         </div>
       </div>
@@ -312,7 +383,6 @@ export default function QuizGamePage() {
         <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 pixel-card my-8 px-4 py-2">
           <CardContent className="px-0">
             <div className="flex sm:items-center justify-between gap-4">
-              {/* Bagian Kiri */}
               <div className="flex items-center space-x-3 sm:space-x-4">
                 <Clock
                   className={`h-5 w-5 sm:h-7 sm:w-7 md:h-8 md:w-8 lg:h-10 lg:w-10 ${getTimeColor()}`}
@@ -325,20 +395,15 @@ export default function QuizGamePage() {
                   </div>
                 </div>
               </div>
-
-              {/* Bagian Kanan */}
               <div className="flex items-center">
                 <Badge
-                  className="bg-[#1a0a2a]/50 border-[#00ffff] text-[#00ffff] 
-                   px-3 sm:px-4 sm:py-2 text-base sm:text-lg md:text-xl lg:text-2xl
-                   pixel-text glow-cyan"
+                  className="bg-[#1a0a2a]/50 border-[#00ffff] text-[#00ffff] px-3 sm:px-4 sm:py-2 text-base sm:text-lg md:text-xl lg:text-2xl pixel-text glow-cyan"
                 >
                   {currentQuestionIndex + 1}/{totalQuestions}
                 </Badge>
               </div>
             </div>
           </CardContent>
-
         </Card>
 
         {/* Question */}
@@ -355,7 +420,7 @@ export default function QuizGamePage() {
                   key={index}
                   onClick={() => handleAnswerSelect(index)}
                   disabled={isAnswered}
-                  className={`p-3 sm:p-4  rounded-xl border-4 border-double transition-all duration-200 text-left bg-[#1a0a2a]/50 ${getOptionStyle(index)}`}
+                  className={`p-3 sm:p-4 rounded-xl border-4 border-double transition-all duration-200 text-left bg-[#1a0a2a]/50 ${getOptionStyle(index)}`}
                   whileHover={{ scale: isAnswered ? 1 : 1.01 }}
                   whileTap={{ scale: isAnswered ? 1 : 0.99 }}
                 >
