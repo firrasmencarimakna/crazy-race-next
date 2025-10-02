@@ -344,6 +344,15 @@ export default function HostRoomPage() {
 
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font"> {/* pt-20 untuk ruang burger */}
+      {/* Audio Element untuk Background Music */}
+      <audio
+        ref={audioRef}
+        src="/assets/music/robbers.mp3"
+        loop
+        preload="auto"
+        className="hidden"
+      />
+
       {/* Preload Background GIFs */}
       {backgroundGifs.map((gif, index) => (
         <link key={index} rel="preload" href={gif} as="image" />
@@ -364,13 +373,6 @@ export default function HostRoomPage() {
           transition={{ duration: 1, ease: "easeInOut" }}
         />
       </AnimatePresence>
-
-      {/* CRT Monitor Effect */}
-      <div className="crt-effect"></div>
-      {/* Static Noise */}
-      <div className="noise-effect"></div>
-      {/* Purple Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-100/20 pointer-events-none"></div>
 
       {/* Back Button - Fixed Top Left */}
       <motion.button
@@ -436,28 +438,6 @@ export default function HostRoomPage() {
           </div>
         </motion.div>
       )}
-
-      {/* Corner Decorations */}
-      <div className="absolute top-4 left-4 opacity-30 hidden sm:block">
-        <div className="w-6 h-6 border-2 border-[#00ffff]"></div>
-      </div>
-      <div className="absolute top-4 right-4 opacity-30 hidden sm:block">
-        <div className="w-6 h-6 border-2 border-[#ff6bff]"></div>
-      </div>
-      <div className="absolute bottom-4 left-4 opacity-40 hidden sm:block">
-        <div className="flex gap-1">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="w-3 h-3 bg-[#00ffff]"></div>
-          ))}
-        </div>
-      </div>
-      <div className="absolute bottom-4 right-4 opacity-40 hidden sm:block">
-        <div className="flex flex-col gap-1">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="w-3 h-3 bg-[#ff6bff]"></div>
-          ))}
-        </div>
-      </div>
 
       <div className="relative z-10 max-w-8xl mx-auto p-4 sm:p-6 md:p-8">
         {/* Title */}
@@ -594,15 +574,6 @@ export default function HostRoomPage() {
           </Card>
         </div>
       </div>
-
-      {/* Audio Element untuk Background Music */}
-      <audio
-        ref={audioRef}
-        src="/assets/music/robbers.mp3"
-        loop
-        preload="auto"
-        className="hidden"
-      />
 
       <style jsx>{`
         .pixel-font {

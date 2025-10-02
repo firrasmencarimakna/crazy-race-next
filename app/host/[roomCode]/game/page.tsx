@@ -252,7 +252,7 @@ export default function HostMonitorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font pt-20"> {/* pt-20 untuk ruang burger */}
+    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font"> {/* pt-20 untuk ruang burger */}
       {/* Preload GIFs */}
       {backgroundGifs.map((gif, index) => (
         <link key={index} rel="preload" href={gif} as="image" />
@@ -331,34 +331,21 @@ export default function HostMonitorPage() {
         </motion.div>
       )}
 
-      {/* Corner Decorations */}
-      <div className="absolute top-4 left-4 opacity-30">
-        <div className="w-6 h-6 border-2 border-[#00ffff]"></div>
-      </div>
-      <div className="absolute top-4 right-4 opacity-30">
-        <div className="w-6 h-6 border-2 border-[#ff6bff]"></div>
-      </div>
-      <div className="absolute bottom-4 left-4 opacity-40">
-        <div className="flex gap-1">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="w-3 h-3 bg-[#00ffff]"></div>
-          ))}
-        </div>
-      </div>
-      <div className="absolute bottom-4 right-4 opacity-40">
-        <div className="flex flex-col gap-1">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="w-3 h-3 bg-[#ff6bff]"></div>
-          ))}
-        </div>
-      </div>
-
-      <div className="relative z-10 max-w-7xl mx-auto pt-8 px-4">
+      <div className="relative z-10 max-w-7xl mx-auto p-4 sm:p-6 md:p-10">
         {/* Header dengan Timer dan Controls */}
-        <div className="flex flex-col items-center mb-8 text-center">
-          <h1 className="text-6xl font-bold text-[#00ffff] pixel-text glow-cyan mb-4 tracking-wider">
-            CRAZY RACE
-          </h1>
+        <div className="flex flex-col items-center text-center">
+          <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center pb-4 sm:pb-5"
+        >
+          <div className="inline-block p-4 sm:p-6">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#00ffff] pixel-text glow-cyan">
+              Crazy Race
+            </h1>
+          </div>
+        </motion.div>
           
           {/* Game Timer dan Controls */}
           <Card className="bg-[#1a0a2a]/60 border-[#ff6bff]/50 pixel-card px-6 py-4 mb-4 w-full ">
@@ -427,8 +414,8 @@ export default function HostMonitorPage() {
                         }`}
                       >
                         {/* Rank Badge */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
+                        <div className="flex items-center">
+                          <div className="flex items-center justify-between space-x-2 w-full">
                             {getRankIcon(index)}
                             {isCompleted && (
                               <CheckCircle className="w-4 h-4 text-green-400" />
