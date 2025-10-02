@@ -324,7 +324,7 @@ export default function HostRoomPage() {
   // Countdown display component
   if (countdown > 0) {
     return (
-      <div className="min-h-screen bg-[#1a0a2a] flex items-center justify-center pixel-font pt-20"> {/* pt-20 untuk ruang burger */}
+      <div className="min-h-screen z-50 bg-[#1a0a2a] flex items-center justify-center pixel-font"> {/* pt-20 untuk ruang burger */}
         <div className="text-center">
           <motion.div
             className="text-6xl md:text-8xl font-bold text-[#00ffff] pixel-text glow-cyan race-pulse"
@@ -334,80 +334,6 @@ export default function HostRoomPage() {
             {countdown}
           </motion.div>
         </div>
-
-        {/* Back Button - Fixed Top Left */}
-        <motion.button
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          whileHover={{ scale: 1.05 }}
-          className="fixed top-4 left-4 z-40 p-3 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded-lg shadow-lg shadow-[#00ffff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
-          aria-label="Back to Host"
-        >
-          <Link href="/host">
-            <ArrowLeft size={20} className="text-white" />
-          </Link>
-        </motion.button>
-
-        {/* Burger Menu Button - Fixed Top Right */}
-        <motion.button
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          whileHover={{ scale: 1.05 }}
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="fixed top-4 right-4 z-40 p-3 bg-[#ff6bff] border-2 border-white pixel-button hover:bg-[#ff8aff] glow-pink rounded-lg shadow-lg shadow-[#ff6bff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
-          aria-label="Toggle menu"
-        >
-          {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
-        </motion.button>
-
-        {/* Menu Dropdown - Muncul saat burger diklik, dari kanan */}
-        {isMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, x: 300 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 300 }}
-            className="fixed top-20 right-4 z-30 w-64 bg-[#1a0a2a]/90 border border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm"
-          >
-            <div className="space-y-4">
-              {/* Mute Toggle */}
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-white pixel-text">Audio</span>
-                <button
-                  onClick={handleMuteToggle}
-                  className="p-2 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded"
-                  aria-label={isMuted ? "Unmute" : "Mute"}
-                >
-                  {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-                </button>
-              </div>
-
-              {/* Volume Slider */}
-              <div className="space-y-2">
-                <span className="text-xs text-[#ff6bff] pixel-text">Volume</span>
-                <div className="bg-[#1a0a2a]/60 border border-[#ff6bff]/50 rounded px-2 py-1">
-                  <Slider
-                    value={[volume]}
-                    onValueChange={handleVolumeChange}
-                    max={100}
-                    min={0}
-                    step={1}
-                    className="w-full"
-                    orientation="horizontal"
-                  />
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Audio Element untuk Background Music */}
-        <audio
-          ref={audioRef}
-          src="/assets/music/resonance.mp3"
-          loop
-          preload="auto"
-          className="hidden"
-        />
       </div>
     )
   }
@@ -417,7 +343,7 @@ export default function HostRoomPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font pt-20"> {/* pt-20 untuk ruang burger */}
+    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font"> {/* pt-20 untuk ruang burger */}
       {/* Preload Background GIFs */}
       {backgroundGifs.map((gif, index) => (
         <link key={index} rel="preload" href={gif} as="image" />
@@ -550,10 +476,10 @@ export default function HostRoomPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-5">
           {/* Room Info & QR Code */}
-          <Card className="bg-[#1a0a2a]/60 border-2 sm:border-3 border-[#ff6bff]/50 pixel-card glow-pink-subtle p-4 sm:p-6 md:p-8 lg:col-span-2 order-2 lg:order-1">
+          <Card className="bg-[#1a0a2a]/60 border-2 sm:border-3 border-[#ff6bff]/50 pixel-card glow-pink-subtle p-4 sm:p-6 md:p-8 lg:col-span-2 order-1 lg:order-1">
             <div className="text-center space-y-3 sm:space-y-4">
               <div className="relative p-3 sm:p-4 md:p-5 bg-[#0a0a0f] border-2 sm:border-3 border-[#6a4c93] rounded-lg">
-                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-[#00ffff] pixel-text glow-cyan">{roomCode}</div>
+                <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#00ffff] pixel-text glow-cyan">{roomCode}</div>
                 <Button
                   onClick={copyRoomCode}
                   className="absolute top-1 right-1 bg-transparent pixel-button hover:bg-gray-500/20 transition-colors p-1 sm:p-2"
@@ -567,8 +493,8 @@ export default function HostRoomPage() {
                 {/* QR normal */}
                 <QRCode
                   value={joinLink}
-                  size={256}
-                  className="mx-auto w-full max-w-[280px] sm:max-w-none"
+                  size={300}
+                  className="mx-auto w-fit rounded p-2 bg-white"
                 />
 
                 {/* Tombol maximize */}
@@ -582,12 +508,12 @@ export default function HostRoomPage() {
 
                 {/* Dialog */}
                 <Dialog open={open} onOpenChange={setOpen}>
-                  <DialogContent className="bg-[#0a0a0f] border-2 border-[#6a4c93] rounded-lg max-w-[90vw] sm:max-w-3xl p-4 sm:p-6">
+                  <DialogContent className="bg-[#0a0a0f] border-2 border-[#6a4c93] rounded-lg max-w-[100vw] sm:max-w-3xl p-4 sm:p-6">
                     <div className="flex justify-center">
                       <QRCode
                         value={joinLink}
                         size={Math.min(625, window.innerWidth * 0.8)}
-                        className=" rounded-lg w-full"
+                        className=" rounded w-fit bg-white p-2"
                       />
                     </div>
                   </DialogContent>
@@ -595,7 +521,7 @@ export default function HostRoomPage() {
               </div>
 
               <div className="relative p-3 sm:p-4 md:p-5 bg-[#0a0a0f] border-2 sm:border-3 border-[#6a4c93] rounded-lg">
-                <div className="text-xs sm:text-sm text-[#00ffff] pixel-text glow-cyan break-all">{joinLink}</div>
+                <div className="text-xs sm:text-sm text-[#00ffff] pixel-text glow-cyan break-keep">{joinLink}</div>
                 <Button
                   onClick={copyJoinLink}
                   className="absolute top-1 right-1 bg-transparent pixel-button hover:bg-gray-500/20 transition-colors p-1 sm:p-2"

@@ -361,7 +361,7 @@ export default function HostMonitorPage() {
           </h1>
           
           {/* Game Timer dan Controls */}
-          <Card className="bg-[#1a0a2a]/60 border-[#ff6bff]/50 pixel-card px-6 py-4 mb-4">
+          <Card className="bg-[#1a0a2a]/60 border-[#ff6bff]/50 pixel-card px-6 py-4 mb-4 w-full ">
             <div className="flex items-center justify-between space-x-6">
               <div className="flex items-center space-x-4">
                 <Clock className={`w-8 h-8 ${getTimeColor()}`} />
@@ -369,16 +369,10 @@ export default function HostMonitorPage() {
                   <div className={`text-2xl font-bold ${getTimeColor()} pixel-text`}>
                     {formatTime(gameTimeRemaining)}
                   </div>
-                  <div className="text-xs text-[#00ffff] pixel-text">
-                    Game Time Remaining
-                  </div>
                 </div>
               </div>
               
               <div className="flex items-center space-x-4">
-                <Badge className="bg-[#1a0a2a]/50 border-[#00ffff] text-[#00ffff] pixel-text">
-                  {players.length} Players
-                </Badge>
                 <Button 
                   onClick={endGame}
                   className="bg-red-500 hover:bg-red-600 pixel-button glow-red flex items-center space-x-2"
@@ -424,7 +418,7 @@ export default function HostMonitorPage() {
                       className={`group ${currentlyAnswering ? "glow-cyan animate-neon-pulse" : "glow-pink-subtle"}`}
                     >
                       <Card
-                        className={`p-3 bg-[#1a0a2a]/50 border-2 border-double transition-all duration-300 h-full ${
+                        className={`p-3 bg-[#1a0a2a]/50 border-2 border-double transition-all duration-300 h-full gap-2 ${
                           currentlyAnswering 
                             ? "border-[#00ffff]/70 bg-[#00ffff]/10" 
                             : isCompleted
@@ -433,30 +427,13 @@ export default function HostMonitorPage() {
                         }`}
                       >
                         {/* Rank Badge */}
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             {getRankIcon(index)}
                             {isCompleted && (
                               <CheckCircle className="w-4 h-4 text-green-400" />
                             )}
                           </div>
-                          <Badge className={`pixel-text text-xs ${
-                            index === 0 ? "bg-yellow-500 text-black" :
-                            index === 1 ? "bg-gray-400 text-black" :
-                            index === 2 ? "bg-orange-500 text-black" :
-                            "bg-[#1a0a2a]/50 border-[#00ffff] text-[#00ffff]"
-                          }`}>
-                            {progress}/{totalQuestions}
-                          </Badge>
-                        </div>
-
-                        {/* Car Image */}
-                        <div className="relative mb-3">
-                          <img
-                            src={carGifMap[player.car] || '/images/car/car5.gif'}
-                            alt={`${player.car} car`}
-                            className="h-16 w-24 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
-                          />
                         </div>
 
                         {/* Player Info */}
@@ -473,16 +450,9 @@ export default function HostMonitorPage() {
                             }`}
                           />
                           
-                          {/* Stats */}
-                          <div className="flex justify-between text-xs text-[#00ffff] pixel-text mb-1">
-                            <span>Correct: {correctAnswers}</span>
-                            <span>Score: {result.score || 0}</span>
-                          </div>
-                          
                           {/* Status */}
                           <div className="text-xs text-[#00ffff] pixel-text">
-                            {isCompleted ? "Completed! 🎉" : 
-                             currentlyAnswering ? `Question ${progress + 1}...` : "Getting ready..."}
+                            {progress}/{totalQuestions}
                           </div>
                         </div>
                       </Card>
@@ -501,16 +471,6 @@ export default function HostMonitorPage() {
             )}
           </Card>
         </motion.div>
-
-        {/* Navigation */}
-        <div className="text-center">
-          <Button
-            onClick={() => router.push(`/host/${roomCode}`)}
-            className="bg-[#ff6bff] border-3 border-white pixel-button hover:bg-[#ff8aff] glow-pink px-8 py-3"
-          >
-            Back to Room
-          </Button>
-        </div>
       </div>
 
       {/* Audio Element untuk Background Music */}
