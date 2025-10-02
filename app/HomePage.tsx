@@ -202,15 +202,15 @@ export default function HomePage() {
         </motion.div>
       )}
 
-      <div className="relative z-10 flex flex-col items-center justify-center h-full w-full pt-20"> {/* pt-20 untuk ruang burger */}
+      <div className="relative z-10 flex flex-col items-center justify-center h-full w-full"> {/* pt-20 untuk ruang burger */}
         {/* Main Title dengan efek pixel art */}
         <div className="text-center relative pb-5 sm:pt-3 pt-16 space-y-3">
           {/* Title Border */}
           <div className="pixel-border-large mx-auto" >
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-2 text-white pixel-text-outline">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-2 text-white pixel-text-outline">
               CRAZY
             </h1>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff6bff] to-[#00ffff] pixel-text">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff6bff] to-[#00ffff] pixel-text">
               RACE
             </h2>
           </div>

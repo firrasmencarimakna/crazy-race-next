@@ -17,21 +17,22 @@ export const calculateRemainingTime = (startTime: string | null, totalDuration: 
 
 export const sortPlayersByProgress = (players: any[]): any[] => {
   return players
-    .filter(player => player.result && player.result.length > 0)
+    .map(player => {
+      const result = player.result?.[0] || {};
+      return {
+        ...player,
+        _progress: result.current_question || 0,
+        _correct: result.correct || 0,
+        _duration: result.duration || 0,
+      };
+    })
     .sort((a, b) => {
-      const aProgress = a.result[0]?.current_question || 0;
-      const bProgress = b.result[0]?.current_question || 0;
-      const aCorrect = a.result[0]?.correct || 0;
-      const bCorrect = b.result[0]?.correct || 0;
-      const aDuration = a.result[0]?.duration || 0;
-      const bDuration = b.result[0]?.duration || 0;
-      
-      // Urutkan berdasarkan: progress (desc), correct answers (desc), duration (asc)
-      if (bProgress !== aProgress) return bProgress - aProgress;
-      if (bCorrect !== aCorrect) return bCorrect - aCorrect;
-      return aDuration - bDuration;
+      if (b._progress !== a._progress) return b._progress - a._progress;
+      if (b._correct !== a._correct) return b._correct - a._correct;
+      return a._duration - b._duration;
     });
 };
+
 
 export const formatTime = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);

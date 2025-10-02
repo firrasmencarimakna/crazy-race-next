@@ -163,7 +163,7 @@ export default function QuestionListPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font pt-20"> {/* pt-20 untuk ruang burger */}
+    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font"> {/* pt-20 untuk ruang burger */}
       {/* Preload Background GIFs */}
       {backgroundGifs.map((gif, index) => (
         <link key={index} rel="preload" href={gif} as="image" />
@@ -300,7 +300,7 @@ export default function QuestionListPage() {
             transition={{ duration: 0.5 }}
             className="pixel-border-large inline-block p-6"
           >
-            <h1 className="text-4xl md:text-6xl font-bold text-[#00ffff] pixel-text glow-cyan">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#00ffff] pixel-text glow-cyan">
               Select Quiz
             </h1>
           </motion.div>
