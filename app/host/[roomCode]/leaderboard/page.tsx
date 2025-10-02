@@ -13,8 +13,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { useEffect, useState } from "react"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { motion, AnimatePresence } from "framer-motion"
+import { supabase } from "@/lib/supabase"
 
 type PlayerStats = {
   nickname: string
@@ -36,7 +36,6 @@ const backgroundGifs = [
 export default function HostLeaderboardPage() {
   const params = useParams()
   const roomCode = params.roomCode as string
-  const supabase = createClientComponentClient()
 
   const [loading, setLoading] = useState(true)
   const [playerStats, setPlayerStats] = useState<PlayerStats[]>([])
