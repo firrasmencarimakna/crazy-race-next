@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
-import { Flag, Volume2, VolumeX, Settings, Users, Menu, X } from "lucide-react"
+import { Flag, Volume2, VolumeX, Settings, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight, HelpCircle } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState, useRef } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 
@@ -22,6 +22,46 @@ export default function HomePage() {
   const [roomCode, setRoomCode] = useState("")
   const [nickname, setNickname] = useState("")
   const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
+  const [showHowToPlay, setShowHowToPlay] = useState(false) // State untuk modal How to Play
+  const [currentPage, setCurrentPage] = useState(0) // State untuk pagination
+  
+  // Tambahkan array untuk generate nama random (di luar component atau di dalam)
+const adjectives = ["Crazy", "Fast", "Speedy", "Turbo", "Neon", "Pixel", "Racing", "Wild", "Epic", "Flash"];
+const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", "Gear", "Track", "Lap"];
+
+// Function untuk generate nickname otomatis
+  const generateNickname = () => {
+  const randomAdj = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
+  return `${randomAdj}${randomNoun}`;
+};
+
+  
+
+  const steps = [
+    {
+      title: "Host a Game",
+      content: "Click 'HOST GAME' to create a room and get a unique code. Share it with your friends to start the challenge!"
+    },
+    {
+      title: "Join the Race",
+      content: "Enter the room code and your nickname in 'JOIN RACE'. Hit JOIN to hop into the action and pick your car color."
+    },
+    {
+      title: "Answer Questions",
+      content: "When the race kicks off, trivia questions pop up. Nail the answers right to zoom your car forward on the track."
+    },
+    {
+      title: "Race to Win",
+      content: "Speed to the finish line! The first player to answer the most questions correctly claims victory and bragging rights."
+    },
+    {
+      title: "Pro Tip",
+      content: "Pick a killer nickname and strategize: go for lightning-fast answers or laser-focused accuracy? Your call!"
+    }
+  ]
+
+  const totalPages = steps.length
 
   const audioRef = useRef<HTMLAudioElement>(null)
 
@@ -122,6 +162,27 @@ export default function HomePage() {
     }
   }
 
+  const closeHowToPlay = () => {
+    setShowHowToPlay(false)
+    setCurrentPage(0) // Reset to first page
+  }
+
+  const goToPrevPage = () => {
+    setCurrentPage((prev) => Math.max(0, prev - 1))
+  }
+
+  const goToNextPage = () => {
+    if (currentPage === totalPages - 1) {
+      closeHowToPlay()
+    } else {
+      setCurrentPage((prev) => Math.min(totalPages - 1, prev + 1))
+    }
+  }
+
+  const goToPage = (pageIndex: number) => {
+    setCurrentPage(pageIndex)
+  }
+
   return (
     <div className="min-h-[100dvh] w-full relative overflow-hidden pixel-font p-2">
       {/* Background Image */}
@@ -145,7 +206,7 @@ export default function HomePage() {
         animate={{ opacity: 1, x: 0 }}
         whileHover={{ scale: 1.05 }}
         onClick={() => setIsMenuOpen(!isMenuOpen)}
-        className="fixed top-4 right-4 z-40 p-3 bg-[#ff6bff] border-2 border-white pixel-button hover:bg-[#ff8aff] glow-pink rounded-lg shadow-lg shadow-[#ff6bff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
+        className="fixed top-4 right-4 z-40 p-3 bg-[#1a0a2a]/60 border-2 border-[#ff6bff]/50 hover:border-[#ff6bff] pixel-button hover:bg-[#ff6bff]/20 glow-pink-subtle rounded-lg shadow-lg shadow-[#ff6bff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
         aria-label="Toggle menu"
       >
         {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -157,7 +218,7 @@ export default function HomePage() {
           initial={{ opacity: 0, x: 300 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 300 }}
-          className="fixed top-20 right-4 z-30 w-64 bg-[#1a0a2a]/90 border border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm"
+          className="fixed top-20 right-4 z-30 w-64 bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm scrollbar-themed"
         >
           <div className="space-y-4">
             {/* Mute Toggle */}
@@ -165,7 +226,7 @@ export default function HomePage() {
               <span className="text-sm text-white pixel-text">Audio</span>
               <button
                 onClick={handleMuteToggle}
-                className="p-2 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded"
+                className="p-2 bg-[#1a0a2a]/60 border-2 border-[#00ffff]/50 hover:border-[#00ffff] pixel-button hover:bg-[#00ffff]/20 glow-cyan-subtle rounded"
                 aria-label={isMuted ? "Unmute" : "Mute"}
               >
                 {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
@@ -174,7 +235,7 @@ export default function HomePage() {
 
             {/* Volume Slider */}
             <div className="space-y-2">
-              <span className="text-xs text-[#ff6bff] pixel-text">Volume</span>
+              <span className="text-xs text-[#ff6bff] pixel-text glow-pink-subtle">Volume</span>
               <div className="bg-[#1a0a2a]/60 border border-[#ff6bff]/50 rounded px-2 py-1">
                 <Slider
                   value={[volume]}
@@ -188,17 +249,159 @@ export default function HomePage() {
               </div>
             </div>
 
+            {/* How to Play Button */}
+            <button 
+              onClick={() => {
+                setShowHowToPlay(true)
+                setIsMenuOpen(false) // Tutup menu saat buka modal
+              }}
+              className="w-full p-2 bg-[#1a0a2a]/60 border-2 border-[#ff6bff]/50 hover:border-[#ff6bff] pixel-button hover:bg-[#ff6bff]/20 glow-pink-subtle rounded text-center"
+              aria-label="How to Play"
+            >
+              <div className="flex items-center justify-center gap-2">
+                <BookOpen size={16} />
+                <span className="text-sm text-[#00ffff] pixel-text glow-cyan">How to Play</span>
+              </div>
+            </button>
+
             {/* Settings Button */}
             <button 
-              className="w-full p-2 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded text-center"
+              className="w-full p-2 bg-[#1a0a2a]/60 border-2 border-[#00ffff]/50 hover:border-[#00ffff] pixel-button hover:bg-[#00ffff]/20 glow-cyan-subtle rounded text-center"
               aria-label="Settings"
             >
               <div className="flex items-center justify-center gap-2">
                 <Settings size={16} />
-                <span className="text-sm">Settings</span>
+                <span className="text-sm text-[#00ffff] pixel-text glow-cyan">Settings</span>
               </div>
             </button>
           </div>
+        </motion.div>
+      )}
+
+      {/* How to Play Modal */}
+      {showHowToPlay && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={closeHowToPlay} // Tutup saat klik luar
+        >
+          {/* Backdrop */}
+          <motion.div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            onClick={(e) => e.stopPropagation()} // Cegah tutup saat klik modal
+          />
+          
+          {/* Modal Content */}
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="relative w-full max-w-lg max-h-[85vh] overflow-hidden bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-2xl shadow-2xl shadow-[#ff6bff]/40 backdrop-blur-md pixel-card scrollbar-themed book-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <CardHeader className="text-center border-b-2 border-[#ff6bff]/20 p-6">
+              <CardTitle className="text-2xl font-bold text-[#00ffff] pixel-text glow-cyan mb-2">
+                Crazy Race Guide
+              </CardTitle>
+              <CardDescription className="text-[#ff6bff]/80 text-base pixel-text glow-pink-subtle">
+                Flip through the pages to learn how to race and win!
+              </CardDescription>
+              <p className="text-xs text-gray-200 mt-2 pixel-text">Page {currentPage + 1} of {totalPages}</p>
+            </CardHeader>
+
+            {/* Paginated Content */}
+            <div className="flex-1 p-6 overflow-hidden">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentPage}
+                  initial={{ x: currentPage > 0 ? "100%" : "-100%", opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: currentPage > 0 ? "-100%" : "100%", opacity: 0 }}
+                  transition={{ duration: 0.4, ease: "easeInOut" }}
+                  className="h-full flex flex-col justify-center book-page"
+                >
+                  <div className="text-center mb-6">
+                    <motion.div
+            
+                    >
+                  
+                    </motion.div>
+                    <h3 className="text-xl font-bold text-[#00ffff] mb-4 pixel-text glow-cyan">
+                      {steps[currentPage].title}
+                    </h3>
+                  </div>
+                  <p className="text-gray-200 leading-relaxed pixel-text text-center max-w-md mx-auto line-clamp-3">
+                    {steps[currentPage].content}
+                  </p>
+                  <div className="flex items-center justify-center gap-2 text-[#ff6bff] text-sm pixel-text glow-pink-subtle mt-4">
+                    
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* Pagination Footer */}
+            <CardFooter className="border-t-2 border-[#ff6bff]/20 p-4 bg-[#1a0a2a]/50">
+              <div className="w-full flex items-center justify-between">
+                {/* Prev Button */}
+                <Button
+                  onClick={goToPrevPage}
+                  disabled={currentPage === 0}
+                  className={`flex items-center gap-2 px-4 py-2 bg-[#1a0a2a]/60 hover:bg-[#00ffff]/20 border-2 border-[#00ffff]/50 text-[#00ffff] pixel-button glow-cyan-subtle transition-all duration-200 ${currentPage === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <ArrowLeft size={16} />
+                  Prev
+                </Button>
+
+{/* Page Dots */}
+                <div className="flex space-x-2">
+                  {steps.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => goToPage(index)}
+                      className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                        index === currentPage
+                          ? 'bg-[#a100ff] shadow-md shadow-[#a100ff]/50 scale-110'
+                          : 'bg-white/30 hover:bg-white/50'
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                {/* Next / Got It Button */}
+                <Button
+                  onClick={goToNextPage}
+                  className={`flex items-center gap-2 px-4 py-2 bg-[#1a0a2a]/60 hover:bg-[#ff6bff]/20 border-2 border-[#ff6bff]/50 text-[#ff6bff] pixel-button glow-pink-subtle transition-all duration-200`}
+                >
+                  {currentPage === totalPages - 1 ? (
+                    <>
+                      Got It!
+                      <BookOpen size={16} />
+                    </>
+                  ) : (
+                    <>
+                      Next
+                      <ArrowRight size={16} />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardFooter>
+
+            {/* Close Button */}
+            <button
+              onClick={closeHowToPlay}
+              className="absolute top-3 right-3 p-2 bg-[#1a0a2a]/60 border-2 border-[#ff6bff]/50 rounded-lg text-[#00ffff] hover:bg-[#ff6bff]/20 hover:border-[#ff6bff] transition-all duration-200 glow-cyan-subtle"
+              aria-label="Close"
+            >
+              <X size={20} />
+            </button>
+          </motion.div>
         </motion.div>
       )}
 
@@ -285,26 +488,35 @@ export default function HomePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Input
-                  placeholder="Room Code"
-                  value={roomCode}
-                  maxLength={6}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-                    setRoomCode(value);
-                  }}
-                  className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
-                  aria-label="Room Code"
-                />
-                <Input
-                  placeholder="Nickname"
-                  value={nickname}
-                  maxLength={26}
-                  onChange={(e) => setNickname(e.target.value)}
-                  className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
-                  aria-label="Nickname"
-                />
-
+<Input
+    placeholder="Room Code"
+    value={roomCode}
+    maxLength={6}
+    onChange={(e) => {
+      const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+      setRoomCode(value);
+    }}
+    className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
+    aria-label="Room Code"
+  />
+  <div className="relative">
+    <Input
+      placeholder="Nickname"
+      value={nickname}
+      maxLength={26}
+      onChange={(e) => setNickname(e.target.value)}
+      className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30 pr-10"
+      aria-label="Nickname"
+    />
+    <button
+      type="button"
+      onClick={() => setNickname(generateNickname())}
+      className="absolute right-2 top-1/8  text-[#00ffff] hover:bg-[#00ffff]/20 hover:border-[#00ffff] transition-all duration-200 glow-cyan-subtle"
+      aria-label="Generate Nickname"
+    >
+      <span className="text-lg">🎲</span>
+    </button>
+  </div>
               </CardContent>
               <CardFooter>
                 <Button
@@ -449,6 +661,20 @@ export default function HomePage() {
             box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.9), 0 0 25px rgba(255, 107, 255, 0.4);
           }
 
+          .book-modal {
+            box-shadow: 
+              0 25px 50px -12px rgba(0, 0, 0, 0.8),
+              0 0 0 1px rgba(255, 107, 255, 0.2),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+          }
+
+          .book-page {
+            background: linear-gradient(135deg, #2d1b69 0%, #1a0a2a 100%);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5), 0 4px 8px rgba(255, 107, 255, 0.1);
+          }
+
           .crt-effect {
             position: fixed;
             top: 0;
@@ -511,6 +737,61 @@ export default function HomePage() {
             50% { transform: scale(1.03); }
           }
 
+          /* Themed Scrollbar */
+          .scrollbar-themed::-webkit-scrollbar {
+            width: 8px;
+          }
+
+          .scrollbar-themed::-webkit-scrollbar-track {
+            background: linear-gradient(to bottom, #1a0a2a, #2d1b69);
+            border: 1px solid rgba(255, 107, 255, 0.3);
+            border-radius: 4px;
+            box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.5);
+          }
+
+          .scrollbar-themed::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, #ff6bff, #00ffff);
+            border-radius: 4px;
+            border: 2px solid #1a0a2a;
+            box-shadow: 
+              0 0 8px rgba(255, 107, 255, 0.6),
+              inset 0 0 4px rgba(255, 255, 255, 0.2);
+            animation: glow-scrollbar 2s ease-in-out infinite alternate;
+          }
+
+          .scrollbar-themed::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, #ff8aff, #33ffff);
+            box-shadow: 
+              0 0 12px rgba(0, 255, 255, 0.8),
+              inset 0 0 4px rgba(255, 255, 255, 0.3);
+          }
+
+          @keyframes glow-scrollbar {
+            0% { 
+              box-shadow: 
+                0 0 8px rgba(255, 107, 255, 0.6),
+                inset 0 0 4px rgba(255, 255, 255, 0.2);
+            }
+            100% { 
+              box-shadow: 
+                0 0 12px rgba(0, 255, 255, 0.6),
+                inset 0 0 4px rgba(255, 255, 255, 0.4);
+            }
+          }
+
+          /* Firefox scrollbar styling */
+          .scrollbar-themed {
+            scrollbar-width: thin;
+            scrollbar-color: #ff6bff #1a0a2a;
+          }
+
+          .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
+
           /* Responsive adjustments */
           @media (max-width: 768px) {
             .pixel-border-large {
@@ -532,9 +813,13 @@ export default function HomePage() {
               min-width: 52px;
               min-height: 52px;
             }
+
+            .book-modal {
+              max-w-full max-h-[95vh];
+            }
           }
             
         `}</style>
     </div>
   )
-} 
+}
