@@ -14,22 +14,22 @@ import { calculateCountdown } from "@/utils/countdown"
 
 // Background GIFs
 const backgroundGifs = [
-  "/assets/gif/host/1.gif",
-  "/assets/gif/host/2.gif",
-  "/assets/gif/host/3.gif",
-  "/assets/gif/host/4.gif",
-  "/assets/gif/host/5.gif",
-  "/assets/gif/host/7.gif",
+  "/assets/gif/host/1.webp",
+  "/assets/gif/host/2.webp",
+  "/assets/gif/host/3.webp",
+  "/assets/gif/host/4.webp",
+  "/assets/gif/host/5.webp",
+  "/assets/gif/host/7.webp",
 ]
 
 // Mapping warna mobil ke file GIF mobil
 const carGifMap: Record<string, string> = {
-  red: "/assets/car/car1.gif",
-  blue: "/assets/car/car2.gif",
-  green: "/assets/car/car3.gif",
-  yellow: "/assets/car/car4.gif",
-  purple: "/assets/car/car5.gif",
-  orange: "/assets/car/car5.gif",
+  red: "/assets/car/car1.webp",
+  blue: "/assets/car/car2.webp",
+  green: "/assets/car/car3.webp",
+  yellow: "/assets/car/car4.webp",
+  purple: "/assets/car/car5.webp",
+  orange: "/assets/car/car5.webp",
 }
 
 export default function LobbyPage() {
@@ -228,13 +228,6 @@ export default function LobbyPage() {
 
   return (
     <div className={`min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font`}>
-      {/* Preload semua GIF */}
-      {backgroundGifs.map((gif, index) => (
-        <link key={index} rel="preload" href={gif} as="image" />
-      ))}
-      {Object.values(carGifMap).map((gif, idx) => (
-        <link key={`car-${idx}`} rel="preload" href={gif} as="image" />
-      ))}
 
       {/* Background */}
       <AnimatePresence mode="wait">
@@ -305,7 +298,7 @@ export default function LobbyPage() {
                       {/* Car GIF - Enhanced visuals */}
                       <div className="relative mb-3">
                         <img
-                          src={carGifMap[player.car] || '/assets/car/car5.gif'}
+                          src={carGifMap[player.car] || '/assets/car/car5.webp'}
                           alt={`${player.car} car`}
                           className="h-28 w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
                         />

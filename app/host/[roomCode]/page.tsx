@@ -17,16 +17,16 @@ import { Slider } from "@/components/ui/slider"
 
 // List of background GIFs (same as previous pages for consistency)
 const backgroundGifs = [
-  "/assets/gif/4.gif",
+  "/assets/gif/4.webp",
 ]
 
 const carGifMap: Record<string, string> = {
-  red: "/assets/car/car1.gif",
-  blue: "/assets/car/car2.gif",
-  green: "/assets/car/car3.gif",
-  yellow: "/assets/car/car4.gif",
-  purple: "/assets/car/car5.gif",
-  orange: "/assets/car/car5.gif",
+  red: "/assets/car/car1.webp",
+  blue: "/assets/car/car2.webp",
+  green: "/assets/car/car3.webp",
+  yellow: "/assets/car/car4.webp",
+  purple: "/assets/car/car5.webp",
+  orange: "/assets/car/car5.webp",
 }
 
 export default function HostRoomPage() {
@@ -353,14 +353,6 @@ export default function HostRoomPage() {
         className="hidden"
       />
 
-      {/* Preload Background GIFs */}
-      {backgroundGifs.map((gif, index) => (
-        <link key={index} rel="preload" href={gif} as="image" />
-      ))}
-      {Object.values(carGifMap).map((gif, idx) => (
-        <link key={`car-${idx}`} rel="preload" href={gif} as="image" />
-      ))}
-
       {/* Background Image with Smooth Transition */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -552,7 +544,7 @@ export default function HostRoomPage() {
                         {/* Car GIF */}
                         <div className="relative mb-2 sm:mb-3">
                           <img
-                            src={carGifMap[player.car] || '/assets/car/car5.gif'}
+                            src={carGifMap[player.car] || '/assets/car/car5.webp'}
                             alt={`${player.car} car`}
                             className="h-16 sm:h-20 md:h-24 lg:h-28 w-20 sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce
                        filter brightness-125 contrast-150"

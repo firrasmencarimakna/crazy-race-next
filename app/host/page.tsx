@@ -15,7 +15,7 @@ import LoadingRetro from "@/components/loadingRetro"
 
 // List of background GIFs in filename order
 const backgroundGifs = [
-  "/assets/gif/2.gif",
+  "/assets/gif/2.webp",
 ]
 
 export default function QuestionListPage() {
@@ -164,10 +164,6 @@ export default function QuestionListPage() {
 
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font"> {/* pt-20 untuk ruang burger */}
-      {/* Preload Background GIFs */}
-      {backgroundGifs.map((gif, index) => (
-        <link key={index} rel="preload" href={gif} as="image" />
-      ))}
 
       {/* Background Image with Smooth Transition */}
       <AnimatePresence mode="wait">

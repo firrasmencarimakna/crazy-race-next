@@ -14,17 +14,17 @@ import { sortPlayersByProgress, formatTime, calculateRemainingTime } from "@/uti
 
 // Background GIFs
 const backgroundGifs = [
-  "/assets/gif/host/4.gif",
+  "/assets/gif/host/4.webp",
 ]
 
 // Mapping warna mobil ke file GIF mobil
 const carGifMap: Record<string, string> = {
-  red: "/assets/car/car1.gif",
-  blue: "/assets/car/car2.gif",
-  green: "/assets/car/car3.gif",
-  yellow: "/assets/car/car4.gif",
-  purple: "/assets/car/car5.gif",
-  orange: "/assets/car/car5.gif",
+  red: "/assets/car/car1.webp",
+  blue: "/assets/car/car2.webp",
+  green: "/assets/car/car3.webp",
+  yellow: "/assets/car/car4.webp",
+  purple: "/assets/car/car5.webp",
+  orange: "/assets/car/car5.webp",
 }
 
 export default function HostMonitorPage() {
@@ -252,14 +252,7 @@ export default function HostMonitorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font"> {/* pt-20 untuk ruang burger */}
-      {/* Preload GIFs */}
-      {backgroundGifs.map((gif, index) => (
-        <link key={index} rel="preload" href={gif} as="image" />
-      ))}
-      {Object.values(carGifMap).map((gif, idx) => (
-        <link key={`car-${idx}`} rel="preload" href={gif} as="image" />
-      ))}
+    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
 
       {/* Background */}
       <AnimatePresence mode="wait">

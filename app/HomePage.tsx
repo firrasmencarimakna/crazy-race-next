@@ -101,7 +101,7 @@ export default function HomePage() {
         .insert({
           room_id: roomData.id,
           nickname,
-          car: ["red", "blue", "green", "yellow", "purple", "orange"][Math.floor(Math.random() * 6)]
+          car: ["red", "blue", "green", "yellow", "purple"][Math.floor(Math.random() * 5)]
         })
 
       if (playerError) {
@@ -135,7 +135,7 @@ export default function HomePage() {
       {/* Background Image */}
       <div
         className="absolute inset-0 w-full h-full bg-cover bg-center"
-        style={{ backgroundImage: "url('/assets/gif/1.gif/')" }}
+        style={{ backgroundImage: "url('/assets/gif/1.webp')" }}
       />
 
       {/* Burger Menu Button - Fixed Top Right */}
