@@ -12,12 +12,12 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { usePreloader } from "@/components/preloader"
 import LoadingRetro from "@/components/loadingRetro"
+import LoadingAssets from "@/components/loadingAssets"
 
 export default function HomePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
-  const isLoaded = usePreloader()
 
   const [joining, setJoining] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
@@ -124,8 +124,8 @@ export default function HomePage() {
     }
   }
 
-  const isLoaded1 = usePreloader()
-  if (!isLoaded1) return <LoadingRetro />
+  const isLoaded = usePreloader()
+  if (!isLoaded) return <LoadingAssets />
 
 
   return (

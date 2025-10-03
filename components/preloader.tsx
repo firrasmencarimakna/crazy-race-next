@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 
 export function usePreloader() {
   const [isLoaded, setIsLoaded] = useState(false)
+  const [progress, setProgress] = useState(0)
 
   useEffect(() => {
     const assetsImages = [
@@ -87,7 +88,12 @@ export function usePreloader() {
 
     const checkDone = () => {
       loadedCount++
-      if (loadedCount >= total) setIsLoaded(true)
+      const newProgress = Math.round((loadedCount / total) * 100)
+      setProgress(newProgress)
+      if (loadedCount >= total) {
+        setIsLoaded(true)
+        setProgress(100)
+      }
     }
 
     allImages.forEach((src) => {
@@ -106,5 +112,5 @@ export function usePreloader() {
     })
   }, [])
 
-  return isLoaded
+  return { isLoaded, progress }
 }
