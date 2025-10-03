@@ -23,18 +23,18 @@ import LoadingRetro from "@/components/loadingRetro"
 
 // Background GIFs
 const backgroundGifs = [
-  "/assets/gif/host/4.gif",
+  "/assets/background/host/4.webp",
   // Add more GIFs if available
 ]
 
 // Car GIF mappings
 const carGifMap: Record<string, string> = {
-  red: "/assets/car/car1.gif",
-  blue: "/assets/car/car2.gif",
-  green: "/assets/car/car3.gif",
-  yellow: "/assets/car/car4.gif",
-  purple: "/assets/car/car5.gif",
-  orange: "/assets/car/car5.gif",
+  red: "/assets/car/car1.webp",
+  blue: "/assets/car/car2.webp",
+  green: "/assets/car/car3.webp",
+  yellow: "/assets/car/car4.webp",
+  purple: "/assets/car/car5.webp",
+  orange: "/assets/car/car5.webp",
 }
 
 type PlayerStats = {
@@ -199,10 +199,6 @@ export default function PlayerResultsPage() {
 
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
-      {/* Preload GIFs */}
-      {backgroundGifs.map((gif, index) => (
-        <link key={index} rel="preload" href={gif} as="image" />
-      ))}
 
       {/* Background */}
       <AnimatePresence mode="wait">
@@ -245,7 +241,7 @@ export default function PlayerResultsPage() {
             </div>
             <div className="flex flex-col items-center justify-center space-x-2">
               <img
-                src={carGifMap[car] || '/assets/car/car5.gif'}
+                src={carGifMap[car] || '/assets/car/car5.webp'}
                 alt={`${car} car`}
                 className="h-28 w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
               />

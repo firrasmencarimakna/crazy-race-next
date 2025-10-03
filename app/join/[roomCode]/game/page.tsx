@@ -12,22 +12,21 @@ import { formatTime } from "@/utils/game"
 
 // Background GIFs
 const backgroundGifs = [
-  "/assets/gif/host/1.gif",
-  "/assets/gif/host/2.gif",
-  "/assets/gif/host/3.gif",
-  "/assets/gif/host/4.gif",
-  "/assets/gif/host/5.gif",
-  "/assets/gif/host/7.gif",
+  "/assets/background/host/1.webp",
+  "/assets/background/host/2.webp",
+  "/assets/background/host/3.webp",
+  "/assets/background/host/4.webp",
+  "/assets/background/host/5.webp",
+  "/assets/background/host/7.webp",
 ]
 
 // Car GIF mappings
 const carGifMap: Record<string, string> = {
-  red: "/assets/car/car1.gif",
-  blue: "/assets/car/car2.gif",
-  green: "/assets/car/car3.gif",
-  yellow: "/assets/car/car4.gif",
-  purple: "/assets/car/car5.gif",
-  orange: "/assets/car/car6.gif",
+  red: "/assets/car/car1.webp",
+  blue: "/assets/car/car2.webp",
+  green: "/assets/car/car3.webp",
+  yellow: "/assets/car/car4.webp",
+  purple: "/assets/car/car5.webp",
 }
 
 type QuizQuestion = {
@@ -294,20 +293,23 @@ export default function QuizGamePage() {
   }, [questions.length, totalQuestions])
 
   const getOptionStyle = (optionIndex: number) => {
+    // mode normal (belum submit)
     if (!showResult) {
       return selectedAnswer === optionIndex
         ? "border-[#00ffff] bg-[#00ffff]/10 animate-neon-pulse"
         : "border-[#ff6bff]/70 hover:border-[#ff6bff] hover:bg-[#ff6bff]/10 hover:scale-[1.01] glow-pink-subtle"
     }
 
+    // mode setelah submit
     if (optionIndex === selectedAnswer) {
+      // yang dipilih user
       return optionIndex === currentQuestion.correctAnswer
-        ? "border-[#00ff00] bg-[#00ff00]/10 text-[#00ff00] glow-green"
-        : "border-red-500 bg-red-500/10 text-red-500"
+        ? "border-[#00ff00] bg-[#00ff00]/10 text-[#00ff00] glow-green"   // benar
+        : "border-red-500 bg-red-500/10 text-red-500"                  // salah
     }
-    return optionIndex === currentQuestion.correctAnswer
-      ? "border-[#00ff00] bg-[#00ff00]/10 text-[#00ff00] glow-green"
-      : "border-[#ff6bff]/50 bg-[#1a0a2a]/50 opacity-60"
+
+    // yang tidak dipilih → tidak usah di-highlight sama sekali
+    return "border-[#ff6bff]/50 bg-[#1a0a2a]/50 opacity-60"
   }
 
   const getTimeColor = () => {
@@ -322,13 +324,6 @@ export default function QuizGamePage() {
 
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
-      {/* Preload GIFs */}
-      {backgroundGifs.map((gif, index) => (
-        <link key={index} rel="preload" href={gif} as="image" />
-      ))}
-      {Object.values(carGifMap).map((gif, idx) => (
-        <link key={`car-${idx}`} rel="preload" href={gif} as="image" />
-      ))}
 
       {/* Background */}
       <AnimatePresence mode="wait">

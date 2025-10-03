@@ -10,6 +10,9 @@ import { useEffect, useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import Image from "next/image"
+import { usePreloader } from "@/components/preloader"
+import LoadingRetro from "@/components/loadingRetro"
 
 export default function HomePage() {
   const router = useRouter()
@@ -141,7 +144,7 @@ const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", 
         .insert({
           room_id: roomData.id,
           nickname,
-          car: ["red", "blue", "green", "yellow", "purple", "orange"][Math.floor(Math.random() * 6)]
+          car: ["red", "blue", "green", "yellow", "purple"][Math.floor(Math.random() * 5)]
         })
 
       if (playerError) {
@@ -160,6 +163,9 @@ const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", 
       setJoining(false)
     }
   }
+
+  const isLoaded = usePreloader()
+  if (!isLoaded) return <LoadingRetro />
 
   const closeHowToPlay = () => {
     setShowHowToPlay(false)
@@ -194,9 +200,13 @@ const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", 
       />
 
       {/* Background Image */}
-      <div
-        className="absolute inset-0 w-full h-full bg-cover bg-center"
-        style={{ backgroundImage: "url('/assets/gif/1.gif/')" }}
+      <Image
+        src="/assets/background/1.webp"
+        alt="Background"  // SEO/accessibility
+        fill
+        className="object-cover"  // Ganti bg-cover
+        priority  // Auto preload kalo critical (mirip fetchPriority high)
+        style={{ objectPosition: 'center' }}  // Ganti bg-center
       />
 
       {/* Burger Menu Button - Fixed Top Right */}
@@ -264,6 +274,7 @@ const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", 
             </button>
 
             {/* Settings Button */}
+
             <button 
               className="w-full p-2 bg-[#1a0a2a]/60 border-2 border-[#00ffff]/50 hover:border-[#00ffff] pixel-button hover:bg-[#00ffff]/20 glow-cyan-subtle rounded text-center"
               aria-label="Settings"

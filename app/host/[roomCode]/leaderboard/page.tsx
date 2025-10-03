@@ -22,7 +22,7 @@ type PlayerStats = {
 
 // Background GIFs (reuse from player results)
 const backgroundGifs = [
-  "/assets/gif/host/4.gif",
+  "/assets/background/host/4.webp",
   // Add more if available, or cycle this one
 ]
 
@@ -244,10 +244,6 @@ export default function HostLeaderboardPage() {
 
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
-      {/* Preload GIFs */}
-      {backgroundGifs.map((gif, index) => (
-        <link key={index} rel="preload" href={gif} as="image" />
-      ))}
 
       {/* Background */}
       <AnimatePresence mode="wait">
