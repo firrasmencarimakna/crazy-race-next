@@ -297,24 +297,24 @@ export default function HostSettingsPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
-            className="text-center text-gray-400 pixel-text glow-pink-subtle text-sm sm:text-base"
+            className="text-center text-gray-400 pixel-text  text-sm sm:text-base"
           >
             ERROR: QUIZ NOT FOUND
           </motion.p>
-        ) : (
+        ) : ( 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <Card className="bg-[#1a0a2a]/60 border-2 sm:border-4 border-[#ff6bff]/50 pixel-card glow-pink-subtle p-6 sm:p-8">
+            <Card className="bg-[#1a0a2a]/60 border-2 sm:border-4 border-[#ff87ff]/50 pixel-card glow-pink-subtle p-6 sm:p-8">
               <div className="space-y-6 sm:space-y-8">
                 {/* Selected Quiz */}
-                <div className="p-3 sm:p-4 bg-[#0a0a0f] border-2 sm:border-4 border-[#6a4c93] rounded-lg">
-                  <p className="text-base sm:text-lg text-gray-200 pixel-text font-semibold line-clamp-2">
+                <div className="p-3 sm:p-4 bg-[#0a0a0f] border-2 rounded-lg">
+                  <p className="text-base sm:text-lg text-[#ff87ff] pixel-text font-semibold line-clamp-2">
                     {quiz.title}
                   </p>
-                  <p className="text-gray-400 pixel-text text-xs sm:text-sm mt-1 line-clamp-2">
+                  <p className="text-[#00ffff] pixel-text text-xs sm:text-sm mt-1 line-clamp-2">
                     {quiz.description}
                   </p>
                 </div>
@@ -324,11 +324,11 @@ export default function HostSettingsPage() {
                   {/* Duration */}
                   <div className="space-y-2 sm:space-y-3">
                     <Label className="text-base sm:text-lg font-semibold flex items-center text-[#00ffff] pixel-text glow-cyan">
-                      <Clock className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                      {/* <Clock className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> */}
                       Duration
                     </Label>
                     <Select value={duration} onValueChange={setDuration}>
-                      <SelectTrigger className="text-base sm:text-lg p-3 sm:p-5 bg-[#0a0a0f] border-2 sm:border-4 border-[#6a4c93] text-white pixel-text focus:border-[#00ffff] w-full">
+                      <SelectTrigger className="text-base sm:text-lg p-3 sm:p-5 bg-[#0a0a0f] border-2 text-white pixel-text focus:border-[#00ffff] w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-[#0a0a0f] border-2 sm:border-4 border-[#6a4c93] text-white pixel-text">
@@ -344,11 +344,11 @@ export default function HostSettingsPage() {
                   {/* Number of Questions */}
                   <div className="space-y-2 sm:space-y-3">
                     <Label className="text-base sm:text-lg font-semibold flex items-center text-[#00ffff] pixel-text glow-cyan">
-                      <Hash className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                      {/* <Hash className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> */}
                       Questions
                     </Label>
                     <Select value={questionCount} onValueChange={setQuestionCount}>
-                      <SelectTrigger className="text-base sm:text-lg p-3 sm:p-5 bg-[#0a0a0f] border-2 sm:border-4 border-[#6a4c93] text-white pixel-text focus:border-[#00ffff] w-full">
+                      <SelectTrigger className="text-base sm:text-lg p-3 sm:p-5 bg-[#0a0a0f] border-2  text-white pixel-text focus:border-[#00ffff] w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-[#0a0a0f] border-2 sm:border-4 border-[#6a4c93] text-white pixel-text">
@@ -366,7 +366,7 @@ export default function HostSettingsPage() {
                 <Button
                   onClick={handleCreateRoom}
                   disabled={saving}
-                  className="w-full text-base sm:text-xl py-4 sm:py-6 bg-[#00ffff] border-2 sm:border-4 border-white pixel-button hover:bg-[#33ffff] glow-cyan text-black font-bold disabled:bg-[#6a4c93] disabled:cursor-not-allowed"
+                  className="w-full text-base sm:text-xl py-4 sm:py-6 bg-[#00ffff]  pixel-button hover:bg-[#33ffff] glow-cyan text-black font-bold disabled:bg-[#6a4c93] disabled:cursor-not-allowed"
                 >
                   <Play className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
                   CONTINUE
