@@ -15,7 +15,7 @@ import LoadingRetro from "@/components/loadingRetro"
 
 // List of background GIFs in filename order
 const backgroundGifs = [
-  "/assets/gif/2.webp",
+  "/assets/background/2.webp",
 ]
 
 export default function QuestionListPage() {

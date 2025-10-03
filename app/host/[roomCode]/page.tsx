@@ -17,7 +17,7 @@ import { Slider } from "@/components/ui/slider"
 
 // List of background GIFs (same as previous pages for consistency)
 const backgroundGifs = [
-  "/assets/gif/4.webp",
+  "/assets/background/4.webp",
 ]
 
 const carGifMap: Record<string, string> = {

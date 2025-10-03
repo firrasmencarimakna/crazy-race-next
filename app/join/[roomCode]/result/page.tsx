@@ -23,7 +23,7 @@ import LoadingRetro from "@/components/loadingRetro"
 
 // Background GIFs
 const backgroundGifs = [
-  "/assets/gif/host/4.webp",
+  "/assets/background/host/4.webp",
   // Add more GIFs if available
 ]
 

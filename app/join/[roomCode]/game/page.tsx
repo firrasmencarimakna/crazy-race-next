@@ -12,12 +12,12 @@ import { formatTime } from "@/utils/game"
 
 // Background GIFs
 const backgroundGifs = [
-  "/assets/gif/host/1.webp",
-  "/assets/gif/host/2.webp",
-  "/assets/gif/host/3.webp",
-  "/assets/gif/host/4.webp",
-  "/assets/gif/host/5.webp",
-  "/assets/gif/host/7.webp",
+  "/assets/background/host/1.webp",
+  "/assets/background/host/2.webp",
+  "/assets/background/host/3.webp",
+  "/assets/background/host/4.webp",
+  "/assets/background/host/5.webp",
+  "/assets/background/host/7.webp",
 ]
 
 // Car GIF mappings

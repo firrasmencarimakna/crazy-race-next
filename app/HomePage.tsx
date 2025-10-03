@@ -10,9 +10,9 @@ import { useEffect, useState, useRef } from "react"
 import { motion } from "framer-motion"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import Image from "next/image"
 import { usePreloader } from "@/components/preloader"
 import LoadingRetro from "@/components/loadingRetro"
-import LoadingAssets from "@/components/loadingAssets"
 
 export default function HomePage() {
   const router = useRouter()
@@ -24,7 +24,7 @@ export default function HomePage() {
   const [volume, setVolume] = useState(50) // 0-100, default 50%
   const [roomCode, setRoomCode] = useState("")
   const [nickname, setNickname] = useState("")
-  const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   const audioRef = useRef<HTMLAudioElement>(null)
 
@@ -125,8 +125,7 @@ export default function HomePage() {
   }
 
   const isLoaded = usePreloader()
-  if (!isLoaded) return <LoadingAssets />
-
+  if (!isLoaded) return <LoadingRetro />
 
   return (
     <div className="min-h-[100dvh] w-full relative overflow-hidden pixel-font p-2">
@@ -140,9 +139,13 @@ export default function HomePage() {
       />
 
       {/* Background Image */}
-      <div
-        className="absolute inset-0 w-full h-full bg-cover bg-center"
-        style={{ backgroundImage: "url('/assets/gif/1.webp')" }}
+      <Image
+        src="/assets/background/1.webp"
+        alt="Background"  // SEO/accessibility
+        fill
+        className="object-cover"  // Ganti bg-cover
+        priority  // Auto preload kalo critical (mirip fetchPriority high)
+        style={{ objectPosition: 'center' }}  // Ganti bg-center
       />
 
       {/* Burger Menu Button - Fixed Top Right */}
@@ -195,7 +198,7 @@ export default function HomePage() {
             </div>
 
             {/* Settings Button */}
-            <button 
+            <button
               className="w-full p-2 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded text-center"
               aria-label="Settings"
             >

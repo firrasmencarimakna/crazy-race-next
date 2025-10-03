@@ -14,7 +14,7 @@ import { sortPlayersByProgress, formatTime, calculateRemainingTime } from "@/uti
 
 // Background GIFs
 const backgroundGifs = [
-  "/assets/gif/host/4.webp",
+  "/assets/background/host/4.webp",
 ]
 
 // Mapping warna mobil ke file GIF mobil
