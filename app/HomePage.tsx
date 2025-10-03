@@ -124,7 +124,9 @@ export default function HomePage() {
     }
   }
 
-  
+  const isLoaded1 = usePreloader()
+  if (!isLoaded1) return <LoadingRetro />
+
 
   return (
     <div className="min-h-[100dvh] w-full relative overflow-hidden pixel-font p-2">
