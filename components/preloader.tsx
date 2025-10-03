@@ -1,27 +1,23 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 
-export function Preloader() {
+export function usePreloader() {
+  const [isLoaded, setIsLoaded] = useState(false)
+
   useEffect(() => {
-    // ---- Preload images/gif/sprites dari /assets ----
     const assetsImages = [
-      // 🚗 Car
       "/assets/car/car1.webp",
       "/assets/car/car2.webp",
       "/assets/car/car3.webp",
       "/assets/car/car4.webp",
       "/assets/car/car5.webp",
-
-      // 🌀 Gif
       "/assets/gif/1.webp",
       "/assets/gif/2.webp",
       "/assets/gif/3.webp",
       "/assets/gif/4.webp",
       "/assets/gif/5.webp",
       "/assets/gif/6.webp",
-
-      // 🏁 Host Gif
       "/assets/gif/host/1.webp",
       "/assets/gif/host/2.webp",
       "/assets/gif/host/3.webp",
@@ -32,14 +28,12 @@ export function Preloader() {
       "/assets/gif/host/8.webp",
     ]
 
-    // ---- Preload images/gif/sprites dari /racing-game ----
     const racingImages = [
       "/racing-game/images/background/6.gif",
       "/racing-game/images/background/background.svg",
       "/racing-game/images/background/hills.png",
       "/racing-game/images/background/sky.png",
       "/racing-game/images/background/trees.png",
-      // sprites
       "/racing-game/images/sprites/billboard01.png",
       "/racing-game/images/sprites/billboard02.png",
       "/racing-game/images/sprites/billboard03.png",
@@ -78,12 +72,6 @@ export function Preloader() {
 
     const allImages = [...assetsImages, ...racingImages]
 
-    allImages.forEach((src) => {
-      const img = new Image()
-      img.src = src
-    })
-
-    // ---- Preload audio dari /assets dan /racing-game ----
     const audios = [
       "/assets/music/resonance.mp3",
       "/assets/music/robbers.mp3",
@@ -91,12 +79,29 @@ export function Preloader() {
       "/racing-game/music/racer.ogg",
     ]
 
+    let loadedCount = 0
+    const total = allImages.length + audios.length
+
+    const checkDone = () => {
+      loadedCount++
+      if (loadedCount >= total) setIsLoaded(true)
+    }
+
+    allImages.forEach((src) => {
+      const img = new Image()
+      img.src = src
+      img.onload = checkDone
+      img.onerror = checkDone
+    })
+
     audios.forEach((src) => {
       const audio = new Audio()
       audio.src = src
       audio.preload = "auto"
+      audio.oncanplaythrough = checkDone
+      audio.onerror = checkDone
     })
   }, [])
 
-  return null
+  return isLoaded
 }

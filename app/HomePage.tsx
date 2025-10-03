@@ -10,11 +10,14 @@ import { useEffect, useState, useRef } from "react"
 import { motion } from "framer-motion"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { usePreloader } from "@/components/preloader"
+import LoadingRetro from "@/components/loadingRetro"
 
 export default function HomePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
+  const isLoaded = usePreloader()
 
   const [joining, setJoining] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
@@ -120,6 +123,8 @@ export default function HomePage() {
       setJoining(false)
     }
   }
+
+  
 
   return (
     <div className="min-h-[100dvh] w-full relative overflow-hidden pixel-font p-2">
