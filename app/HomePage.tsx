@@ -19,6 +19,11 @@ export default function HomePage() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
 
+  // State untuk modal alert
+const [showAlert, setShowAlert] = useState(false);
+// Ref untuk audio alert (suara gas.mp3)  
+const alertAudioRef = useRef<HTMLAudioElement>(null);
+
   const [activeTab, setActiveTab] = useState<'join' | 'tryout'>('join');
 
   const [joining, setJoining] = useState(false)
@@ -123,57 +128,67 @@ export default function HomePage() {
       setIsMuted(false) // Auto unmute jika volume dinaikkan
     }
   }
-
-  const handleJoin = async () => {
-    if (!roomCode || !nickname || joining) return;
-    setJoining(true);
-
-    try {
-      // Verify room exists
-      const { data: roomData, error: roomError } = await supabase
-        .from("game_rooms")
-        .select("id, status")
-        .eq("room_code", roomCode)
-        .single()
-
-      if (roomError || !roomData) {
-        console.error("Error: Room not found", roomError)
-        setJoining(false)
-        return
-      }
-
-      // Check if room is in 'waiting' status
-      if (roomData.status !== "waiting") {
-        console.error("Error: Room is not accepting players")
-        setJoining(false)
-        return
-      }
-
-      // Insert player
-      const { error: playerError } = await supabase
-        .from("players")
-        .insert({
-          room_id: roomData.id,
-          nickname,
-          car: ["red", "blue", "green", "yellow", "purple"][Math.floor(Math.random() * 5)]
-        })
-
-      if (playerError) {
-        console.error("Error joining room:", playerError)
-        setJoining(false)
-        return
-      }
-
-      // Store nickname in localStorage
-      localStorage.setItem("nickname", nickname)
-
-      // Navigate to game page
-      router.push(`/join/${roomCode}`)
-    } catch (error) {
-      console.error("Unexpected error:", error)
-      setJoining(false)
+const handleJoin = async () => {
+  // Check kondisi: roomCode harus tepat 6 char, nickname gak kosong, dan gak lagi joining
+  if (roomCode.length !== 6 || !nickname.trim() || joining) {  // .trim() biar spasi kosong dianggap invalid
+    console.log("Trigger alert: Input belum lengkap");  // Debug log, bisa hapus nanti
+    setShowAlert(true);  // Show modal alert
+    if (alertAudioRef.current && !isMuted) {  // Play suara kalau gak muted
+      alertAudioRef.current.volume = volume / 100;
+      alertAudioRef.current.currentTime = 0;  // Reset audio biar play dari awal tiap kali
+      alertAudioRef.current.play().catch((e) => console.log("Audio error:", e));
     }
+    return;  // Stop, jangan lanjut join
   }
+  
+  setJoining(true);  // Lanjut kalau valid
+
+  try {
+    // Verify room exists
+    const { data: roomData, error: roomError } = await supabase
+      .from("game_rooms")
+      .select("id, status")
+      .eq("room_code", roomCode)
+      .single()
+
+    if (roomError || !roomData) {
+      console.error("Error: Room not found", roomError)
+      setJoining(false)
+      return
+    }
+
+    // Check if room is in 'waiting' status
+    if (roomData.status !== "waiting") {
+      console.error("Error: Room is not accepting players")
+      setJoining(false)
+      return
+    }
+
+    // Insert player
+    const { error: playerError } = await supabase
+      .from("players")
+      .insert({
+        room_id: roomData.id,
+        nickname: nickname.trim(),  // Trim biar clean
+        car: ["red", "blue", "green", "yellow", "purple"][Math.floor(Math.random() * 5)]
+      })
+
+    if (playerError) {
+      console.error("Error joining room:", playerError)
+      setJoining(false)
+      return
+    }
+
+    // Store nickname in localStorage
+    localStorage.setItem("nickname", nickname.trim())
+
+    // Navigate to game page
+    router.push(`/join/${roomCode}`)
+  } catch (error) {
+    console.error("Unexpected error:", error)
+    setJoining(false)
+  }
+};
 
   const isLoaded = usePreloader()
   if (!isLoaded) return <LoadingRetro />
@@ -227,6 +242,77 @@ const handleTryout = () => {
         priority  // Auto preload kalo critical (mirip fetchPriority high)
         style={{ objectPosition: 'center' }}  // Ganti bg-center
       />
+
+      {/* Audio Alert untuk gas.mp3 */}
+        <audio
+          ref={alertAudioRef}
+          src="/assets/music/gas.mp3"  // Ganti path kalau beda
+          preload="auto"
+          className="hidden"
+        />
+
+
+{/* Modal Alert untuk Kondisi Belum Terpenuhi */}
+{showAlert && (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 z-50 flex items-center justify-center p-4"
+    onClick={() => setShowAlert(false)}  // Close saat klik luar
+  >
+    {/* Backdrop */}
+    <motion.div
+      className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+      onClick={(e) => e.stopPropagation()}  // Jangan close saat klik modal
+    />
+    
+    {/* Modal Content */}
+    <motion.div
+      initial={{ scale: 0.9, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      exit={{ scale: 0.9, opacity: 0 }}
+      className="relative w-full max-w-md max-h-[70vh] overflow-hidden bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-2xl shadow-2xl shadow-[#ff6bff]/40 backdrop-blur-md pixel-card text-center p-6"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* GIF Car */}
+      <div className="mb-4">
+        <Image
+          src="/assets/car/car3.webp"  // Ganti path kalau beda
+          alt="Car alert animation"
+          width={200}
+          height={150}
+          className="mx-auto rounded-lg"
+        />
+      </div>
+      
+      {/* Teks Warning */}
+      <CardTitle className="text-xl font-bold text-[#ff6bff] mb-2 pixel-text glow-pink">
+        Oops! Belum Siap Balapan!
+      </CardTitle>
+      <CardDescription className="text-[#00ffff]/80 mb-6 pixel-text glow-cyan-subtle">
+        Isi Room Code (6 huruf) dan Nickname dulu, ya! 🚀
+      </CardDescription>
+      
+      {/* Close Button */}
+      <Button
+        onClick={() => setShowAlert(false)}
+        className="w-full bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] text-white pixel-button glow-pink"
+      >
+        Oke, Saya Isi!
+      </Button>
+      
+      {/* Close Icon */}
+      <button
+        onClick={() => setShowAlert(false)}
+        className="absolute top-3 right-3 p-2 bg-[#1a0a2a]/60 border-2 border-[#ff6bff]/50 rounded-lg text-[#00ffff] hover:bg-[#ff6bff]/20 glow-cyan-subtle"
+        aria-label="Close alert"
+      >
+        <X size={20} />
+      </button>
+    </motion.div>
+  </motion.div>
+)}
 
       {/* Burger Menu Button - Fixed Top Right */}
       <motion.button
@@ -447,6 +533,8 @@ const handleTryout = () => {
             </h2>
           </div>
 
+
+
           {/* Subtitle dengan pixel border */}
           <div
             className="pixel-border-small inline-block"
@@ -475,7 +563,8 @@ const handleTryout = () => {
             whileHover={{ scale: 1.02 }}
             className="group max-sm:[grid-area:host]"
           >
-              <Card className="bg-[#1a0a2a]/40 border-[#00ffff]/50 hover:border-[#00ffff] transition-all duration-300 sm:h-full shadow-[0_0_15px_rgba(255,107,255,0.3)] pixel-card">
+       
+              <Card className="bg-[#1a0a2a]/70 border-[#00ffff]/70 hover:border-[#00ffff] transition-all duration-300 sm:h-full shadow-[0_0_15px_rgba(255,107,255,0.3)] pixel-card">
                 <CardHeader className="text-center">
                   <motion.div
                     className="w-16 h-16 bg-gradient-to-br from-[#00ffff] to-[#120512] border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-[0_0_15px_rgba(255,107,255,0.7)] transition-all duration-300"
@@ -510,7 +599,7 @@ const handleTryout = () => {
   whileHover={{ scale: 1.02 }}
   className="group max-sm:[grid-area:join]"
 >
-  <Card className="bg-[#1a0a2a]/40 border-[#00ffff]/50 hover:border-[#00ffff] transition-all duration-300 h-full shadow-[0_0_15px_rgba(0,255,255,0.3)] pixel-card">
+  <Card className="bg-[#1a0a2a]/70 border-[#00ffff]/70 hover:border-[#00ffff] transition-all duration-300 h-full shadow-[0_0_15px_rgba(0,255,255,0.3)] pixel-card">
     {/* Tab Selector */}
     <CardHeader className="text-center pb-2">
       <div className="flex justify-center space-x-0 bg-[#1a0a2a]/50 rounded-xl p-1 mb-4">
@@ -623,24 +712,26 @@ const handleTryout = () => {
     </CardContent>
 
     <CardFooter>
-      <Button
-        onClick={activeTab === 'join' ? handleJoin : handleTryout}
-        className={`w-full transition-all duration-300 ease-in-out pixel-button-large retro-button ${
-          activeTab === 'join' 
-            ? `bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white border-[#0070f3]/80 hover:border-[#0ea5e9]/80 glow-cyan ${!roomCode || !nickname ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}` 
-            : `bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] hover:to-[#ffb3ff] text-white border-[#ff6bff]/80 hover:border-[#ff8aff]/80 glow-pink ${!nickname ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`
-        }`}
-        disabled={activeTab === 'join' ? (roomCode.length !== 6 || !nickname || joining) : (!nickname || joining)}
-      >
-        {activeTab === 'join' ? 'JOIN' : 'TRYOUT'}
-      </Button>
+<Button
+  onClick={activeTab === 'join' ? handleJoin : handleTryout}
+  className={`w-full transition-all duration-300 ease-in-out pixel-button-large retro-button ${
+    activeTab === 'join' 
+      ? `bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white border-[#0070f3]/80 hover:border-[#0ea5e9]/80 glow-cyan cursor-pointer`  // Selalu cursor-pointer, gak ada opacity conditional
+      : `bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] hover:to-[#ffb3ff] text-white border-[#ff6bff]/80 hover:border-[#ff8aff]/80 glow-pink cursor-pointer`  // Sama untuk tryout
+  }`}
+>
+  {activeTab === 'join' ? 'JOIN' : 'TRYOUT'}
+</Button>
     </CardFooter>
   </Card>
 </motion.div>
         </div>
       </div>
 
-      <style jsx>{`
+     <style jsx>{`
+
+
+
   .pixel-font {
     font-family: 'Press Start 2P', cursive, monospace;
     image-rendering: pixelated;
