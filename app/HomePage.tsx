@@ -27,19 +27,19 @@ export default function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
   const [showHowToPlay, setShowHowToPlay] = useState(false) // State untuk modal How to Play
   const [currentPage, setCurrentPage] = useState(0) // State untuk pagination
-  
+
   // Tambahkan array untuk generate nama random (di luar component atau di dalam)
-const adjectives = ["Crazy", "Fast", "Speedy", "Turbo", "Neon", "Pixel", "Racing", "Wild", "Epic", "Flash"];
-const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", "Gear", "Track", "Lap"];
+  const adjectives = ["Crazy", "Fast", "Speedy", "Turbo", "Neon", "Pixel", "Racing", "Wild", "Epic", "Flash"];
+  const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", "Gear", "Track", "Lap"];
 
-// Function untuk generate nickname otomatis
+  // Function untuk generate nickname otomatis
   const generateNickname = () => {
-  const randomAdj = adjectives[Math.floor(Math.random() * adjectives.length)];
-  const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
-  return `${randomAdj}${randomNoun}`;
-};
+    const randomAdj = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
+    return `${randomAdj}${randomNoun}`;
+  };
 
-  
+
 
   const steps = [
     {
@@ -259,7 +259,7 @@ const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", 
             </div>
 
             {/* How to Play Button */}
-            <button 
+            <button
               onClick={() => {
                 setShowHowToPlay(true)
                 setIsMenuOpen(false) // Tutup menu saat buka modal
@@ -275,7 +275,7 @@ const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", 
 
             {/* Settings Button */}
 
-            <button 
+            <button
               className="w-full p-2 bg-[#1a0a2a]/60 border-2 border-[#00ffff]/50 hover:border-[#00ffff] pixel-button hover:bg-[#00ffff]/20 glow-cyan-subtle rounded text-center"
               aria-label="Settings"
             >
@@ -304,7 +304,7 @@ const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", 
             animate={{ opacity: 1 }}
             onClick={(e) => e.stopPropagation()} // Cegah tutup saat klik modal
           />
-          
+
           {/* Modal Content */}
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
@@ -337,9 +337,9 @@ const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", 
                 >
                   <div className="text-center mb-6">
                     <motion.div
-            
+
                     >
-                  
+
                     </motion.div>
                     <h3 className="text-xl font-bold text-[#00ffff] mb-4 pixel-text glow-cyan">
                       {steps[currentPage].title}
@@ -349,7 +349,7 @@ const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", 
                     {steps[currentPage].content}
                   </p>
                   <div className="flex items-center justify-center gap-2 text-[#ff6bff] text-sm pixel-text glow-pink-subtle mt-4">
-                    
+
                   </div>
                 </motion.div>
               </AnimatePresence>
@@ -368,17 +368,16 @@ const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", 
                   Prev
                 </Button>
 
-{/* Page Dots */}
+                {/* Page Dots */}
                 <div className="flex space-x-2">
                   {steps.map((_, index) => (
                     <button
                       key={index}
                       onClick={() => goToPage(index)}
-                      className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                        index === currentPage
+                      className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentPage
                           ? 'bg-[#a100ff] shadow-md shadow-[#a100ff]/50 scale-110'
                           : 'bg-white/30 hover:bg-white/50'
-                      }`}
+                        }`}
                     />
                   ))}
                 </div>
@@ -419,28 +418,28 @@ const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", 
         {/* Main Title dengan efek pixel art */}
         <div className="text-center relative pb-5 sm:pt-3 pt-16 space-y-3">
           {/* Title Border */}
-<div className="pixel-border-large mx-auto relative z-0">  {/* Tambah relative z-0 buat layering */}
-  <h1 className="font-bold bg-clip-text text-4xl md:text-5xl lg:text-6xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-[#ff6bff] to-[#00ffff]  tracking-wider drop-shadow-[0_0_4px_rgba(139,92,246,0.6)]">  {/* Tracking-wider buat spasiin huruf, kurangin glow ke 4px & opacity 0.6 */}
-    CRAZY
-  </h1>
-  <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff6bff] to-[#00ffff]  relative z-10">  {/* Tambah z-10 biar h2 di atas kalau ada overlap */}
-    RACE
-  </h2>
-</div>
+          <div className="pixel-border-large mx-auto relative z-0">  {/* Tambah relative z-0 buat layering */}
+            <h1 className="font-bold bg-clip-text text-4xl md:text-5xl lg:text-6xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-[#ff6bff] to-[#00ffff]  tracking-wider drop-shadow-[0_0_4px_rgba(139,92,246,0.6)]">  {/* Tracking-wider buat spasiin huruf, kurangin glow ke 4px & opacity 0.6 */}
+              CRAZY
+            </h1>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff6bff] to-[#00ffff]  relative z-10">  {/* Tambah z-10 biar h2 di atas kalau ada overlap */}
+              RACE
+            </h2>
+          </div>
 
           {/* Subtitle dengan pixel border */}
-<div 
-  className="pixel-border-small inline-block" 
-  style={{
-    border: '2px solid #ff6bff',  // Ubah warna & ketebalan border
-    boxShadow: '0 0 10px #ff6bff, 0 0 20px #ff6bff',  // Glow neon multi-layer
-    borderRadius: '4px'  // Opsional buat rounded
-  }}
->
-  <p className="text-sm md:text-base px-4 py-2 bg-[#1a0a2a] text-white">
-    ANSWER • RACE • WIN
-  </p>
-</div>
+          <div
+            className="pixel-border-small inline-block"
+            style={{
+              border: '2px solid #ff6bff',  // Ubah warna & ketebalan border
+              boxShadow: '0 0 10px #ff6bff, 0 0 20px #ff6bff',  // Glow neon multi-layer
+              borderRadius: '4px'  // Opsional buat rounded
+            }}
+          >
+            <p className="text-sm md:text-base px-4 py-2 bg-[#1a0a2a] text-white">
+              ANSWER • RACE • WIN
+            </p>
+          </div>
         </div>
 
         {/* Action Cards */}
@@ -456,29 +455,30 @@ const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", 
             whileHover={{ scale: 1.02 }}
             className="group max-sm:[grid-area:host]"
           >
-            <Link href="/host">
-              <Card className="bg-[#1a0a2a]/40 border-[#00ffff]/50 hover:border-[#00ffff] transition-all duration-300 sm:h-full shadow-[0_0_15px_rgba(255,107,255,0.3)] pixel-card">
-                <CardHeader className="text-center">
-                  <motion.div
-                    className="w-16 h-16 bg-gradient-to-br from-[#00ffff] to-[#120512] border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-[0_0_15px_rgba(255,107,255,0.7)] transition-all duration-300"
-                    whileHover={{ rotate: 5 }}
-                  >
-                    <Flag className="w-8 h-8 text-white" />
-                  </motion.div>
-                  <CardTitle className="text-xl font-bold text-[#00ffff] pixel-text glow-pink">
-                    HOST GAME
-                  </CardTitle>
-                  <CardDescription className="text-[#00ffff]/80 text-sm pixel-text glow-pink-subtle">
-                    Create your own race and challenge others
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                <Button className="w-full bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white ] focus:ring-[#00ffff]/30 transition-all duration-200 ">
+            <Card className="bg-[#1a0a2a]/40 border-[#00ffff]/50 hover:border-[#00ffff] transition-all duration-300 sm:h-full shadow-[0_0_15px_rgba(255,107,255,0.3)] pixel-card">
+              <CardHeader className="text-center">
+                <motion.div
+                  className="w-16 h-16 bg-gradient-to-br from-[#00ffff] to-[#120512] border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-[0_0_15px_rgba(255,107,255,0.7)] transition-all duration-300"
+                  whileHover={{ rotate: 5 }}
+                >
+                  <Flag className="w-8 h-8 text-white" />
+                </motion.div>
+                <CardTitle className="text-xl font-bold text-[#00ffff] pixel-text glow-pink">
+                  HOST GAME
+                </CardTitle>
+                <CardDescription className="text-[#00ffff]/80 text-sm pixel-text glow-pink-subtle">
+                  Create your own race and challenge others
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  className="w-full bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white ] focus:ring-[#00ffff]/30 transition-all duration-200 hover:cursor-pointer"
+                  onClick={() => router.push('/host')}
+                >
                   Create Room
                 </Button>
-                </CardContent>
-              </Card>
-            </Link>
+              </CardContent>
+            </Card>
           </motion.div>
 
           {/* Join Race Card */}
@@ -505,51 +505,51 @@ const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", 
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
-<Input
-    placeholder="Room Code"
-    value={roomCode}
-    maxLength={6}
-    onChange={(e) => {
-      const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-      setRoomCode(value);
-    }}
-    className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
-    aria-label="Room Code"
-  />
-  <div className="relative">
-    <Input
-      placeholder="Nickname"
-      value={nickname}
-      maxLength={26}
-      onChange={(e) => setNickname(e.target.value)}
-      className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30 pr-10"
-      aria-label="Nickname"
-    />
-    <button
-      type="button"
-      onClick={() => setNickname(generateNickname())}
-      className="absolute right-2 top-1/8  text-[#00ffff] hover:bg-[#00ffff]/20 hover:border-[#00ffff] transition-all duration-200 glow-cyan-subtle"
-      aria-label="Generate Nickname"
-    >
-      <span className="text-lg">🎲</span>
-    </button>
-  </div>
+                <Input
+                  placeholder="Room Code"
+                  value={roomCode}
+                  maxLength={6}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                    setRoomCode(value);
+                  }}
+                  className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
+                  aria-label="Room Code"
+                />
+                <div className="relative">
+                  <Input
+                    placeholder="Nickname"
+                    value={nickname}
+                    maxLength={26}
+                    onChange={(e) => setNickname(e.target.value)}
+                    className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30 pr-10"
+                    aria-label="Nickname"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setNickname(generateNickname())}
+                    className="absolute right-2 top-1/8  text-[#00ffff] hover:bg-[#00ffff]/20 hover:border-[#00ffff] transition-all duration-200 glow-cyan-subtle"
+                    aria-label="Generate Nickname"
+                  >
+                    <span className="text-lg">🎲</span>
+                  </button>
+                </div>
               </CardContent>
               <CardFooter>
-<Button
-  onClick={handleJoin}
-  className={`w-full bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white  border-[#0070f3]/80 hover:border-[#0ea5e9]/80 transition-all duration-300 ease-in-out pixel-button-large retro-button glow-cyan ${!roomCode || !nickname ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-  disabled={roomCode.length !== 6 || !nickname || joining}
->
-  JOIN
-</Button>
+                <Button
+                  onClick={handleJoin}
+                  className={`w-full bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white  border-[#0070f3]/80 hover:border-[#0ea5e9]/80 transition-all duration-300 ease-in-out pixel-button-large retro-button glow-cyan ${!roomCode || !nickname ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                  disabled={roomCode.length !== 6 || !nickname || joining}
+                >
+                  JOIN
+                </Button>
               </CardFooter>
             </Card>
           </motion.div>
         </div>
       </div>
 
-     <style jsx>{`
+      <style jsx>{`
   .pixel-font {
     font-family: 'Press Start 2P', cursive, monospace;
     image-rendering: pixelated;
@@ -658,30 +658,6 @@ const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", 
     border-radius: 12px;
     padding: 2rem;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5), 0 4px 8px rgba(0, 255, 255, 0.1);  /* Cyan */
-  }
-
-  .crt-effect {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-    background-size: 100% 4px;
-    z-index: 5;
-    pointer-events: none;
-    animation: scanline 8s linear infinite;
-  }
-
-  .noise-effect {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E");
-    z-index: 4;
-    pointer-events: none;
   }
 
   .glow-pink {

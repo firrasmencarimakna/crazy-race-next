@@ -185,10 +185,9 @@ export default function QuestionListPage() {
         whileHover={{ scale: 1.05 }}
         className="fixed top-4 left-4 z-40 p-3 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded-lg shadow-lg shadow-[#00ffff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
         aria-label="Back to Home"
+        onClick={() => router.push('/')}
       >
-        <Link href="/">
           <ArrowLeft size={20} className="text-white" />
-        </Link>
       </motion.button>
 
       {/* Burger Menu Button - Fixed Top Right */}

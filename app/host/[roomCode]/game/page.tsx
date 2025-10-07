@@ -11,6 +11,7 @@ import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
 import { sortPlayersByProgress, formatTime, calculateRemainingTime } from "@/utils/game"
+import LoadingRetro from "@/components/loadingRetro"
 
 // Background GIFs
 const backgroundGifs = [
@@ -37,12 +38,160 @@ export default function HostMonitorPage() {
   const [totalQuestions, setTotalQuestions] = useState(0)
   const [gameTimeRemaining, setGameTimeRemaining] = useState(0)
   const [gameDuration, setGameDuration] = useState(300)
+  const [gameStartTime, setGameStartTime] = useState<number | null>(null)
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [isMuted, setIsMuted] = useState(false)
   const [volume, setVolume] = useState(50) // 0-100, default 50%
   const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
   const audioRef = useRef<HTMLAudioElement>(null)
+
+  // Fetch initial game data (updated)
+  useEffect(() => {
+    const fetchInitial = async () => {
+      setLoading(true);
+
+      // Ambil data room lengkap
+      const { data: room, error: roomError } = await supabase
+        .from("game_rooms")
+        .select("id, settings, questions, start, status, end")
+        .eq("room_code", roomCode)
+        .single();
+
+      if (roomError || !room) {
+        console.error("Error fetching room:", roomError);
+        setLoading(false);
+        return;
+      }
+
+      setRoom(room);
+      setRoomId(room.id);
+
+      // Hitung total questions dan duration
+      const questions = room.questions || [];
+      setTotalQuestions(questions.length);
+      
+      const settings = typeof room.settings === 'string' ? JSON.parse(room.settings) : room.settings;
+      const duration = settings?.duration || 300;
+      setGameDuration(duration);
+
+      // Set game start time jika playing
+      if (room.status === 'playing' && room.start) {
+        setGameStartTime(new Date(room.start).getTime());
+        // Initial remaining calc (tapi timer akan sync ulang)
+        const remaining = calculateRemainingTime(room.start, duration);
+        setGameTimeRemaining(remaining);
+      } else if (room.status === 'finished') {
+        setGameTimeRemaining(0);
+        setGameStartTime(null);
+      }
+
+      // Ambil players (sama)
+      const { data: playersData, error: playersError } = await supabase
+        .from("players")
+        .select("id, nickname, result, completion, car, joined_at")
+        .eq("room_id", room.id);
+
+      if (!playersError && playersData) {
+        setPlayers(playersData);
+      }
+
+      setLoading(false);
+    };
+
+    fetchInitial();
+  }, [roomCode]);
+
+  // Subscribe to real-time updates (updated: handle start time update)
+  useEffect(() => {
+    if (!roomId) return;
+
+    const subscription = supabase
+      .channel(`host-monitor-${roomId}`)
+      .on(
+        "postgres_changes",
+        { 
+          event: "UPDATE", 
+          schema: "public", 
+          table: "players", 
+          filter: `room_id=eq.${roomId}` 
+        },
+        (payload) => {
+          setPlayers((prev) => {
+            const updatedPlayers = prev.map((p) => (p.id === payload.new.id ? payload.new : p));
+            // Check if all players completed
+            const allCompleted = updatedPlayers.every(p => p.completion === true);
+            if (allCompleted && room?.status === 'playing') {
+              console.log('All players completed, ending game');
+              endGame();
+            }
+            return updatedPlayers;
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "game_rooms",
+          filter: `id=eq.${roomId}`,
+        },
+        (payload) => {
+          const newRoom = payload.new;
+          setRoom(newRoom);
+          
+          // Update timer jika status berubah
+          if (newRoom.status === 'finished') {
+            setGameTimeRemaining(0);
+            setGameStartTime(null);
+          } else if (newRoom.status === 'playing' && newRoom.start) {
+            setGameStartTime(new Date(newRoom.start).getTime());
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, [roomId, room?.status]); // Tambah dep room?.status untuk check allCompleted
+
+  // Timer effect untuk game time (updated: wall-time based)
+  useEffect(() => {
+    if (!gameStartTime || room?.status !== 'playing') {
+      return; // Gak jalan kalau gak playing
+    }
+
+    console.log('Starting wall-time timer for host monitor');
+
+    const updateGameTime = () => {
+      const now = Date.now();
+      const elapsed = Math.floor((now - gameStartTime) / 1000);
+      const remaining = Math.max(0, gameDuration - elapsed);
+      
+      console.log('Host monitor remaining:', remaining); // Optional log buat debug
+      setGameTimeRemaining(remaining);
+
+      if (remaining <= 0) {
+        console.log('Host monitor time up, ending game');
+        clearInterval(gameTimer);
+        endGame();
+      }
+    };
+
+    // Initial update
+    updateGameTime();
+
+    // Interval setiap detik
+    const gameTimer = setInterval(updateGameTime, 1000);
+
+    // Cleanup
+    return () => {
+      console.log('Cleaning up host monitor timer');
+      clearInterval(gameTimer);
+    };
+  }, [gameStartTime, gameDuration, room?.status]); // Depend pada start time & status, gak pada remaining
 
   // Inisialisasi audio: play otomatis dengan volume default
   useEffect(() => {
@@ -74,123 +223,6 @@ export default function HostMonitorPage() {
       setIsMuted(false) // Auto unmute jika volume dinaikkan
     }
   }
-
-  // Fetch initial game data
-  useEffect(() => {
-    const fetchInitial = async () => {
-      setLoading(true);
-
-      // Ambil data room lengkap
-      const { data: room, error: roomError } = await supabase
-        .from("game_rooms")
-        .select("id, settings, questions, start, status, end")
-        .eq("room_code", roomCode)
-        .single();
-
-      if (roomError || !room) {
-        console.error("Error fetching room:", roomError);
-        setLoading(false);
-        return;
-      }
-
-      setRoom(room);
-      setRoomId(room.id);
-
-      // Hitung total questions dan duration
-      const questions = room.questions || [];
-      setTotalQuestions(questions.length);
-      
-      const settings = typeof room.settings === 'string' ? JSON.parse(room.settings) : room.settings;
-      const duration = settings?.duration || 300;
-      setGameDuration(duration);
-
-      // Hitung sisa waktu jika game sedang berjalan
-      if (room.status === 'playing' && room.start) {
-        const remaining = calculateRemainingTime(room.start, duration);
-        setGameTimeRemaining(remaining);
-      } else if (room.status === 'finished') {
-        setGameTimeRemaining(0);
-      }
-
-      // Ambil players
-      const { data: playersData, error: playersError } = await supabase
-        .from("players")
-        .select("id, nickname, result, completion, car, joined_at")
-        .eq("room_id", room.id);
-
-      if (!playersError && playersData) {
-        setPlayers(playersData);
-      }
-
-      setLoading(false);
-    };
-
-    fetchInitial();
-  }, [roomCode]);
-
-  // Subscribe to real-time updates
-  useEffect(() => {
-    if (!roomId) return;
-
-    const subscription = supabase
-      .channel(`host-monitor-${roomId}`)
-      .on(
-        "postgres_changes",
-        { 
-          event: "UPDATE", 
-          schema: "public", 
-          table: "players", 
-          filter: `room_id=eq.${roomId}` 
-        },
-        (payload) => {
-          setPlayers((prev) =>
-            prev.map((p) => (p.id === payload.new.id ? payload.new : p))
-          );
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "game_rooms",
-          filter: `id=eq.${roomId}`,
-        },
-        (payload) => {
-          const newRoom = payload.new;
-          setRoom(newRoom);
-          
-          // Update timer jika status berubah
-          if (newRoom.status === 'finished') {
-            setGameTimeRemaining(0);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(subscription);
-    };
-  }, [roomId]);
-
-  // Timer effect untuk game time
-  useEffect(() => {
-    if (gameTimeRemaining <= 0 || room?.status === 'finished') return;
-
-    const timer = setInterval(() => {
-      setGameTimeRemaining(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          // Auto end game ketika waktu habis
-          endGame();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [gameTimeRemaining, room?.status]);
 
   // Sort players by progress dengan animasi
   const sortedPlayers = useMemo(() => {
@@ -224,6 +256,20 @@ export default function HostMonitorPage() {
     console.log("Game ended successfully");
   };
 
+  // Monitor status untuk redirect ke leaderboard
+  useEffect(() => {
+    if (room?.status === 'finished' && !loading) {
+      console.log('Host monitor detected finished, redirecting to leaderboard');
+      router.push(`/host/${roomCode}/leaderboard`);
+    }
+  }, [room?.status, loading, roomCode, router]);
+
+  if (loading) {
+    return (
+      <LoadingRetro />
+    );
+  }
+
   const getRankIcon = (rank: number) => {
     switch (rank) {
       case 0: return <Crown className="w-5 h-5 text-yellow-400" />;
@@ -241,9 +287,7 @@ export default function HostMonitorPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#1a0a2a] flex items-center justify-center">
-        <div className="text-[#00ffff] pixel-text">Loading game monitor...</div>
-      </div>
+      <LoadingRetro />
     );
   }
 
@@ -266,11 +310,6 @@ export default function HostMonitorPage() {
           transition={{ duration: 1, ease: "easeInOut" }}
         />
       </AnimatePresence>
-
-      {/* Overlay Effects */}
-      <div className="crt-effect"></div>
-      <div className="noise-effect"></div>
-      <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none"></div>
 
       {/* Burger Menu Button - Fixed Top Right */}
       <motion.button

@@ -39,3 +39,7 @@ export const formatTime = (seconds: number): string => {
   const secs = seconds % 60;
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
+
+export function breakOnCaps(text: string) {
+  return text.replace(/([a-z])([A-Z])/g, '$1\u200B$2');
+}
