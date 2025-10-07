@@ -62,7 +62,7 @@
     #controls-area {
       box-sizing: border-box; /* Border masuk ke height 120px, total pas 120px */
       width: 100%;
-      height: 120px;
+      height: 130px;
       background: linear-gradient(to top, #1a202c, #2d3748);
       border-top: 4px solid #333;
       display: flex;
@@ -77,17 +77,18 @@
   justify-content: space-evenly; /* Ubah dari space-between ke space-evenly biar jarak super rata */
   align-items: flex-end; /* Tombol rata di bawah */
   width: 100%;
-  gap: 1rem; /* Tambah gap minimal antar tombol untuk handphone besar */
+ 
+  gap: 0.5rem; /* Tambah gap minimal antar tombol untuk handphone besar */
   padding: 0 2rem; /* Padding samping biar tidak nempel pinggir layar */
 }
     #mobile-controls button {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
+      width: 90px;
+      height: 70px;
+      border-radius: 0%;
       border: none;
       font-size: 1.2rem;
-      color: #fff;
-      background: rgba(45, 55, 72, 0.95);
+      color: #000000;
+      background: rgb(160, 153, 153);
       backdrop-filter: blur(10px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       transition: all 0.15s ease;
@@ -99,7 +100,7 @@
       margin: 0 0.25rem;
     }
     #mobile-controls button:active {
-      background: rgba(45, 55, 72, 1);
+      background: rgb(17, 104, 255);
       transform: scale(0.95);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
     }
@@ -108,6 +109,7 @@
   /* Hapus atau comment out seluruh style ini, karena kita gabungkan semua tombol langsung ke #mobile-controls */
   /* Atau ganti jadi: display: contents; biar sub-container "hilang" dan tombol langsung flex di parent */
   display: contents;
+  gap: 1.5rem;
 }
     #left, #right {
       background: rgba(59, 130, 246, 0.9); /* Soft blue */
@@ -122,7 +124,7 @@
     @media (max-width: 767px) {
       #mobile-controls {
         display: flex !important;
-        margin-top: -230px; /* Sesuai permintaan: Naikkan tombol ke atas 230px */
+        margin-top: -130px; /* Sesuai permintaan: Naikkan tombol ke atas 230px */
       }
       #screen-area {
         max-height: calc(100vh + 110px); /* Adjust: 120px controls - 230px naik = -110px efektif, jadi +110px ruang untuk overlap tanpa potong */
