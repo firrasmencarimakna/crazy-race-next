@@ -27,10 +27,9 @@
     }
     #screen-area {
       flex: 1;
-      margin: 0 8px 8px 8px; /* Hapus margin atas, biar nggak push ke atas berlebih. Bottom 8px aja buat jarak */
-      max-height: calc(100vh - 128px); /* Adjust: 120px controls + 4px border + 4px extra safety (setengah margin bottom) */
       width: 100%;
-      max-height: calc(100vh - 120px); /* Reserve space for controls + bezel */
+      margin: 0 8px 8px 8px; /* Hapus margin atas, biar nggak push ke atas berlebih. Bottom 8px aja buat jarak */
+      max-height: calc(100vh - 144px); /* Adjust lebih: 120px controls + 4px border + 20px extra naik (untuk -40px margin-top) */
       position: relative;
       /* Background diganti ke 6.gif */
       background-image: url('images/background/6.gif');
@@ -39,7 +38,6 @@
       background-repeat: no-repeat;
       border: 8px solid #333;
       border-radius: 12px;
-      margin: 8px;
       box-sizing: border-box;
       box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
     }
@@ -48,6 +46,11 @@
         border: 20px solid #2d3748;
         margin: 20px;
         max-height: none;
+        flex: none;
+        height: 100vh;
+        margin: 0;
+        border: none;
+        border-radius: 0;
       }
     }
     #canvas {
@@ -58,8 +61,6 @@
     }
     #controls-area {
       box-sizing: border-box; /* Border masuk ke height 120px, total pas 120px */
-      height: 120px; /* Tetep */
-      border-top: 4px solid #333; /* Tetep, tapi sekarang include */
       width: 100%;
       height: 120px;
       background: linear-gradient(to top, #1a202c, #2d3748);
@@ -71,20 +72,20 @@
       box-shadow: 0 -4px 12px rgba(0,0,0,0.5);
     }
     #mobile-controls {
-      padding: 0.25rem 2rem;
       display: none; /* Default hidden */
       position: relative; /* Changed from fixed to relative for separation */
       bottom: auto;
       left: auto;
       right: auto;
       z-index: 10;
-      padding: 0.5rem 2rem; /* Adjusted padding */
+      padding: 0.25rem 2rem; /* Adjusted padding vertikal dikurangi biar muat */
       height: 100%;
       pointer-events: none;
       background: none; /* Remove gradient for clean separation */
       justify-content: space-between;
       width: 100%;
       box-sizing: border-box;
+      margin-top: 0; /* Default */
     }
     #mobile-controls button {
       width: 60px;
@@ -133,20 +134,27 @@
     #brake {
       background: rgba(239, 68, 68, 0.9); /* Soft red */
     }
-    /* Hide on desktop, show on mobile via JS */
+    /* Mobile specific: Show controls and adjust position */
+    @media (max-width: 767px) {
+      #mobile-controls {
+        display: flex !important;
+        margin-top: -40px; /* Naikkan lebih ke atas lagi (~33% dari 120px) */
+      }
+      #screen-area {
+        max-height: calc(100vh - 104px); /* Adjust lebih: 120px - 40px naik + safety */
+      }
+      #controls-area {
+        display: flex;
+      }
+    }
+    /* Hide on desktop */
     @media (min-width: 768px) {
       #mobile-controls {
         display: none !important;
+        margin-top: 0; /* Reset untuk desktop */
       }
       #controls-area {
         display: none;
-      }
-      #screen-area {
-        flex: none;
-        height: 100vh;
-        margin: 0;
-        border: none;
-        border-radius: 0;
       }
     }
     #controls {
@@ -313,7 +321,7 @@
       text-align: center;
       max-width: 80%;
     }
-  </style>
+</style>
 </head>
 <body>
   <div id="game-container">
