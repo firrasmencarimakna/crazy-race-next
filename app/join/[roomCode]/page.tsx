@@ -51,38 +51,52 @@ export default function LobbyPage() {
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [loading, setLoading] = useState(true)
 
-  // Effect untuk sinkronisasi countdown
+  // Tambah useEffect baru: Monitor status room dan auto-redirect ke game
   useEffect(() => {
-    if (!room?.countdown_start || room.status !== 'countdown') return;
+    if (room?.status === 'playing' && !loading) {
+      console.log('Lobby detected playing status, redirecting to game');
+      router.replace(`/join/${roomCode}/game`);
+    }
+  }, [room?.status, loading, roomCode, router]);
 
-    const syncAndStartCountdown = () => {
-      const remaining = calculateCountdown(room.countdown_start, 10);
+  // Effect untuk sinkronisasi countdown (updated ke wall-time)
+  useEffect(() => {
+    if (!room?.countdown_start || room.status !== 'countdown') {
+      setCountdown(0);
+      return;
+    }
+
+    console.log('Starting wall-time countdown sync for lobby:', room.countdown_start);
+
+    const countdownStartTime = new Date(room.countdown_start).getTime();
+    const totalCountdown = 10; // Detik total
+
+    const updateCountdown = () => {
+      const now = Date.now();
+      const elapsed = Math.floor((now - countdownStartTime) / 1000);
+      const remaining = Math.max(0, totalCountdown - elapsed);
+      
+      console.log('Lobby countdown remaining:', remaining);
       setCountdown(remaining);
 
       if (remaining <= 0) {
-        // Countdown sudah selesai, langsung pindah ke game
-        router.push(`/join/${roomCode}/game`);
-        return;
+        console.log('Lobby countdown finished, redirecting to game');
+        clearInterval(countdownInterval);
+        router.replace(`/join/${roomCode}/game`);
       }
-
-      // Start countdown timer
-      const timer = setInterval(() => {
-        setCountdown(prev => {
-          const newCountdown = prev - 1;
-          if (newCountdown <= 0) {
-            clearInterval(timer);
-            router.push(`/join/${roomCode}/game`);
-            return 0;
-          }
-          return newCountdown;
-        });
-      }, 1000);
-
-      return () => clearInterval(timer);
     };
 
-    const timerCleanup = syncAndStartCountdown();
-    return timerCleanup;
+    // Initial update
+    updateCountdown();
+
+    // Interval setiap detik
+    const countdownInterval = setInterval(updateCountdown, 1000);
+
+    // Cleanup
+    return () => {
+      console.log('Cleaning up lobby countdown interval');
+      clearInterval(countdownInterval);
+    };
   }, [room?.countdown_start, room?.status, roomCode, router]);
 
   useEffect(() => {
@@ -109,6 +123,13 @@ export default function LobbyPage() {
       roomId = room.id
       setRoom(room)
       setGamePhase(room.status)
+
+      // Immediate check: Kalau udah playing, redirect (handle refresh mid-game)
+      if (room.status === 'playing') {
+        console.log('Bootstrap detected playing, immediate redirect');
+        router.replace(`/join/${roomCode}/game`);
+        return; // Stop bootstrap
+      }
 
       // Sync countdown jika sudah mulai
       if (room.status === 'countdown' && room.countdown_start) {
@@ -166,7 +187,7 @@ export default function LobbyPage() {
         )
         .subscribe()
 
-      // 6. Subscription untuk perubahan room dengan countdown_start
+      // 6. Subscription untuk perubahan room dengan countdown_start (updated: auto-redirect playing)
       const roomChannel = supabase
         .channel(`room:${roomCode}`)
         .on(
@@ -174,8 +195,15 @@ export default function LobbyPage() {
           { event: 'UPDATE', schema: 'public', table: 'game_rooms', filter: `room_code=eq.${roomCode}` },
           payload => {
             const newRoomData = payload.new;
+            console.log('Lobby room update:', newRoomData.status);
             setGamePhase(newRoomData.status)
             setRoom(newRoomData)
+
+            // Auto-redirect kalau status playing
+            if (newRoomData.status === 'playing') {
+              console.log('Subscription detected playing, redirecting to game');
+              router.replace(`/join/${roomCode}/game`);
+            }
 
             // Jika status berubah menjadi countdown, sync countdown
             if (newRoomData.status === 'countdown' && newRoomData.countdown_start) {
@@ -204,6 +232,17 @@ export default function LobbyPage() {
     }, 5000)
     return () => clearInterval(bgInterval)
   }, [])
+
+  // sebelum return (atau di atas map)
+  const sortedPlayers = [...players].sort((a, b) => {
+    if (a.id === currentPlayer.id) return -1; // current player duluan
+    if (b.id === currentPlayer.id) return 1;
+    return 0;
+  });
+
+  if (loading) {
+    return <LoadingRetro />; // Atau JSX loading kamu
+  }
 
   // Countdown display component
   if (countdown > 0) {
@@ -242,9 +281,6 @@ export default function LobbyPage() {
         />
       </AnimatePresence>
 
-      {/* Overlay Effects */}
-      {/* <div className="crt-effect"></div> */}
-
       {/* Header */}
       <div className="relative z-10 max-w-7xl mx-auto pt-8 px-4">
         {/* Judul Utama */}
@@ -271,9 +307,7 @@ export default function LobbyPage() {
                   {players.length}
                 </Badge>
 
-                <Activity className="w-10 text-[#00ffff] glow-cyan animate-pulse" />
-                <h2 className="text-xl md:text-4xl font-bold text-[#00ffff] pixel-text glow-cyan mx-2">WAITING ROOM</h2>
-                <Activity className="w-10 text-[#00ffff] glow-cyan animate-pulse" />
+                <h2 className="max-w-[10rem] sm:max-w-none text-xl md:text-4xl font-bold text-[#00ffff] pixel-text glow-cyan mx-2">WAITING ROOM</h2>
 
               </motion.div>
             </CardHeader>
@@ -281,7 +315,7 @@ export default function LobbyPage() {
             <CardContent className="p-6">
               {/* Players Grid - 5 columns */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                {players.map((player) => (
+                {sortedPlayers.map((player) => (
                   <motion.div
                     key={player.id}
                     className={`relative group ${player.id === currentPlayer.id ? 'glow-cyan' : 'glow-pink-subtle'
@@ -302,18 +336,12 @@ export default function LobbyPage() {
                           alt={`${player.car} car`}
                           className="h-28 w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
                         />
-                        {/* Ready Status Indicator */}
-                        {player.isReady && (
-                          <div className="absolute -top-2 -right-2 w-8 h-8 bg-[#00ff00] border-2 border-white rounded-full flex items-center justify-center animate-pulse glow-green">
-                            <div className="w-4 h-4 bg-white rounded-full"></div>
-                          </div>
-                        )}
                       </div>
 
                       {/* Player Info */}
                       <div className="text-center">
                         <div className="flex items-center justify-center space-x-2 mb-1">
-                          <h3 className="font-bold text-white pixel-text text-sm leading-tight glow-text">
+                          <h3 className="font-bold text-white pixel-text text-sm leading-tight glow-text line-clamp-2">
                             {player.nickname}
                           </h3>
                         </div>
@@ -335,11 +363,9 @@ export default function LobbyPage() {
 
         {/* Exit Button */}
         <div className="text-center mt-8">
-          <Link href="/">
-            <Button className="bg-[#ff6bff] border-4 border-white pixel-button-large hover:bg-[#ff8aff] glow-pink px-8 py-3">
+            <Button className="bg-[#ff6bff] border-4 border-white pixel-button-large hover:bg-[#ff8aff] glow-pink px-8 py-3" onClick={() => router.push('/')}>
               <span className="pixel-text text-lg">EXIT</span>
             </Button>
-          </Link>
         </div>
       </div>
 

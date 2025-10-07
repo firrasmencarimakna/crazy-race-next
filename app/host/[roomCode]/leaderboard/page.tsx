@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
-import { useParams } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { useCallback, useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
 
@@ -18,6 +18,7 @@ type PlayerStats = {
   accuracy: number
   totalTime: string
   rank: number
+  duration: number
 }
 
 // Background GIFs (reuse from player results)
@@ -27,126 +28,144 @@ const backgroundGifs = [
 ]
 
 const carGifMap: Record<string, string> = {
-  red: "/assets/car/car1.gif",
-  blue: "/assets/car/car2.gif",
-  green: "/assets/car/car3.gif",
-  yellow: "/assets/car/car4.gif",
-  purple: "/assets/car/car5.gif",
-  orange: "/assets/car/car5.gif",
+  red: "/assets/car/car1.webp",
+  blue: "/assets/car/car2.webp",
+  green: "/assets/car/car3.webp",
+  yellow: "/assets/car/car4.webp",
+  purple: "/assets/car/car5.webp",
+  orange: "/assets/car/car5.webp",
 }
 
 export default function HostLeaderboardPage() {
   const params = useParams()
+  const router = useRouter()
   const roomCode = params.roomCode as string
 
   const [loading, setLoading] = useState(true)
   const [playerStats, setPlayerStats] = useState<PlayerStats[]>([])
   const [error, setError] = useState<string | null>(null)
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
+  const [roomId, setRoomId] = useState<string>("")
 
   const computePlayerStats = (result: any[], questions: any[]): Omit<PlayerStats, 'nickname' | 'car' | 'rank'> => {
-    const totalQuestions = questions.length
-    let correct = 0
-    let totalSeconds = 0
-
-    result.forEach((ans: any) => {
-      const question = questions.find((q: any) => q.id === ans.question_id)
-      if (question && ans.selected_answer === question.correct_answer) {
-        correct++
-      }
-      totalSeconds += ans.time_taken || 0
-    })
-
-    const correctAnswers = correct
-    const accuracy = totalQuestions > 0 ? Math.round((correct / totalQuestions) * 100) : 0
+    // Parse aggregated result from players.result[0]
+    const stats = result[0] || {}
+    const totalQuestions = questions.length || stats.total_question || 0
+    const correctAnswers = stats.correct || 0
+    const accuracy = parseFloat(stats.accuracy) || (totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0)
+    const totalSeconds = stats.duration || 0
     const mins = Math.floor(totalSeconds / 60)
     const secs = Math.floor(totalSeconds % 60)
     const totalTime = `${mins}:${secs.toString().padStart(2, '0')}`
-    const finalScore = correct * 10 + 50 // Standardized to match player results
+    const finalScore = stats.score || (correctAnswers * 10)
 
-    return { finalScore, correctAnswers, totalQuestions, accuracy, totalTime }
-
-          {/* Preload Background GIFs */}
-      {backgroundGifs.map((gif, index) => (
-        <link key={index} rel="preload" href={gif} as="image" />
-      ))}
-      {Object.values(carGifMap).map((gif, idx) => (
-        <link key={`car-${idx}`} rel="preload" href={gif} as="image" />
-      ))}
-
+    return { finalScore, correctAnswers, totalQuestions, accuracy, totalTime, duration: totalSeconds }
   }
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        setError(null)
+  // Pindahin fetchData ke function standalone + useCallback
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
 
-        const { data: roomData, error: roomError } = await supabase
-          .from('game_rooms')
-          .select('*')
-          .eq('room_code', roomCode)
-          .single()
+      const { data: roomData, error: roomError } = await supabase
+        .from('game_rooms')
+        .select('*')
+        .eq('room_code', roomCode)
+        .single()
 
-        if (roomError || !roomData) {
-          console.error('Error fetching room:', roomError)
-          setError('Failed to load room data')
-          return
-        }
-
-        // Format questions with ids to match player
-        const formattedQuestions = (roomData.questions || []).map((q: any, i: number) => ({
-          id: `${roomCode}-${i}`,
-          ...q,
-          correct_answer: q.correct,
-        }))
-
-        const { data: playersData, error: playersError } = await supabase
-          .from('players')
-          .select('*')
-          .eq('room_id', roomData.id)
-          .eq('completion', true)
-
-        if (playersError || !playersData || playersData.length === 0) {
-          console.error('Error fetching players:', playersError)
-          setError('No completed players found')
-          return
-        }
-
-        // Compute stats for all players
-        const allStats = playersData
-          .filter((p: any) => p.result && p.result.length > 0)
-          .map((p: any) => ({
-            ...computePlayerStats(p.result, formattedQuestions),
-            nickname: p.nickname,
-            car: p.car
-          }))
-
-        if (allStats.length === 0) {
-          setError('No valid results')
-          return
-        }
-
-        // Sort by finalScore descending for ranking
-        const sortedStats = [...allStats].sort((a, b) => b.finalScore - a.finalScore)
-        const rankedStats = sortedStats.map((stats, index) => ({
-          ...stats,
-          rank: index + 1
-        }))
-
-        setPlayerStats(rankedStats)
-      } catch (err) {
-        console.error('Error fetching data:', err)
-        setError('Failed to load leaderboard')
-      } finally {
-        setLoading(false)
+      if (roomError || !roomData) {
+        console.error('Error fetching room:', roomError)
+        setError('Failed to load room data')
+        return
       }
-    }
 
+      setRoomId(roomData.id)
+
+      // Format questions with ids to match player (though not used now, keep for future)
+      const formattedQuestions = (roomData.questions || []).map((q: any, i: number) => ({
+        id: `${roomCode}-${i}`,
+        ...q,
+        correct_answer: q.correct,
+      }))
+
+      const { data: playersData, error: playersError } = await supabase
+        .from('players')
+        .select('*')
+        .eq('room_id', roomData.id)
+        .eq('completion', true)
+
+      if (playersError || !playersData || playersData.length === 0) {
+        console.error('Error fetching players:', playersError)
+        setError('No completed players found')
+        return
+      }
+
+      // Compute stats for all players
+      const allStats = playersData
+        .filter((p: any) => p.result && p.result.length > 0)
+        .map((p: any) => ({
+          ...computePlayerStats(p.result, formattedQuestions),
+          nickname: p.nickname,
+          car: p.car
+        }))
+
+      if (allStats.length === 0) {
+        setError('No valid results')
+        return
+      }
+
+      // Sort by finalScore descending for ranking
+      const sortedStats = [...allStats].sort((a, b) =>
+        b.finalScore - a.finalScore || a.duration - b.duration  // Tie-breaker: durasi kecil dulu
+      )
+      const rankedStats = sortedStats.map((stats, index) => ({
+        ...stats,
+        rank: index + 1
+      }))
+
+      setPlayerStats(rankedStats)
+    } catch (err) {
+      console.error('Error fetching data:', err)
+      setError('Failed to load leaderboard')
+    } finally {
+      setLoading(false)
+    }
+  }, [roomCode]) // Deps: roomCode
+
+  // Initial fetch
+  useEffect(() => {
     if (roomCode) {
       fetchData()
     }
-  }, [roomCode])
+  }, [fetchData]) // Depend pada fetchData callback
+
+  // Realtime subscription for players updates (only after room loaded)
+  useEffect(() => {
+    if (!roomId) return
+
+    const subscription = supabase
+      .channel(`host-leaderboard-${roomId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'players',
+          filter: `room_id=eq.${roomId}`,
+        },
+        async (payload) => {
+          console.log('Leaderboard player update:', payload.new)
+          // Refetch full data to recompute ranks
+          await fetchData()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(subscription)
+    }
+  }, [roomId, fetchData]) // Tambah fetchData di deps
 
   // Background cycling
   useEffect(() => {
@@ -183,26 +202,6 @@ export default function HostLeaderboardPage() {
             transition={{ duration: 1, ease: "easeInOut" }}
           />
         </AnimatePresence>
-        <div className="crt-effect"></div>
-        <div className="noise-effect"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none"></div>
-        <div className="relative z-10 max-w-5xl mx-auto p-4">
-          <div className="text-center">
-            <Skeleton className="h-8 w-56 mx-auto mb-2 bg-[#ff6bff]/30" />
-            <Skeleton className="h-4 w-96 mx-auto bg-[#00ffff]/30" />
-          </div>
-          {/* Podium skeleton */}
-          <div className="flex justify-center items-end gap-4 mt-8 mb-8">
-            <Skeleton className="h-96 w-72 bg-[#ff6bff]/20" />
-            <Skeleton className="h-80 w-56 bg-[#00ffff]/20" />
-            <Skeleton className="h-64 w-56 bg-[#00ffff]/20" />
-          </div>
-          <div className="space-y-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-16 p-4 bg-[#ff6bff]/20" />
-            ))}
-          </div>
-        </div>
       </div>
     )
   }
@@ -221,18 +220,16 @@ export default function HostLeaderboardPage() {
             transition={{ duration: 1, ease: "easeInOut" }}
           />
         </AnimatePresence>
-        <div className="crt-effect"></div>
-        <div className="noise-effect"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none"></div>
         <div className="relative z-10 max-w-4xl mx-auto p-4 text-center flex items-center justify-center min-h-screen">
           <Card className="bg-[#1a0a2a]/60 border-[#ff6bff]/50 pixel-card p-6">
             <h1 className="text-xl font-bold mb-2 text-[#00ffff] pixel-text glow-cyan">Leaderboard not available</h1>
             <p className="text-[#ff6bff] mb-4 pixel-text">{error || 'No data found'}</p>
-            <Link href="/">
-              <Button className="bg-[#ff6bff] pixel-button glow-pink">
-                Back to Home
-              </Button>
-            </Link>
+            <Button
+              className="bg-[#ff6bff] pixel-button glow-pink"
+              onClick={() => router.push('/')}
+            >
+              Back to Home
+            </Button>
           </Card>
         </div>
       </div>
@@ -244,6 +241,14 @@ export default function HostLeaderboardPage() {
 
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
+
+      {/* Preload Background GIFs */}
+      {backgroundGifs.map((gif, index) => (
+        <link key={index} rel="preload" href={gif} as="image" />
+      ))}
+      {Object.values(carGifMap).map((gif, idx) => (
+        <link key={`car-${idx}`} rel="preload" href={gif} as="image" />
+      ))}
 
       {/* Background */}
       <AnimatePresence mode="wait">
@@ -258,36 +263,9 @@ export default function HostLeaderboardPage() {
         />
       </AnimatePresence>
 
-      {/* Overlay Effects */}
-      <div className="crt-effect"></div>
-      <div className="noise-effect"></div>
-      <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none"></div>
-
-      {/* Corner Decorations */}
-      <div className="absolute top-4 left-4 opacity-30">
-        <div className="w-6 h-6 border-2 border-[#00ffff]"></div>
-      </div>
-      <div className="absolute top-4 right-4 opacity-30">
-        <div className="w-6 h-6 border-2 border-[#ff6bff]"></div>
-      </div>
-      <div className="absolute bottom-4 left-4 opacity-40">
-        <div className="flex gap-1">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="w-3 h-3 bg-[#00ffff]"></div>
-          ))}
-        </div>
-      </div>
-      <div className="absolute bottom-4 right-4 opacity-40">
-        <div className="flex flex-col gap-1">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="w-3 h-3 bg-[#ff6bff]"></div>
-          ))}
-        </div>
-      </div>
-
       <div className="relative z-10 max-w-5xl mx-auto p-4">
-        <div className="text-center mb-18">
-          <motion.h1 
+        <div className="text-center py-5">
+          <motion.h1
             className="text-4xl md:text-5xl font-bold mb-2 text-[#00ffff] pixel-text glow-cyan tracking-wider animate-neon-glow"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -297,43 +275,40 @@ export default function HostLeaderboardPage() {
           </motion.h1>
         </div>
 
-        {/* Podium - Top 3: Staggered steps */}
+        {/* Podium - Top 3: Staggered steps with fixed heights for visual podium */}
         <motion.div
-          className="flex justify-center items-end gap-6 mb-12"
+          className="flex justify-center items-end gap-6 mb-12 h-[500px]" // Fixed container height for podium scaling
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          {/* 2nd Place - Left, slightly lower */}
+          {/* 2nd Place - Left, medium height */}
           {topThree[1] && (
             <motion.div
-              className="w-64 order-1"
+              className="w-64 order-1 flex flex-col justify-end h-[300px]" // Fixed height for podium step
               initial={{ scale: 0.8, y: 50 }}
               animate={{ scale: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
             >
               <Card className="p-5 text-center pixel-card border-gray-300/50 bg-[#1a0a2a]/70 animate-pulse-silver">
                 <div className={`text-3xl font-bold mb-2 ${getRankColor(2)} pixel-text`}>#2</div>
-                   <img
-                    src={carGifMap[topThree[1].car] || '/assets/car/car5.gif'}
-                    alt={`${carGifMap[topThree[1].car]} car`}
-                    className="h-16 sm:h-20 md:h-24 lg:h-28 w-20 sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce
+                <img
+                  src={carGifMap[topThree[1].car] || '/assets/car/car5.webp'}
+                  alt={`${carGifMap[topThree[1].car]} car`}
+                  className="h-16 sm:h-20 md:h-24 lg:h-28 w-20 sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce
                     filter brightness-125 contrast-150"
-                     />
-                <h3 className="text-xl font-bold text-white pixel-text glow-text mb-2">{topThree[1].nickname}</h3>
+                />
                 <div className="text-2xl font-bold text-[#00ffff] mb-2 pixel-text glow-cyan">{topThree[1].finalScore}</div>
-                <div className="text-xs text-[#ff6bff] pixel-text mb-3">points</div>
-                <div className="grid grid-cols-1 gap-1 text-sm">
- 
-                </div>
+                <h3 className="text-xl font-bold text-white pixel-text glow-text mb-2">{topThree[1].nickname}</h3>
+                {/* <div className="text-xs text-[#ff6bff] pixel-text mb-3">points</div> */}
               </Card>
             </motion.div>
           )}
 
-          {/* 1st Place - Center, tallest */}
+          {/* 1st Place - Center, tallest podium */}
           {topThree[0] && (
             <motion.div
-              className="w-80 order-2"
+              className="w-80 order-2 flex flex-col justify-end h-[450px]" // Tallest height for #1
               initial={{ scale: 0.9, y: 80 }}
               animate={{ scale: 1.1, y: 0 }}
               transition={{ duration: 1, delay: 0.3 }}
@@ -341,39 +316,37 @@ export default function HostLeaderboardPage() {
               <Card className="p-6 text-center pixel-card border-yellow-400/70 bg-[#1a0a2a]/80 animate-pulse-gold">
                 <div className={`text-5xl font-bold mb-3 ${getRankColor(1)} pixel-text`}>#1</div>
                 <img
-                src={carGifMap[topThree[0].car] || '/assets/car/car5.gif'}
-                alt={`${topThree[0].car} car`}
-                className="h-16 sm:h-20 md:h-24 lg:h-28 w-20 sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce
+                  src={carGifMap[topThree[0].car] || '/assets/car/car5.webp'}
+                  alt={`${topThree[0].car} car`}
+                  className="h-16 sm:h-20 md:h-24 lg:h-28 w-20 sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce
                 filter brightness-125 contrast-150"
-                  />
-                <h3 className="text-3xl font-bold text-white pixel-text glow-text mb-3">{topThree[0].nickname}</h3>
+                />
                 <div className="text-4xl font-bold text-[#00ffff] mb-2 pixel-text glow-cyan ">{topThree[0].finalScore}</div>
-                <div className="text-sm text-[#ff6bff] pixel-text mb-4">points</div>
-
+                <h3 className="text-3xl font-bold text-white pixel-text glow-text mb-3">{topThree[0].nickname}</h3>
+                {/* <div className="text-sm text-[#ff6bff] pixel-text mb-4">points</div> */}
               </Card>
             </motion.div>
           )}
 
-          {/* 3rd Place - Right, lowest */}
+          {/* 3rd Place - Right, shortest height */}
           {topThree[2] && (
             <motion.div
-              className="w-64 order-3"
+              className="w-64 order-3 flex flex-col justify-end h-[250px]" // Shortest for podium step
               initial={{ scale: 0.8, y: 50 }}
               animate={{ scale: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.5 }}
             >
               <Card className="p-5 text-center pixel-card border-amber-600/50 bg-[#1a0a2a]/70 animate-pulse-bronze">
                 <div className={`text-3xl font-bold mb-2 ${getRankColor(3)} pixel-text`}>#3</div>
-                 <img
-                    src={carGifMap[topThree[2].car] || '/assets/car/car5.gif'}
-                    alt={`${carGifMap[topThree[2].car]} car`}
-                    className="h-16 sm:h-20 md:h-24 lg:h-28 w-20 sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce
+                <img
+                  src={carGifMap[topThree[2].car] || '/assets/car/car5.webp'}
+                  alt={`${carGifMap[topThree[2].car]} car`}
+                  className="h-16 sm:h-20 md:h-24 lg:h-28 w-20 sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce
                     filter brightness-125 contrast-150"
-                  />
-                <h3 className="text-xl font-bold text-white pixel-text glow-text mb-2">{topThree[2].nickname}</h3>
+                />
                 <div className="text-2xl font-bold text-[#00ffff] mb-2 pixel-text glow-cyan">{topThree[2].finalScore}</div>
-                <div className="text-xs text-[#ff6bff] pixel-text mb-3">points</div>
-
+                <h3 className="text-xl font-bold text-white pixel-text glow-text mb-2">{topThree[2].nickname}</h3>
+                {/* <div className="text-xs text-[#ff6bff] pixel-text mb-3">points</div> */}
               </Card>
             </motion.div>
           )}
@@ -387,10 +360,10 @@ export default function HostLeaderboardPage() {
             transition={{ duration: 0.8, delay: 0.7 }}
           >
             <Card className="bg-[#1a0a2a]/60 border-[#ff6bff]/50 pixel-card p-4 mb-4">
-              <h3 className="text-lg font-bold mb-2 text-center text-[#00ffff] pixel-text glow-cyan">Other Racers</h3>
+              {/* <h3 className="text-lg font-bold mb-2 text-center text-[#00ffff] pixel-text glow-cyan">Other Racers</h3> */}
               <div className="space-y-2">
                 {others.map((player) => (
-                  <div key={player.nickname} className="flex items-center justify-between p-3 bg-[#1a0a2a]/50 rounded pixel-card">
+                  <div key={player.nickname} className="flex items-center justify-between px-4 py-3 bg-[#1a0a2a]/50 rounded-xl pixel-card">
                     <div className="flex items-center space-x-4">
                       <div className={`text-xl font-bold ${getRankColor(player.rank)} pixel-text`}>
                         #{player.rank}
@@ -400,15 +373,7 @@ export default function HostLeaderboardPage() {
                     <div className="flex items-center space-x-6 text-sm">
                       <div className="text-center">
                         <div className="font-bold text-lg text-[#00ffff] glow-cyan">{player.finalScore}</div>
-                        <div className="text-[#ff6bff] pixel-text">points</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-bold text-[#ff6bff] glow-pink">{player.accuracy}%</div>
-                        <div className="text-[#00ffff] pixel-text">accuracy</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-bold text-[#00ffff] glow-cyan">{player.totalTime}</div>
-                        <div className="text-[#ff6bff] pixel-text">time</div>
+                        {/* <div className="text-[#ff6bff] pixel-text">points</div> */}
                       </div>
                     </div>
                   </div>
@@ -425,21 +390,13 @@ export default function HostLeaderboardPage() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.9 }}
         >
-          <Link href="/">
-            <Button size="sm" variant="outline" className="bg-[#1a0a2a]/50 border-[#00ffff] text-[#00ffff] pixel-button glow-cyan hover:bg-[#00ffff]/20">
-              Home
-            </Button>
-          </Link>
-          <Link href="/host">
-            <Button size="sm" className="bg-[#ff6bff] border-2 border-white pixel-button glow-pink hover:bg-[#ff8aff]">
-              New Race
-            </Button>
-          </Link>
+          <Button size="sm" variant="outline" className="bg-[#1a0a2a]/50 border-[#00ffff] text-[#00ffff] pixel-button glow-cyan hover:bg-[#00ffff]/20" onClick={() => router.push('/')}>
+            Home
+          </Button>
+          <Button size="sm" className="bg-[#ff6bff] border-2 border-white pixel-button glow-pink hover:bg-[#ff8aff]" onClick={() => router.push('/host')}>
+            New Race
+          </Button>
         </motion.div>
-
-        <div className="mt-4 text-center">
-          <p className="text-sm text-[#ff6bff] pixel-text">Great racing! Share your room code with friends.</p>
-        </div>
       </div>
 
       <style jsx>{`
@@ -452,7 +409,7 @@ export default function HostLeaderboardPage() {
           text-shadow: 2px 2px 0px #000;
         }
         .pixel-card {
-          box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 107, 255, 0.3);
+          box-shadow: 0 0 20px rgba(255, 107, 255, 0.3);
         }
         .pixel-button {
           image-rendering: pixelated;

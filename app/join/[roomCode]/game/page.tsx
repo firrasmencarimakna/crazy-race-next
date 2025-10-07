@@ -53,7 +53,8 @@ export default function QuizGamePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
-  const gameStartRef = useRef<number | null>(null)
+  const [gameStartTime, setGameStartTime] = useState<number | null>(null)
+  const [gameDuration, setGameDuration] = useState(0)
 
   const currentQuestion = questions[currentQuestionIndex]
   const totalQuestions = questions.length
@@ -76,7 +77,7 @@ export default function QuizGamePage() {
         // Fetch game room data
         const { data: roomData, error: roomError } = await supabase
           .from("game_rooms")
-          .select("id, settings, questions, status")
+          .select("id, settings, questions, status, start")
           .eq("room_code", roomCode)
           .single()
 
@@ -93,6 +94,10 @@ export default function QuizGamePage() {
           correctAnswer: q.correct,
         }))
 
+        // Set game start time and duration
+        setGameStartTime(roomData.start ? new Date(roomData.start).getTime() : null)
+        setGameDuration(settings.duration)
+
         // Fetch player progress
         const { data: playerData, error: playerError } = await supabase
           .from("players")
@@ -108,17 +113,11 @@ export default function QuizGamePage() {
         const savedAnswers = result.answers || new Array(formattedQuestions.length).fill(null)
         const currentIndex = playerData.completion ? formattedQuestions.length : (result.current_question || 0)
         const savedCorrect = result.correct || 0
-        const savedDuration = result.duration || 0
-        const remainingTime = settings.duration - savedDuration > 0 ? settings.duration - savedDuration : 0
 
         setQuestions(formattedQuestions)
         setAnswers(savedAnswers)
         setCurrentQuestionIndex(currentIndex)
         setCorrectAnswers(savedCorrect)
-        setTotalTimeRemaining(remainingTime)
-        if (!gameStartRef.current) {
-          gameStartRef.current = Date.now() - savedDuration * 1000
-        }
         setLoading(false)
       } catch (err: any) {
         console.error("Error fetching game data:", err)
@@ -132,24 +131,27 @@ export default function QuizGamePage() {
     }
   }, [roomCode, playerId])
 
-  // Timer logic and end-game on timeout
+  // Realtime timer based on wall time from DB start
   useEffect(() => {
-    if (totalTimeRemaining <= 0 && !loading && questions.length > 0) {
-      // Time's up, save progress and redirect to result
-      saveProgressAndRedirect()
-      return
+    if (!gameStartTime || loading || questions.length === 0 || gameDuration === 0) return
+
+    const updateRemaining = () => {
+      const now = Date.now()
+      const elapsed = Math.floor((now - gameStartTime) / 1000)
+      const remaining = gameDuration - elapsed
+      setTotalTimeRemaining(Math.max(0, remaining))
+
+      if (remaining <= 0) {
+        saveProgressAndRedirect()
+      }
     }
 
-    if (totalTimeRemaining > 0 && !isAnswered && currentQuestion) {
-      const timer = setInterval(() => {
-        setTotalTimeRemaining((prev) => {
-          const newTime = prev - 1
-          return newTime
-        })
-      }, 1000)
-      return () => clearInterval(timer)
-    }
-  }, [totalTimeRemaining, isAnswered, currentQuestion, loading, questions.length])
+    // Initial update
+    updateRemaining()
+
+    const interval = setInterval(updateRemaining, 1000)
+    return () => clearInterval(interval)
+  }, [gameStartTime, loading, questions.length, gameDuration])
 
   // Subscribe to game_rooms status changes
   useEffect(() => {
@@ -186,9 +188,9 @@ export default function QuizGamePage() {
 
   // Save progress and redirect to result page
   const saveProgressAndRedirect = async () => {
-    const elapsedSeconds = gameStartRef.current
-      ? Math.floor((Date.now() - gameStartRef.current) / 1000)
-      : 0
+    if (!gameStartTime) return
+    const now = Date.now()
+    const elapsedSeconds = Math.floor((now - gameStartTime) / 1000)
     const accuracy = totalQuestions > 0 ? ((correctAnswers / totalQuestions) * 100).toFixed(2) : "0.00"
     const updatedResult = {
       score: correctAnswers * 10,
@@ -233,9 +235,10 @@ export default function QuizGamePage() {
     const newCorrectAnswers = correctAnswers + (isCorrect ? 1 : 0)
     setCorrectAnswers(newCorrectAnswers)
     const accuracy = totalQuestions > 0 ? ((newCorrectAnswers / totalQuestions) * 100).toFixed(2) : "0.00"
-    const elapsedSeconds = gameStartRef.current
-      ? Math.floor((Date.now() - gameStartRef.current) / 1000)
-      : 0
+
+    if (!gameStartTime) return
+    const now = Date.now()
+    const elapsedSeconds = Math.floor((now - gameStartTime) / 1000)
 
     // Save progress to Supabase
     const updatedResult = {
@@ -338,38 +341,11 @@ export default function QuizGamePage() {
         />
       </AnimatePresence>
 
-      {/* Overlay Effects */}
-      <div className="crt-effect" />
-      <div className="noise-effect" />
-      <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-purple-900/20 pointer-events-none" />
-
-      {/* Corner Decorations */}
-      <div className="absolute top-4 left-4 opacity-30">
-        <div className="w-6 h-6 border-2 border-[#00ffff]" />
-      </div>
-      <div className="absolute top-4 right-4 opacity-30">
-        <div className="w-6 h-6 border-2 border-[#ff6bff]" />
-      </div>
-      <div className="absolute bottom-4 left-4 opacity-40">
-        <div className="flex gap-1">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="w-3 h-3 bg-[#00ffff]" />
-          ))}
-        </div>
-      </div>
-      <div className="absolute bottom-4 right-4 opacity-40">
-        <div className="flex flex-col gap-1">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="w-3 h-3 bg-[#ff6bff]" />
-          ))}
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="relative z-10 max-w-7xl mx-auto pt-8 px-4">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-5xl sm:text-6xl font-bold text-[#00ffff] pixel-text glow-cyan tracking-wider">
+          <h1 className="text-4xl sm:text-6xl font-bold text-[#00ffff] pixel-text glow-cyan tracking-wider">
             CRAZY RACE
           </h1>
         </div>
