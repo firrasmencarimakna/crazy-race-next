@@ -71,22 +71,15 @@
       position: relative;
       box-shadow: 0 -4px 12px rgba(0,0,0,0.5);
     }
-    #mobile-controls {
-      display: none; /* Default hidden */
-      position: relative; /* Changed from fixed to relative for separation */
-      bottom: auto;
-      left: auto;
-      right: auto;
-      z-index: 10;
-      padding: 0.25rem 2rem; /* Adjusted padding vertikal dikurangi biar muat */
-      height: 100%;
-      pointer-events: none;
-      background: none; /* Remove gradient for clean separation */
-      justify-content: space-between;
-      width: 100%;
-      box-sizing: border-box;
-      margin-top: 0; /* Default */
-    }
+#mobile-controls {
+  /* ... kode lama tetap ... */
+  display: flex !important; /* Sudah ada, tapi pastikan */
+  justify-content: space-evenly; /* Ubah dari space-between ke space-evenly biar jarak super rata */
+  align-items: flex-end; /* Tombol rata di bawah */
+  width: 100%;
+  gap: 1rem; /* Tambah gap minimal antar tombol untuk handphone besar */
+  padding: 0 2rem; /* Padding samping biar tidak nempel pinggir layar */
+}
     #mobile-controls button {
       width: 60px;
       height: 60px;
@@ -110,21 +103,12 @@
       transform: scale(0.95);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
     }
-    #accel-brake-controls {
-      display: flex;
-      justify-content: flex-start;
-      width: 60%;
-      height: 100%;
-      align-items: flex-end;
-      gap: 0.5rem;
-    }
-    #steering-controls {
-      display: flex;
-      justify-content: space-between;
-      width: 40%;
-      height: 100%;
-      align-items: flex-end;
-    }
+#accel-brake-controls,
+#steering-controls {
+  /* Hapus atau comment out seluruh style ini, karena kita gabungkan semua tombol langsung ke #mobile-controls */
+  /* Atau ganti jadi: display: contents; biar sub-container "hilang" dan tombol langsung flex di parent */
+  display: contents;
+}
     #left, #right {
       background: rgba(59, 130, 246, 0.9); /* Soft blue */
     }
