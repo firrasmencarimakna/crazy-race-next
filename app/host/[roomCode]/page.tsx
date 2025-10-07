@@ -517,8 +517,8 @@ export default function HostRoomPage() {
           {/* Room Info & QR Code */}
           <Card className="bg-[#1a0a2a]/60 border-2 sm:border-3 border-[#ff6bff]/50 pixel-card glow-pink-subtle p-4 sm:p-6 md:p-8 lg:col-span-2 order-1 lg:order-1">
             <div className="text-center space-y-3 sm:space-y-4">
-              <div className="relative p-3 sm:p-4 md:p-5 bg-[#0a0a0f] border-2 sm:border-3 border-[#6a4c93] rounded-lg">
-                <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#00ffff] pixel-text glow-cyan">{roomCode}</div>
+              <div className="relative p-3 sm:p-4 md:p-5 bg-[#0a0a0f] rounded-lg">
+                <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#00ffff] pixel-text glow-cyan">{roomCode}</div>  
                 <Button
                   onClick={copyRoomCode}
                   className="absolute top-1 right-1 bg-transparent pixel-button hover:bg-gray-500/20 transition-colors p-1 sm:p-2"
@@ -528,7 +528,7 @@ export default function HostRoomPage() {
                 </Button>
               </div>
 
-              <div className="relative p-3 sm:p-4 md:p-5 bg-[#0a0a0f] border-2 sm:border-1 rounded-lg">
+              <div className="relative p-3 sm:p-4 md:p-5 bg-[#0a0a0f]  rounded-lg">
                 {/* QR normal */}
                 <QRCode
                   value={joinLink}
@@ -559,7 +559,7 @@ export default function HostRoomPage() {
                 </Dialog>
               </div>
 
-              <div className="relative p-3 sm:p-4 md:p-5 bg-[#0a0a0f] border-2 sm:border-3 border-[#6a4c93] rounded-lg">
+              <div className="relative p-3 sm:p-4 md:p-5 bg-[#0a0a0f]  rounded-lg">
                 <div className="text-xs sm:text-sm text-[#00ffff] pixel-text glow-cyan break-keep">{joinLink}</div>
                 <Button
                   onClick={copyJoinLink}
