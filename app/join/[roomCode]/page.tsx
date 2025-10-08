@@ -42,16 +42,23 @@ const availableCars = [
   { key: "orange", label: "Orange Outlaw" },
 ] as const
 
+interface Player {
+  id: string | null;
+  nickname: string;
+  car: string | null;
+}
+
 export default function LobbyPage() {
   const params = useParams()
   const router = useRouter()
   const roomCode = params.roomCode as string
 
-  const [currentPlayer, setCurrentPlayer] = useState({
+  const [currentPlayer, setCurrentPlayer] = useState<Player>({
     id: null,
     nickname: "",
-    car: null
-  })
+    car: null,
+  });
+
 
   const [players, setPlayers] = useState<any[]>([])
   const [room, setRoom] = useState<any>(null)
