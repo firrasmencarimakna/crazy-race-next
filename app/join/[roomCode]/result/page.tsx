@@ -20,6 +20,8 @@ import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
 import LoadingRetro from "@/components/loadingRetro"
+import { breakOnCaps } from "@/utils/game"
+import Image from "next/image"
 
 // Background GIFs
 const backgroundGifs = [
@@ -213,6 +215,19 @@ export default function PlayerResultsPage() {
         />
       </AnimatePresence>
 
+      <h1 className="absolute top-5 right-10 hidden md:block">
+        <Image
+          src="/gameforsmartlogo.webp"
+          alt="Gameforsmart Logo"
+          width={256}
+          height={0}
+        />
+      </h1>
+
+      <h1 className="absolute top-7 left-10 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">
+        Crazy Race
+      </h1>
+
       <div className="relative z-10 max-w-4xl mx-auto p-4">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -221,7 +236,7 @@ export default function PlayerResultsPage() {
           className="text-center pb-4 sm:pb-5"
         >
           <div className="inline-block p-4 sm:p-6">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#00ffff] pixel-text glow-cyan">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#ffefff] pixel-text glow-pink">
               Crazy Race
             </h1>
           </div>
@@ -246,7 +261,7 @@ export default function PlayerResultsPage() {
                 className="h-28 w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
               />
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-white pixel-text glow-text">{nickname}</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-white pixel-text glow-text">{breakOnCaps(nickname)}</h2>
           </Card>
         </motion.div>
 
@@ -286,15 +301,15 @@ export default function PlayerResultsPage() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.8 }}
         >
-            <Button
-              size="sm"
-              variant="outline"
-              className="bg-[#1a0a2a]/50 border-[#00ffff] text-[#00ffff] pixel-button glow-cyan hover:bg-[#00ffff]/20"
-              onClick={() => router.push('/')}
-            >
-              <Home className="mr-1 h-4 w-4" />
-              Home
-            </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="bg-[#1a0a2a]/50 border-[#00ffff] text-[#00ffff] pixel-button glow-cyan hover:bg-[#00ffff]/20"
+            onClick={() => router.push('/')}
+          >
+            <Home className="mr-1 h-4 w-4" />
+            Home
+          </Button>
         </motion.div>
       </div>
 

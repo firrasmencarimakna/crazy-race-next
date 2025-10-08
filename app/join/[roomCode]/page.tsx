@@ -11,18 +11,19 @@ import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
 import LoadingRetro from "@/components/loadingRetro"
 import { calculateCountdown } from "@/utils/countdown"
+import { Dialog, DialogContent, DialogHeader, DialogOverlay, DialogTitle } from "@/components/ui/dialog"
+import Image from "next/image"
 
 // Background GIFs
 const backgroundGifs = [
-  "/assets/background/host/1.webp",
-  "/assets/background/host/2.webp",
+  // "/assets/background/host/1.webp",
+  // "/assets/background/host/2.webp",
   "/assets/background/host/3.webp",
-  "/assets/background/host/4.webp",
-  "/assets/background/host/5.webp",
-  "/assets/background/host/7.webp",
+  // "/assets/background/host/4.webp",
+  // "/assets/background/host/5.webp",
+  // "/assets/background/host/7.webp",
 ]
 
-// Mapping warna mobil ke file GIF mobil
 const carGifMap: Record<string, string> = {
   red: "/assets/car/car1.webp",
   blue: "/assets/car/car2.webp",
@@ -31,6 +32,15 @@ const carGifMap: Record<string, string> = {
   purple: "/assets/car/car5.webp",
   orange: "/assets/car/car5.webp",
 }
+
+const availableCars = [
+  { key: "red", label: "Red Racer" },
+  { key: "blue", label: "Blue Bolt" },
+  { key: "green", label: "Green Machine" },
+  { key: "yellow", label: "Yellow Fury" },
+  { key: "purple", label: "Purple Phantom" },
+  { key: "orange", label: "Orange Outlaw" },
+] as const
 
 export default function LobbyPage() {
   const params = useParams()
@@ -50,6 +60,7 @@ export default function LobbyPage() {
   const [countdown, setCountdown] = useState(0)
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [showCarDialog, setShowCarDialog] = useState(false) // State untuk dialog car
 
   // Tambah useEffect baru: Monitor status room dan auto-redirect ke game
   useEffect(() => {
@@ -75,7 +86,7 @@ export default function LobbyPage() {
       const now = Date.now();
       const elapsed = Math.floor((now - countdownStartTime) / 1000);
       const remaining = Math.max(0, totalCountdown - elapsed);
-      
+
       console.log('Lobby countdown remaining:', remaining);
       setCountdown(remaining);
 
@@ -250,7 +261,7 @@ export default function LobbyPage() {
       <div className={`min-h-screen bg-[#1a0a2a] flex items-center justify-center pixel-font`}>
         <div className="text-center">
           <motion.div
-            className="text-8xl font-bold text-[#00ffff] pixel-text glow-cyan race-pulse"
+            className="text-8xl md:text-9xl lg:text-[10rem] xl:text-[12rem] leading-none font-bold text-[#00ffff] pixel-text glow-cyan race-pulse"
             animate={{ scale: [1, 1.1, 1] }}
             transition={{ repeat: Infinity, duration: 0.5 }}
           >
@@ -261,12 +272,29 @@ export default function LobbyPage() {
     )
   }
 
-  if (loading) {
-    return <LoadingRetro />
-  }
+  // Handler pilih car (auto-save ke Supabase)
+  const handleSelectCar = async (selectedCar: string) => {
+    if (!currentPlayer.id) return;
+
+    const { error } = await supabase
+      .from('players')
+      .update({ car: selectedCar })
+      .eq('id', currentPlayer.id);
+
+    if (error) {
+      console.error('Error updating car:', error);
+      // Optional: Show toast error
+    } else {
+      setCurrentPlayer(prev => ({ ...prev, car: selectedCar }));
+      // Update local players list juga
+      setPlayers(prev => prev.map(p => p.id === currentPlayer.id ? { ...p, car: selectedCar } : p));
+      setShowCarDialog(false);
+      console.log('Car updated successfully');
+    }
+  };
 
   return (
-    <div className={`min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font`}>
+    <div className={`min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font p-4`}>
 
       {/* Background */}
       <AnimatePresence mode="wait">
@@ -283,10 +311,24 @@ export default function LobbyPage() {
 
       {/* Header */}
       <div className="relative z-10 max-w-7xl mx-auto pt-8 px-4">
+
+        <h1 className="fixed top-5 right-20 hidden md:block">
+          <Image
+            src="/gameforsmartlogo.webp"
+            alt="Gameforsmart Logo"
+            width={256}
+            height={0}
+          />
+        </h1>
+
+        <h1 className="fixed top-7 left-20 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">
+          Crazy Race
+        </h1>
+
         {/* Judul Utama */}
         <div className="text-center mb-8">
-          <h1 className="text-6xl font-bold text-[#00ffff] pixel-text glow-cyan mb-4 tracking-wider">
-            CRAZY RACE
+          <h1 className="sm:max-w-none text-xl md:text-4xl lg:text-5xl font-bold text-[#00ffff] pixel-text glow-cyan mb-4 tracking-wider">
+            Waiting Room
           </h1>
         </div>
 
@@ -296,8 +338,8 @@ export default function LobbyPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 pixel-card py-5">
-            <CardHeader className="text-center px-5">
+          <Card className="bg-[#1a0a2a]/40 backdrop-blur-sm border-[#ff6bff]/50 pixel-card py-5 gap-3 mb-10">
+            <CardHeader className="text-center px-5 mb-5">
 
               <motion.div
                 className="relative flex items-center justify-center"
@@ -307,7 +349,7 @@ export default function LobbyPage() {
                   {players.length}
                 </Badge>
 
-                <h2 className="max-w-[10rem] sm:max-w-none text-xl md:text-4xl font-bold text-[#00ffff] pixel-text glow-cyan mx-2">WAITING ROOM</h2>
+                {/* <h2 className="max-w-[10rem] sm:max-w-none text-xl md:text-4xl font-bold text-[#00ffff] pixel-text glow-cyan mx-2">WAITING ROOM</h2> */}
 
               </motion.div>
             </CardHeader>
@@ -341,7 +383,7 @@ export default function LobbyPage() {
                       {/* Player Info */}
                       <div className="text-center">
                         <div className="flex items-center justify-center space-x-2 mb-1">
-                          <h3 className="font-bold text-white pixel-text text-sm leading-tight glow-text line-clamp-2">
+                          <h3 className="text-white pixel-text text-sm leading-tight line-clamp-2">
                             {player.nickname}
                           </h3>
                         </div>
@@ -361,13 +403,44 @@ export default function LobbyPage() {
           </Card>
         </motion.div>
 
-        {/* Exit Button */}
-        <div className="text-center mt-8">
-            <Button className="bg-[#ff6bff] border-4 border-white pixel-button-large hover:bg-[#ff8aff] glow-pink px-8 py-3" onClick={() => router.push('/')}>
-              <span className="pixel-text text-lg">EXIT</span>
-            </Button>
+        {/* Button Pilih Car (ganti dari EXIT) */}
+        <div className="bg-[#1a0a2a]/50 sm:bg-transparent backdrop-blur-sm sm:backdrop-blur-none w-full text-center py-3 fixed bottom-0 left-1/2 transform -translate-x-1/2 z-10">
+          <Button className="bg-[#ff6bff] border-4 border-white pixel-button-large hover:bg-[#ff8aff] glow-pink px-8 py-3" onClick={() => setShowCarDialog(true)}>
+            <span className="pixel-text text-lg">CHOOSE CAR</span>
+          </Button>
         </div>
       </div>
+
+      {/* Dialog/Modal Pilih Car - Mobile Friendly */}
+      <Dialog open={showCarDialog} onOpenChange={setShowCarDialog}>
+        <DialogOverlay className="bg-[#1a0a2a]/80 backdrop-blur-sm" />
+        <DialogContent className="bg-[#1a0a2a]/90 border-[#ff6bff]/50 backdrop-blur-sm sm:max-w-md sm:h-auto overflow-auto p-0">
+          <DialogHeader className="pt-4 pb-2 px-4"> {/* Kurangi padding top/bottom */}
+            <DialogTitle className="text-[#00ffff] pixel-text glow-cyan text-center text-xl">Choose Your Car</DialogTitle>
+          </DialogHeader>
+          <div className="px-4 pb-4 grid grid-cols-2 md:grid-cols-3 gap-4 overflow-y-auto"> {/* Tambah px-4 pb-4, gap tetap */}
+            {availableCars.map((car) => (
+              <motion.button
+                key={car.key}
+                onClick={() => handleSelectCar(car.key)}
+                className={`p-4 mt-1 rounded-xl border-2 border-double transition-all duration-200 hover:scale-105 flex flex-col items-center ${currentPlayer.car === car.key
+                  ? 'border-[#00ffff] bg-[#00ffff]/10 animate-neon-pulse'
+                  : 'border-[#ff6bff]/70 hover:border-[#ff6bff] hover:bg-[#ff6bff]/10'
+                  }`}
+                whileHover={{ scale: 0.97 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <img
+                  src={carGifMap[car.key]}
+                  alt={car.label}
+                  className="h-20 w-24 mx-auto object-contain filter brightness-125 contrast-150 mb-2"
+                />
+                <p className="text-xs text-white mt-1 pixel-text text-center">{car.label}</p>
+              </motion.button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <style jsx>{`
         .pixel-font {

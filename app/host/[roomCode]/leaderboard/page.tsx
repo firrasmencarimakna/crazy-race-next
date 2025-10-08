@@ -8,6 +8,8 @@ import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
+import { breakOnCaps } from "@/utils/game"
+import Image from "next/image"
 
 type PlayerStats = {
   nickname: string
@@ -242,14 +244,6 @@ export default function HostLeaderboardPage() {
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
 
-      {/* Preload Background GIFs */}
-      {backgroundGifs.map((gif, index) => (
-        <link key={index} rel="preload" href={gif} as="image" />
-      ))}
-      {Object.values(carGifMap).map((gif, idx) => (
-        <link key={`car-${idx}`} rel="preload" href={gif} as="image" />
-      ))}
-
       {/* Background */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -263,15 +257,28 @@ export default function HostLeaderboardPage() {
         />
       </AnimatePresence>
 
+      <h1 className="absolute top-5 right-10 hidden lg:block">
+        <Image
+          src="/gameforsmartlogo.webp"
+          alt="Gameforsmart Logo"
+          width={256}
+          height={0}
+        />
+      </h1>
+
+      <h1 className="absolute top-7 left-10 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden lg:block">
+        Crazy Race
+      </h1>
+
       <div className="relative z-10 max-w-5xl mx-auto p-4">
-        <div className="text-center py-5">
+        <div className="text-center pt-5">
           <motion.h1
-            className="text-4xl md:text-5xl font-bold mb-2 text-[#00ffff] pixel-text glow-cyan tracking-wider animate-neon-glow"
+            className="text-4xl md:text-5xl font-bold text-[#00ffff] pixel-text glow-cyan tracking-wider animate-neon-glow"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <span className="text-[#ff6bff] glow-pink">Leaderboard</span>
+            <span className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#ffefff] pixel-text glow-pink">Leaderboard</span>
           </motion.h1>
         </div>
 
@@ -299,7 +306,7 @@ export default function HostLeaderboardPage() {
                     filter brightness-125 contrast-150"
                 />
                 <div className="text-2xl font-bold text-[#00ffff] mb-2 pixel-text glow-cyan">{topThree[1].finalScore}</div>
-                <h3 className="text-xl font-bold text-white pixel-text glow-text mb-2">{topThree[1].nickname}</h3>
+                <h3 className="text-xl font-bold text-white pixel-text glow-text mb-2">{breakOnCaps(topThree[1].nickname)}</h3>
                 {/* <div className="text-xs text-[#ff6bff] pixel-text mb-3">points</div> */}
               </Card>
             </motion.div>
@@ -322,7 +329,7 @@ export default function HostLeaderboardPage() {
                 filter brightness-125 contrast-150"
                 />
                 <div className="text-4xl font-bold text-[#00ffff] mb-2 pixel-text glow-cyan ">{topThree[0].finalScore}</div>
-                <h3 className="text-3xl font-bold text-white pixel-text glow-text mb-3">{topThree[0].nickname}</h3>
+                <h3 className="text-3xl font-bold text-white pixel-text glow-text mb-3">{breakOnCaps(topThree[0].nickname)}</h3>
                 {/* <div className="text-sm text-[#ff6bff] pixel-text mb-4">points</div> */}
               </Card>
             </motion.div>
@@ -345,7 +352,7 @@ export default function HostLeaderboardPage() {
                     filter brightness-125 contrast-150"
                 />
                 <div className="text-2xl font-bold text-[#00ffff] mb-2 pixel-text glow-cyan">{topThree[2].finalScore}</div>
-                <h3 className="text-xl font-bold text-white pixel-text glow-text mb-2">{topThree[2].nickname}</h3>
+                <h3 className="text-xl font-bold text-white pixel-text glow-text mb-2">{breakOnCaps(topThree[2].nickname)}</h3>
                 {/* <div className="text-xs text-[#ff6bff] pixel-text mb-3">points</div> */}
               </Card>
             </motion.div>
@@ -368,12 +375,11 @@ export default function HostLeaderboardPage() {
                       <div className={`text-xl font-bold ${getRankColor(player.rank)} pixel-text`}>
                         #{player.rank}
                       </div>
-                      <h4 className="text-lg font-bold text-white pixel-text glow-text">{player.nickname}</h4>
+                      <h4 className="text-lg font-bold text-white pixel-text glow-text">{breakOnCaps(player.nickname)}</h4>
                     </div>
                     <div className="flex items-center space-x-6 text-sm">
                       <div className="text-center">
                         <div className="font-bold text-lg text-[#00ffff] glow-cyan">{player.finalScore}</div>
-                        {/* <div className="text-[#ff6bff] pixel-text">points</div> */}
                       </div>
                     </div>
                   </div>

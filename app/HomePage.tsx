@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
-import { Flag, Volume2, VolumeX, Settings, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight, HelpCircle } from "lucide-react"
+import { Flag, Volume2, VolumeX, Settings, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight, HelpCircle, User } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -77,13 +77,13 @@ export default function HomePage() {
   }, [])
 
   //menambahkan fungsi simpan di local storage 
-//   useEffect(() => {
-//   const savedTryoutNickname = localStorage.getItem('tryout_nickname');
-//   if (savedTryoutNickname) {
-//     setNickname(savedTryoutNickname); // Load nickname untuk tryout
-//     setActiveTab('tryout'); // Opsional: default ke tab tryout jika ada saved
-//   }
-// }, []);
+  //   useEffect(() => {
+  //   const savedTryoutNickname = localStorage.getItem('tryout_nickname');
+  //   if (savedTryoutNickname) {
+  //     setNickname(savedTryoutNickname); // Load nickname untuk tryout
+  //     setActiveTab('tryout'); // Opsional: default ke tab tryout jika ada saved
+  //   }
+  // }, []);
 
   useEffect(() => {
     const code = searchParams.get("code")
@@ -200,12 +200,12 @@ export default function HomePage() {
   }
 
   //menambahkan fungsi handleTryout
-const handleTryout = () => {
-  if (!nickname || joining) return; // Validasi nickname
-  localStorage.setItem('tryout_nickname', nickname); // Simpan khusus untuk tryout (solo, beda key dari join)
-  localStorage.setItem('tryout_mode', 'solo'); // Opsional: tandai mode solo
-  router.push('/tryout'); // Route ke halaman tryout
-};
+  const handleTryout = () => {
+    if (!nickname || joining) return; // Validasi nickname
+    localStorage.setItem('tryout_nickname', nickname); // Simpan khusus untuk tryout (solo, beda key dari join)
+    localStorage.setItem('tryout_mode', 'solo'); // Opsional: tandai mode solo
+    router.push('/tryout'); // Route ke halaman tryout
+  };
 
   return (
     <div className="min-h-[100dvh] w-full relative overflow-hidden pixel-font p-2">
@@ -227,6 +227,10 @@ const handleTryout = () => {
         priority  // Auto preload kalo critical (mirip fetchPriority high)
         style={{ objectPosition: 'center' }}  // Ganti bg-center
       />
+
+      <h1 className="absolute top-6 md:top-4 left-4 w-42 h-10 md:w-100 md:h-16">
+        <Image src="/gameforsmartlogo.webp" alt="Gameforsmart Logo" width="256" height="0" />
+      </h1>
 
       {/* Burger Menu Button - Fixed Top Right */}
       <motion.button
@@ -395,8 +399,8 @@ const handleTryout = () => {
                       key={index}
                       onClick={() => goToPage(index)}
                       className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentPage
-                          ? 'bg-[#a100ff] shadow-md shadow-[#a100ff]/50 scale-110'
-                          : 'bg-white/30 hover:bg-white/50'
+                        ? 'bg-[#a100ff] shadow-md shadow-[#a100ff]/50 scale-110'
+                        : 'bg-white/30 hover:bg-white/50'
                         }`}
                     />
                   ))}
@@ -475,168 +479,164 @@ const handleTryout = () => {
             whileHover={{ scale: 1.02 }}
             className="group max-sm:[grid-area:host]"
           >
-              <Card className="bg-[#1a0a2a]/40 border-[#00ffff]/50 hover:border-[#00ffff] transition-all duration-300 sm:h-full shadow-[0_0_15px_rgba(255,107,255,0.3)] pixel-card">
-                <CardHeader className="text-center">
-                  <motion.div
-                    className="w-16 h-16 bg-gradient-to-br from-[#00ffff] to-[#120512] border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-[0_0_15px_rgba(255,107,255,0.7)] transition-all duration-300"
-                    whileHover={{ rotate: 5 }}
-                  >
-                    <Flag className="w-8 h-8 text-white" />
-                  </motion.div>
-                  <CardTitle className="text-xl font-bold text-[#00ffff] pixel-text glow-pink">
-                    HOST GAME
-                  </CardTitle>
-                  <CardDescription className="text-[#00ffff]/80 text-sm pixel-text glow-pink-subtle">
-                    Create your own race and challenge others
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+            <Card className="bg-[#1a0a2a]/40 border-[#00ffff]/50 hover:border-[#00ffff] transition-all duration-300 sm:h-full shadow-[0_0_15px_rgba(255,107,255,0.3)] pixel-card">
+              <CardHeader className="text-center">
+                <motion.div
+                  className="w-16 h-16 bg-gradient-to-br from-[#00ffff] to-[#120512] border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-[0_0_15px_rgba(255,107,255,0.7)] transition-all duration-300"
+                  whileHover={{ rotate: 5 }}
+                >
+                  <Flag className="w-8 h-8 text-white" />
+                </motion.div>
+                <CardTitle className="text-xl font-bold text-[#00ffff] pixel-text glow-pink">
+                  HOST GAME
+                </CardTitle>
+                <CardDescription className="text-[#00ffff]/80 text-sm pixel-text glow-pink-subtle">
+                  Create your own race and challenge others
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
                 <Link href="/host">
-                <Button className="w-full bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white ] focus:ring-[#00ffff]/30 transition-all duration-200 ">
-                  Create Room
-                </Button>
+                  <Button className="w-full bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white ] focus:ring-[#00ffff]/30 transition-all duration-200 ">
+                    Create Room
+                  </Button>
                 </Link>
-   
-                </CardContent>
-              </Card>
-        
+
+              </CardContent>
+            </Card>
+
           </motion.div>
 
           {/* Join Race Card */}
-<motion.div
-  initial={{ opacity: 0, x: 50 }}
-  animate={{ opacity: 1, x: 0 }}
-  transition={{ delay: 0.3, duration: 0.8 }}
-  whileHover={{ scale: 1.02 }}
-  className="group max-sm:[grid-area:join]"
->
-  <Card className="bg-[#1a0a2a]/40 border-[#00ffff]/50 hover:border-[#00ffff] transition-all duration-300 h-full shadow-[0_0_15px_rgba(0,255,255,0.3)] pixel-card">
-    {/* Tab Selector */}
-    <CardHeader className="text-center pb-2">
-      <div className="flex justify-center space-x-0 bg-[#1a0a2a]/50 rounded-xl p-1 mb-4">
-        <button
-          onClick={() => setActiveTab('join')}
-          className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${activeTab === 'join' 
-            ? 'bg-[#00ffff] text-black shadow-[0_0_10px_rgba(0,255,255,0.5)]' 
-            : 'text-[#00ffff] hover:bg-[#00ffff]/20'}`}
-        >
-          JOIN 
-        </button>
-        <button
-          onClick={() => setActiveTab('tryout')}
-          className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${activeTab === 'tryout' 
-            ? 'bg-[#ff6bff] text-black shadow-[0_0_10px_rgba(255,107,255,0.5)]' 
-            : 'text-[#ff6bff] hover:bg-[#ff6bff]/20'}`}
-        >
-           TRYOUT
-        </button>
-      </div>
-
-      {/* Icon dan Title berdasarkan tab */}
-      <motion.div
-        key={activeTab}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className={`w-16 h-16 border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ${
-          activeTab === 'join' 
-            ? 'bg-gradient-to-br from-[#00ffff] to-[#1a0a2a] group-hover:shadow-[0_0_15px_rgba(0,255,255,0.7)]' 
-            : 'bg-gradient-to-br from-[#ff6bff] to-[#1a0a2a] group-hover:shadow-[0_0_15px_rgba(255,107,255,0.7)]'
-        }`}
-        whileHover={{ rotate: activeTab === 'join' ? -5 : 5 }}
-      >
-        {activeTab === 'join' ? (
-          <Users className="w-8 h-8 text-white" />
-        ) : (
-          // <Zap className="w-8 h-8 text-white" />
-            <Users className="w-8 h-8 text-white" />
-        )}
-      </motion.div>
-      <CardTitle className={`text-xl font-bold transition-all duration-300 ${
-        activeTab === 'join' ? 'text-[#00ffff] glow-cyan' : 'text-[#ff6bff] glow-pink'
-      } pixel-text`}>
-        {activeTab === 'join' ? 'JOIN RACE' : 'SOLO TRYOUT'}
-      </CardTitle>
-      <CardDescription className={`text-sm transition-all duration-300 pixel-text ${
-        activeTab === 'join' ? 'text-[#00ffff]/80 glow-cyan-subtle' : 'text-[#ff6bff]/80 glow-pink-subtle'
-      }`}>
-        {activeTab === 'join' 
-          ? 'Enter a code to join an existing race' 
-          : 'Start a practice session on your own'
-        }
-      </CardDescription>
-    </CardHeader>
-
-    <CardContent className="space-y-2">
-      {activeTab === 'join' ? (
-        <>
-          <Input
-            placeholder="Room Code"
-            value={roomCode}
-            maxLength={6}
-            onChange={(e) => {
-              const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-              setRoomCode(value);
-            }}
-            className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
-            aria-label="Room Code"
-          />
-          <div className="relative">
-            <Input
-              placeholder="Nickname"
-              value={nickname}
-              maxLength={26}
-              onChange={(e) => setNickname(e.target.value)}
-              className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30 pr-10"
-              aria-label="Nickname"
-            />
-            <button
-              type="button"
-              onClick={() => setNickname(generateNickname())}
-              className="absolute right-2 top-1/8 text-[#00ffff] hover:bg-[#00ffff]/20 hover:border-[#00ffff] transition-all duration-200 glow-cyan-subtle"
-              aria-label="Generate Nickname"
-            >
-              <span className="text-lg">🎲</span>
-            </button>
-          </div>
-        </>
-      ) : (
-        <div className="relative">
-          <Input
-            placeholder="Nickname"
-            value={nickname}
-            maxLength={26}
-            onChange={(e) => setNickname(e.target.value)}
-            className="bg-[#1a0a2a]/50 border-[#ff6bff]/50 text-[#ff6bff] placeholder:text-[#ff6bff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#ff6bff] focus:ring-[#ff6bff]/30 pr-10"
-            aria-label="Nickname"
-          />
-          <button
-            type="button"
-            onClick={() => setNickname(generateNickname())}
-            className="absolute right-2 top-1/8 text-[#ff6bff] hover:bg-[#ff6bff]/20 hover:border-[#ff6bff] transition-all duration-200 glow-pink-subtle"
-            aria-label="Generate Nickname"
+          <motion.div
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3, duration: 0.8 }}
+            whileHover={{ scale: 1.02 }}
+            className="group max-sm:[grid-area:join]"
           >
-            <span className="text-lg">🎲</span>
-          </button>
-        </div>
-      )}
-    </CardContent>
+            <Card className="bg-[#1a0a2a]/40 border-[#00ffff]/50 hover:border-[#00ffff] transition-all duration-300 h-full shadow-[0_0_15px_rgba(0,255,255,0.3)] pixel-card">
+              {/* Tab Selector */}
+              <CardHeader className="text-center pb-2">
+                <div className="flex justify-center space-x-0 bg-[#1a0a2a]/50 rounded-xl p-1 mb-4">
+                  <button
+                    onClick={() => setActiveTab('join')}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${activeTab === 'join'
+                      ? 'bg-[#00ffff] text-black shadow-[0_0_10px_rgba(0,255,255,0.5)]'
+                      : 'text-[#00ffff] hover:bg-[#00ffff]/20'}`}
+                  >
+                    JOIN
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('tryout')}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${activeTab === 'tryout'
+                      ? 'bg-[#ff6bff] text-black shadow-[0_0_10px_rgba(255,107,255,0.5)]'
+                      : 'text-[#ff6bff] hover:bg-[#ff6bff]/20'}`}
+                  >
+                    TRYOUT
+                  </button>
+                </div>
 
-    <CardFooter>
-      <Button
-        onClick={activeTab === 'join' ? handleJoin : handleTryout}
-        className={`w-full transition-all duration-300 ease-in-out pixel-button-large retro-button ${
-          activeTab === 'join' 
-            ? `bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white border-[#0070f3]/80 hover:border-[#0ea5e9]/80 glow-cyan ${!roomCode || !nickname ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}` 
-            : `bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] hover:to-[#ffb3ff] text-white border-[#ff6bff]/80 hover:border-[#ff8aff]/80 glow-pink ${!nickname ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`
-        }`}
-        disabled={activeTab === 'join' ? (roomCode.length !== 6 || !nickname || joining) : (!nickname || joining)}
-      >
-        {activeTab === 'join' ? 'JOIN' : 'TRYOUT'}
-      </Button>
-    </CardFooter>
-  </Card>
-</motion.div>
+                {/* Icon dan Title berdasarkan tab */}
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className={`w-16 h-16 border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ${activeTab === 'join'
+                      ? 'bg-gradient-to-br from-[#00ffff] to-[#1a0a2a] group-hover:shadow-[0_0_15px_rgba(0,255,255,0.7)]'
+                      : 'bg-gradient-to-br from-[#ff6bff] to-[#1a0a2a] group-hover:shadow-[0_0_15px_rgba(255,107,255,0.7)]'
+                    }`}
+                  whileHover={{ rotate: activeTab === 'join' ? -5 : 5 }}
+                >
+                  {activeTab === 'join' ? (
+                    <Users className="w-8 h-8 text-white" />
+                  ) : (
+                    // <Zap className="w-8 h-8 text-white" />
+                    <User className="w-8 h-8 text-white" />
+                  )}
+                </motion.div>
+                <CardTitle className={`text-xl font-bold transition-all duration-300 ${activeTab === 'join' ? 'text-[#00ffff] glow-cyan' : 'text-[#ff6bff] glow-pink'
+                  } pixel-text`}>
+                  {activeTab === 'join' ? 'JOIN RACE' : 'SOLO TRYOUT'}
+                </CardTitle>
+                <CardDescription className={`text-sm transition-all duration-300 pixel-text ${activeTab === 'join' ? 'text-[#00ffff]/80 glow-cyan-subtle' : 'text-[#ff6bff]/80 glow-pink-subtle'
+                  }`}>
+                  {activeTab === 'join'
+                    ? 'Enter a code to join an existing race'
+                    : 'Start a practice session on your own'
+                  }
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-2">
+                {activeTab === 'join' ? (
+                  <>
+                    <Input
+                      placeholder="Room Code"
+                      value={roomCode}
+                      maxLength={6}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                        setRoomCode(value);
+                      }}
+                      className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
+                      aria-label="Room Code"
+                    />
+                    <div className="relative">
+                      <Input
+                        placeholder="Nickname"
+                        value={nickname}
+                        maxLength={26}
+                        onChange={(e) => setNickname(e.target.value)}
+                        className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30 pr-10"
+                        aria-label="Nickname"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setNickname(generateNickname())}
+                        className="absolute right-2 top-1/8 text-[#00ffff] hover:bg-[#00ffff]/20 hover:border-[#00ffff] transition-all duration-200 glow-cyan-subtle"
+                        aria-label="Generate Nickname"
+                      >
+                        <span className="text-lg">🎲</span>
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="relative">
+                    <Input
+                      placeholder="Nickname"
+                      value={nickname}
+                      maxLength={26}
+                      onChange={(e) => setNickname(e.target.value)}
+                      className="bg-[#1a0a2a]/50 border-[#ff6bff]/50 text-[#ff6bff] placeholder:text-[#ff6bff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#ff6bff] focus:ring-[#ff6bff]/30 pr-10"
+                      aria-label="Nickname"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setNickname(generateNickname())}
+                      className="absolute right-2 top-1/8 text-[#ff6bff] hover:bg-[#ff6bff]/20 hover:border-[#ff6bff] transition-all duration-200 glow-pink-subtle"
+                      aria-label="Generate Nickname"
+                    >
+                      <span className="text-lg">🎲</span>
+                    </button>
+                  </div>
+                )}
+              </CardContent>
+
+              <CardFooter>
+                <Button
+                  onClick={activeTab === 'join' ? handleJoin : handleTryout}
+                  className={`w-full transition-all duration-300 ease-in-out pixel-button-large retro-button ${activeTab === 'join'
+                      ? `bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white border-[#0070f3]/80 hover:border-[#0ea5e9]/80 glow-cyan ${!roomCode || !nickname ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`
+                      : `bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] hover:to-[#ffb3ff] text-white border-[#ff6bff]/80 hover:border-[#ff8aff]/80 glow-pink ${!nickname ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`
+                    }`}
+                  disabled={activeTab === 'join' ? (roomCode.length !== 6 || !nickname || joining) : (!nickname || joining)}
+                >
+                  {activeTab === 'join' ? 'JOIN' : 'TRYOUT'}
+                </Button>
+              </CardFooter>
+            </Card>
+          </motion.div>
         </div>
       </div>
 
