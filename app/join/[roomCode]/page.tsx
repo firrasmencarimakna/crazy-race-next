@@ -4,13 +4,15 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Users, Activity } from "lucide-react"
+import { Users, Activity, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
 import LoadingRetro from "@/components/loadingRetro"
 import { calculateCountdown } from "@/utils/countdown"
+import { DoorOpen } from "lucide-react";  // Atau ganti dengan LogOut jika lebih suka
+import { LogOut } from "lucide-react";  // Atau tambahkan ke impor existing
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogOverlay, DialogTitle } from "@/components/ui/dialog"
 
 import Image from "next/image"
@@ -444,50 +446,72 @@ export default function LobbyPage() {
 
         {/* Button Pilih Car (ganti dari EXIT) */}
         <div className="bg-[#1a0a2a]/50 sm:bg-transparent backdrop-blur-sm sm:backdrop-blur-none w-full text-center py-3 fixed bottom-0 left-1/2 transform -translate-x-1/2 z-10">
-          <Button className="bg-[#ff6bff] border-4 border-white pixel-button-large hover:bg-[#ff8aff] glow-pink px-8 py-3" onClick={() => setShowCarDialog(true)}>
+          <Button className="bg-[#ff6bff] border-4 border-white pixel-button-large hover:bg-[#ff8aff] glow-pink px-8 py-3 mr-4" onClick={() => setShowExitDialog(true)}>
+            <ArrowLeft className="w-15 h-15" />  {/* Ikon pintu keluar, ukuran 20px */}
+            {/* <span className="pixel-text text-lg">EXIT</span> */}
+          </Button>
+          <Button className="bg-[#ff6bff] border-4 border-white pixel-button-large hover:bg-[#ff8aff] glow-pink px-8 py-3 " onClick={() => setShowCarDialog(true)}>
             <span className="pixel-text text-lg">CHOOSE CAR</span>
           </Button>
-          <Button className="bg-[#ff6bff] border-4 border-white pixel-button-large hover:bg-[#ff8aff] glow-pink px-8 py-3" onClick={() => setShowExitDialog(true)}>
-          <span className="pixel-text text-lg">EXIT</span>
-          </Button>
+
         </div>
       </div>
+{/* Modal Dialog Verifikasi Exit - Enhanced */}
+<Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+  <DialogOverlay className="bg-[#000ffff] backdrop-blur-sm" />
+  <DialogContent className="bg-[#1a0a2a]/65 border-[#ff6bff]/50 backdrop-blur-md text-[#00ffff] max-w-lg mx-auto">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={{ duration: 0.3 }}
+    >
+      <DialogHeader>
+        <DialogTitle className="text-cyan-400 pixel-text glow-cyan text-center"> Exit Room?</DialogTitle>
 
-      {/*Dialog Verifikasi exit  */}
-        <Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
-        <DialogContent className="bg-[#1a0a2a]/90 border-[#ff6bff]/50 text-white max-w-md mx-auto">
-          <DialogHeader>
-            <DialogTitle className="text-[#00ffff] pixel-text">Keluar Ruangan?</DialogTitle>
-            <DialogDescription className="text-gray-300">
-              Kamu akan keluar dari ruangan {roomCode}. Pilihan lain tidak bisa join lagi kecuali host restart.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setShowExitDialog(false)}
-              className="border-[#00ffff] text-[#00ffff] hover:bg-[#00ffff]/10"
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={handleExit}
-              className="bg-[#ff6bff] hover:bg-[#ff8aff] border-white"
-            >
-              Keluar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      </DialogHeader>
+
+      {/* Car GIF - Enhanced */}
+      <div className="flex justify-center mb-4">
+        <img
+          src={carGifMap[currentPlayer.car || 'blue']}
+          alt="Your Car"
+          className="h-24 w-42 object-contain filter brightness-125 glow-cyan"
+        />
+      </div>
+        <DialogDescription className="text-cyan-400 text-center">
+          Are you sure you want to exit the room? You will Go to the Homepage.
+        </DialogDescription>
+
+      <div className="flex justify-end space-x-3 pt-4">
+        <Button
+          variant="outline"
+          onClick={() => setShowExitDialog(false)}
+          className="text-[#00ffff] border-1 border-[#00ffff] hover:bg-[#00ffff] "
+        >
+          Cancel
+        </Button>
+
+        <Button
+          onClick={handleExit}
+          className="bg-[#000] border-1 text-[#00ffff] border-[#00ffff] hover:bg-[#00ffff] hover:text-[#000]"
+        >
+         
+          Exit
+        </Button>
+      </div>
+    </motion.div>
+  </DialogContent>
+</Dialog>
 
       {/* Dialog/Modal Pilih Car - Mobile Friendly */}
       <Dialog open={showCarDialog} onOpenChange={setShowCarDialog}>
-        <DialogOverlay className="bg-[#1a0a2a]/80 backdrop-blur-sm" />
+        <DialogOverlay className="bg-[#8B00FF]/60 backdrop-blur-sm" />
         <DialogContent className="bg-[#1a0a2a]/90 border-[#ff6bff]/50 backdrop-blur-sm sm:max-w-md sm:h-auto overflow-auto p-0">
-          <DialogHeader className="pt-4 pb-2 px-4"> {/* Kurangi padding top/bottom */}
+          <DialogHeader className="pt-4 pb-2 px-4">
             <DialogTitle className="text-[#00ffff] pixel-text glow-cyan text-center text-xl">Choose Your Car</DialogTitle>
           </DialogHeader>
-          <div className="px-4 pb-4 grid grid-cols-2 md:grid-cols-3 gap-4 overflow-y-auto"> {/* Tambah px-4 pb-4, gap tetap */}
+          <div className="px-4 pb-4 grid grid-cols-2 md:grid-cols-3 gap-4 overflow-y-auto">
             {availableCars.map((car) => (
               <motion.button
                 key={car.key}
@@ -502,7 +526,7 @@ export default function LobbyPage() {
                 <img
                   src={carGifMap[car.key]}
                   alt={car.label}
-                  className="h-20 w-24 mx-auto object-contain filter brightness-125 contrast-150 mb-2"
+                  className="h-24 w-32 mx-auto object-contain filter brightness-125 contrast-150 mb-2"
                 />
                 <p className="text-xs text-white mt-1 pixel-text text-center">{car.label}</p>
               </motion.button>
@@ -512,6 +536,7 @@ export default function LobbyPage() {
       </Dialog>
 
       <style jsx>{`
+
         .pixel-font {
           font-family: 'Press Start 2P', cursive, monospace;
           image-rendering: pixelated;
@@ -577,7 +602,7 @@ export default function LobbyPage() {
         @keyframes neon-bounce {
           0%, 100% { transform: translateY(0px); }
           50% { transform: translateY(-8px); }
-        }
+        }mi
 
         /* Neon pulse animation for borders */
 @keyframes neon-pulse {

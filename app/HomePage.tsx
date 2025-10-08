@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
-import { Flag, Volume2, VolumeX, Settings, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight, HelpCircle, User } from "lucide-react"
+import { Flag, Volume2, VolumeX, Settings, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -14,40 +14,85 @@ import Image from "next/image"
 import { usePreloader } from "@/components/preloader"
 import LoadingRetro from "@/components/loadingRetro"
 
+/**
+ * HomePage Component
+ * Halaman utama aplikasi Crazy Race, berisi tombol Host Game, Join Race (dengan tab Tryout),
+ * menu burger untuk audio settings dan How to Play modal.
+ * Mengintegrasikan validasi input dengan modal alert spesifik berdasarkan field kosong.
+ */
 export default function HomePage() {
+  // Hooks untuk navigasi dan query params
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
+  // State untuk tab selector (join atau tryout)
+  const [activeTab, setActiveTab] = useState<'join' | 'tryout'>('join')
 
-  // State untuk modal alert
-  const [showAlert, setShowAlert] = useState(false);
-  // Ref untuk audio alert (suara gas.mp3)  
-  const alertAudioRef = useRef<HTMLAudioElement>(null);
-
-  const [activeTab, setActiveTab] = useState<'join' | 'tryout'>('join');
-
+  // State untuk loading dan joining process
   const [joining, setJoining] = useState(false)
+
+  // State untuk audio controls
   const [isMuted, setIsMuted] = useState(false)
   const [volume, setVolume] = useState(50) // 0-100, default 50%
+
+  // State untuk input fields
   const [roomCode, setRoomCode] = useState("")
   const [nickname, setNickname] = useState("")
-  const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
-  const [showHowToPlay, setShowHowToPlay] = useState(false) // State untuk modal How to Play
-  const [currentPage, setCurrentPage] = useState(0) // State untuk pagination
 
-  // Tambahkan array untuk generate nama random (di luar component atau di dalam)
-  const adjectives = ["Crazy", "Fast", "Speedy", "Turbo", "Neon", "Pixel", "Racing", "Wild", "Epic", "Flash"];
-  const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", "Gear", "Track", "Lap"];
+  // State untuk UI modals dan menu
+  const [isMenuOpen, setIsMenuOpen] = useState(false) // Toggle menu burger
+  const [showHowToPlay, setShowHowToPlay] = useState(false) // Modal How to Play
+  const [currentPage, setCurrentPage] = useState(0) // Pagination untuk modal How to Play
 
-  // Function untuk generate nickname otomatis
+  // State untuk modal alert (spesifik berdasarkan reason)
+  const [showAlert, setShowAlert] = useState(false)
+  const [alertReason, setAlertReason] = useState<'roomCode' | 'nickname' | 'both' | 'general' | ''>('')
+
+  // Refs untuk audio elements
+  const audioRef = useRef<HTMLAudioElement>(null) // Background music
+  const alertAudioRef = useRef<HTMLAudioElement>(null) // Alert sound (gas.mp3)
+
+  // Arrays untuk generate random nickname
+  const adjectives = ["Crazy", "Fast", "Speedy", "Turbo", "Neon", "Pixel", "Racing", "Wild", "Epic", "Flash"]
+  const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", "Gear", "Track", "Lap"]
+
+  /**
+   * Generate random nickname menggunakan adjectives + nouns.
+   * @returns {string} Nickname acak, e.g., "CrazyRacer"
+   */
   const generateNickname = () => {
-    const randomAdj = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
-    return `${randomAdj}${randomNoun}`;
-  };
+    const randomAdj = adjectives[Math.floor(Math.random() * adjectives.length)]
+    const randomNoun = nouns[Math.floor(Math.random() * nouns.length)]
+    return `${randomAdj}${randomNoun}`
+  }
 
+  /**
+   * Helper function untuk pesan alert dinamis berdasarkan reason.
+   * @param {string} reason - Alasan trigger alert ('roomCode', 'nickname', 'both', dll.)
+   * @returns {string} Pesan yang sesuai untuk CardDescription
+   */
+  const getAlertMessage = (reason: string) => {
+    switch (reason) {
+      case 'roomCode':
+        return "Room Code harus tepat 6 huruf. Cek lagi ya! 🔑"
+      case 'nickname':
+        return "Nickname nggak boleh kosong. Buat yang unik dulu! 🚀"
+      case 'both':
+        return "Lengkapi Room Code (6 huruf) dan Nickname dulu, ya! 📝"
+      default:
+        return "Isi Room Code (6 huruf) dan Nickname dulu, ya! 🚀"
+    }
+  }
 
+  /**
+   * Close modal alert dan reset reason.
+   */
+  const closeAlert = () => {
+    setShowAlert(false)
+    setAlertReason('')
+  }
 
+  // Steps untuk modal How to Play (pagination content)
   const steps = [
     {
       title: "Host a Game",
@@ -73,32 +118,23 @@ export default function HomePage() {
 
   const totalPages = steps.length
 
-  const audioRef = useRef<HTMLAudioElement>(null)
-
+  // useEffect: Clear localStorage on mount (reset session data)
   useEffect(() => {
     localStorage.removeItem("nickname")
     localStorage.removeItem("playerId")
     localStorage.removeItem("nextQuestionIndex")
   }, [])
 
-  //menambahkan fungsi simpan di local storage 
-  //   useEffect(() => {
-  //   const savedTryoutNickname = localStorage.getItem('tryout_nickname');
-  //   if (savedTryoutNickname) {
-  //     setNickname(savedTryoutNickname); // Load nickname untuk tryout
-  //     setActiveTab('tryout'); // Opsional: default ke tab tryout jika ada saved
-  //   }
-  // }, []);
-
+  // useEffect: Auto-fill roomCode dari URL query param (?code=ABC123)
   useEffect(() => {
     const code = searchParams.get("code")
     if (code) {
       setRoomCode(code.toUpperCase())
-      router.replace(pathname, undefined)
+      router.replace(pathname, undefined) // Clear query param dari URL
     }
-  }, [])
+  }, [searchParams, pathname, router])
 
-  // Inisialisasi audio: play otomatis dengan volume default
+  // useEffect: Inisialisasi background audio (autoplay dengan volume default)
   useEffect(() => {
     if (audioRef.current) {
       const initialVolume = volume / 100
@@ -107,44 +143,62 @@ export default function HomePage() {
         console.log("Autoplay dicegah oleh browser:", e)
       })
     }
-  }, [])
+  }, []) // Run sekali on mount
 
-  // Update audio volume berdasarkan state volume dan isMuted
+  // useEffect: Update volume background audio saat volume/mute berubah
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = isMuted ? 0 : (volume / 100)
     }
   }, [volume, isMuted])
 
-  // Handle toggle mute/unmute
+  /**
+   * Toggle mute/unmute audio.
+   */
   const handleMuteToggle = () => {
     setIsMuted(!isMuted)
   }
 
-  // Handle volume change
+  /**
+   * Handle perubahan volume slider.
+   * @param {number[]} value - Array dari slider value [currentValue]
+   */
   const handleVolumeChange = (value: number[]) => {
     setVolume(value[0])
     if (isMuted && value[0] > 0) {
-      setIsMuted(false) // Auto unmute jika volume dinaikkan
+      setIsMuted(false) // Auto unmute jika volume dinaikkan dari 0
     }
   }
+
+  /**
+   * Handle join race (tab 'join'): Validasi input, insert player ke Supabase, navigasi ke lobby.
+   */
   const handleJoin = async () => {
-    // Check kondisi: roomCode harus tepat 6 char, nickname gak kosong, dan gak lagi joining
-    if (roomCode.length !== 6 || !nickname.trim() || joining) {  // .trim() biar spasi kosong dianggap invalid
-      console.log("Trigger alert: Input belum lengkap");  // Debug log, bisa hapus nanti
-      setShowAlert(true);  // Show modal alert
-      if (alertAudioRef.current && !isMuted) {  // Play suara kalau gak muted
-        alertAudioRef.current.volume = volume / 100;
-        alertAudioRef.current.currentTime = 0;  // Reset audio biar play dari awal tiap kali
-        alertAudioRef.current.play().catch((e) => console.log("Audio error:", e));
+    // Deteksi reason untuk alert spesifik
+    let reason: '' | 'roomCode' | 'nickname' | 'both' | 'general' = ''
+    if (roomCode.length !== 6) {
+      reason = 'roomCode'
+    }
+    if (!nickname.trim()) {
+      reason = reason ? 'both' : 'nickname'
+    }
+    if (joining || reason) {
+      console.log("Trigger alert:", reason || 'general')
+      setAlertReason(reason || 'general')
+      setShowAlert(true)
+      // Play alert audio jika tidak muted
+      if (alertAudioRef.current && !isMuted) {
+        alertAudioRef.current.volume = volume / 100
+        alertAudioRef.current.currentTime = 0 // Reset untuk replay
+        alertAudioRef.current.play().catch((e) => console.log("Audio error:", e))
       }
-      return;  // Stop, jangan lanjut join
+      return // Stop proses join
     }
 
-    setJoining(true);  // Lanjut kalau valid
+    setJoining(true) // Mulai loading
 
     try {
-      // Verify room exists
+      // Verify room exists dan status 'waiting'
       const { data: roomData, error: roomError } = await supabase
         .from("game_rooms")
         .select("id, status")
@@ -157,20 +211,19 @@ export default function HomePage() {
         return
       }
 
-      // Check if room is in 'waiting' status
       if (roomData.status !== "waiting") {
         console.error("Error: Room is not accepting players")
         setJoining(false)
         return
       }
 
-      // Insert player
+      // Insert player ke tabel players
       const { error: playerError } = await supabase
         .from("players")
         .insert({
           room_id: roomData.id,
-          nickname: nickname.trim(),  // Trim biar clean
-          car: ["red", "blue", "green", "yellow", "purple"][Math.floor(Math.random() * 5)]
+          nickname: nickname.trim(), // Trim whitespace
+          car: ["red", "blue", "green", "yellow", "purple"][Math.floor(Math.random() * 5)] // Random car color
         })
 
       if (playerError) {
@@ -179,23 +232,47 @@ export default function HomePage() {
         return
       }
 
-      // Store nickname in localStorage
+      // Simpan nickname di localStorage untuk session
       localStorage.setItem("nickname", nickname.trim())
 
-      // Navigate to game page
+      // Navigasi ke lobby page
       router.push(`/join/${roomCode}`)
     } catch (error) {
       console.error("Unexpected error:", error)
       setJoining(false)
     }
-  };
+  }
 
+  /**
+   * Handle solo tryout (tab 'tryout'): Validasi nickname, simpan ke localStorage, navigasi ke tryout page.
+   */
+  const handleTryout = () => {
+    if (!nickname.trim() || joining) {
+      console.log("Trigger tryout alert: nickname empty")
+      setAlertReason('nickname')
+      setShowAlert(true)
+      // Play alert audio jika tidak muted
+      if (alertAudioRef.current && !isMuted) {
+        alertAudioRef.current.volume = volume / 100
+        alertAudioRef.current.currentTime = 0
+        alertAudioRef.current.play().catch((e) => console.log("Audio error:", e))
+      }
+      return
+    }
+    // Simpan khusus untuk tryout mode
+    localStorage.setItem('tryout_nickname', nickname.trim())
+    localStorage.setItem('tryout_mode', 'solo')
+    router.push('/tryout')
+  }
+
+  // Preload check: Tampilkan loading jika belum siap
   const isLoaded = usePreloader()
   if (!isLoaded) return <LoadingRetro />
 
+  // Functions untuk modal How to Play
   const closeHowToPlay = () => {
     setShowHowToPlay(false)
-    setCurrentPage(0) // Reset to first page
+    setCurrentPage(0) // Reset pagination
   }
 
   const goToPrevPage = () => {
@@ -214,17 +291,9 @@ export default function HomePage() {
     setCurrentPage(pageIndex)
   }
 
-  //menambahkan fungsi handleTryout
-  const handleTryout = () => {
-    if (!nickname || joining) return; // Validasi nickname
-    localStorage.setItem('tryout_nickname', nickname); // Simpan khusus untuk tryout (solo, beda key dari join)
-    localStorage.setItem('tryout_mode', 'solo'); // Opsional: tandai mode solo
-    router.push('/tryout'); // Route ke halaman tryout
-  };
-
   return (
     <div className="min-h-[100dvh] w-full relative overflow-hidden pixel-font p-2">
-      {/* Audio Element untuk Background Music */}
+      {/* Background Music Audio (hidden) */}
       <audio
         ref={audioRef}
         src="/assets/music/resonance.mp3"
@@ -233,91 +302,97 @@ export default function HomePage() {
         className="hidden"
       />
 
-      {/* Background Image */}
+      {/* Background Image (full viewport) */}
       <Image
         src="/assets/background/1.webp"
-        alt="Background"  // SEO/accessibility
+        alt="Crazy Race Background"
         fill
-        className="object-cover"  // Ganti bg-cover
-        priority  // Auto preload kalo critical (mirip fetchPriority high)
-        style={{ objectPosition: 'center' }}  // Ganti bg-center
+        className="object-cover"
+        priority // Preload untuk performa
+        style={{ objectPosition: 'center' }}
       />
 
       <h1 className="absolute top-6 md:top-4 left-4 w-42 md:w-50 lg:w-100">
         <Image src="/gameforsmartlogo.webp" alt="Gameforsmart Logo" width="256" height="0" />
       </h1>
-      {/* Audio Alert untuk gas.mp3 */}
+
+      {/* Alert Audio (hidden, untuk efek suara) */}
       <audio
         ref={alertAudioRef}
-        src="/assets/music/gas.mp3"  // Ganti path kalau beda
+        src="/assets/music/gas.mp3"
         preload="auto"
         className="hidden"
       />
 
-
-      {/* Modal Alert untuk Kondisi Belum Terpenuhi */}
-      {showAlert && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          onClick={() => setShowAlert(false)}  // Close saat klik luar
-        >
-          {/* Backdrop */}
+      {/* Modal Alert: Tampil jika showAlert true, dengan pesan dinamis berdasarkan alertReason */}
+      <AnimatePresence>
+        {showAlert && (
           <motion.div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={(e) => e.stopPropagation()}  // Jangan close saat klik modal
-          />
-
-          {/* Modal Content */}
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            className="relative w-full max-w-md max-h-[70vh] overflow-hidden bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-2xl shadow-2xl shadow-[#ff6bff]/40 backdrop-blur-md pixel-card text-center p-6"
-            onClick={(e) => e.stopPropagation()}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            onClick={closeAlert} // Close on backdrop click
           >
-            {/* GIF Car */}
-            <div className="mb-4">
-              <Image
-                src="/assets/car/car3.webp"  // Ganti path kalau beda
-                alt="Car alert animation"
-                width={200}
-                height={150}
-                className="mx-auto rounded-lg"
-              />
-            </div>
-
-            {/* Teks Warning */}
-            <CardTitle className="text-xl font-bold text-[#ff6bff] mb-2 pixel-text glow-pink">
-              Oops! Belum Siap Balapan!
-            </CardTitle>
-            <CardDescription className="text-[#00ffff]/80 mb-6 pixel-text glow-cyan-subtle">
-              Isi Room Code (6 huruf) dan Nickname dulu, ya! 🚀
-            </CardDescription>
-
-            {/* Close Button */}
-            <Button
-              onClick={() => setShowAlert(false)}
-              className="w-full bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] text-white pixel-button glow-pink"
+            {/* Backdrop (semi-transparent blur) */}
+            <motion.div
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              onClick={(e) => e.stopPropagation()} // Prevent close on modal click
+            />
+            
+            {/* Modal Content */}
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-md max-h-[70vh] overflow-hidden bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-2xl shadow-2xl shadow-[#ff6bff]/40 backdrop-blur-md pixel-card text-center p-6"
+              onClick={(e) => e.stopPropagation()}
             >
-              Oke, Saya Isi!
-            </Button>
-
-            {/* Close Icon */}
-            <button
-              onClick={() => setShowAlert(false)}
-              className="absolute top-3 right-3 p-2 bg-[#1a0a2a]/60 border-2 border-[#ff6bff]/50 rounded-lg text-[#00ffff] hover:bg-[#ff6bff]/20 glow-cyan-subtle"
-              aria-label="Close alert"
-            >
-              <X size={20} />
-            </button>
+              {/* Alert Car GIF */}
+              <div className="mb-4">
+                <Image
+                  src="/assets/car/car3.webp"
+                  alt="Car alert animation"
+                  width={200}
+                  height={150}
+                  className="mx-auto rounded-lg"
+                />
+              </div>
+              
+              {/* Dynamic Title berdasarkan reason */}
+              <CardTitle className="text-xl font-bold text-[#ff6bff] mb-2 pixel-text glow-pink">
+                {alertReason === 'roomCode' ? 'Oops! Room Code Belum Lengkap!' : 
+                 alertReason === 'nickname' ? 'Oops! Nickname Kosong!' : 
+                 alertReason === 'both' ? 'Oops! Input Belum Lengkap!' : 'Oops! Belum Siap Balapan!'}
+              </CardTitle>
+              
+              {/* Dynamic Description */}
+              <CardDescription className="text-[#00ffff]/80 mb-6 pixel-text glow-cyan-subtle">
+                {getAlertMessage(alertReason)}
+              </CardDescription>
+              
+              {/* Close Button */}
+              <Button
+                onClick={closeAlert}
+                className="w-full bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] text-white pixel-button glow-pink"
+              >
+                Oke, Saya Isi!
+              </Button>
+              
+              {/* Close Icon (top-right) */}
+              <button
+                onClick={closeAlert}
+                className="absolute top-3 right-3 p-2 bg-[#1a0a2a]/60 border-2 border-[#ff6bff]/50 rounded-lg text-[#00ffff] hover:bg-[#ff6bff]/20 glow-cyan-subtle"
+                aria-label="Close alert"
+              >
+                <X size={20} />
+              </button>
+            </motion.div>
           </motion.div>
-        </motion.div>
-      )}
+        )}
+      </AnimatePresence>
 
-      {/* Burger Menu Button - Fixed Top Right */}
+      {/* Burger Menu Button (fixed top-right) */}
       <motion.button
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
@@ -329,222 +404,215 @@ export default function HomePage() {
         {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
       </motion.button>
 
-      {/* Menu Dropdown - Muncul saat burger diklik, dari kanan */}
-      {isMenuOpen && (
-        <motion.div
-          initial={{ opacity: 0, x: 300 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 300 }}
-          className="fixed top-20 right-4 z-30 w-64 bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm scrollbar-themed"
-        >
-          <div className="space-y-4">
-            {/* Mute Toggle */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-white pixel-text">Audio</span>
+      {/* Burger Menu Dropdown */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, x: 300 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 300 }}
+            className="fixed top-20 right-4 z-30 w-64 bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm scrollbar-themed"
+          >
+            <div className="space-y-4">
+              {/* Mute Toggle */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-white pixel-text">Audio</span>
+                <button
+                  onClick={handleMuteToggle}
+                  className="p-2 bg-[#1a0a2a]/60 border-2 border-[#00ffff]/50 hover:border-[#00ffff] pixel-button hover:bg-[#00ffff]/20 glow-cyan-subtle rounded"
+                  aria-label={isMuted ? "Unmute" : "Mute"}
+                >
+                  {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                </button>
+              </div>
+
+              {/* Volume Slider */}
+              <div className="space-y-2">
+                <span className="text-xs text-[#ff6bff] pixel-text glow-pink-subtle">Volume</span>
+                <div className="bg-[#1a0a2a]/60 border border-[#ff6bff]/50 rounded px-2 py-1">
+                  <Slider
+                    value={[volume]}
+                    onValueChange={handleVolumeChange}
+                    max={100}
+                    min={0}
+                    step={1}
+                    className="w-full"
+                    orientation="horizontal"
+                  />
+                </div>
+              </div>
+
+              {/* How to Play Button */}
               <button
-                onClick={handleMuteToggle}
-                className="p-2 bg-[#1a0a2a]/60 border-2 border-[#00ffff]/50 hover:border-[#00ffff] pixel-button hover:bg-[#00ffff]/20 glow-cyan-subtle rounded"
-                aria-label={isMuted ? "Unmute" : "Mute"}
+                onClick={() => {
+                  setShowHowToPlay(true)
+                  setIsMenuOpen(false) // Tutup menu saat buka modal
+                }}
+                className="w-full p-2 bg-[#1a0a2a]/60 border-2 border-[#ff6bff]/50 hover:border-[#ff6bff] pixel-button hover:bg-[#ff6bff]/20 glow-pink-subtle rounded text-center"
+                aria-label="How to Play"
               >
-                {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                <div className="flex items-center justify-center gap-2">
+                  <BookOpen size={16} />
+                  <span className="text-sm text-[#00ffff] pixel-text glow-cyan">How to Play</span>
+                </div>
+              </button>
+
+              {/* Settings Button (placeholder, bisa di-expand) */}
+              <button
+                className="w-full p-2 bg-[#1a0a2a]/60 border-2 border-[#00ffff]/50 hover:border-[#00ffff] pixel-button hover:bg-[#00ffff]/20 glow-cyan-subtle rounded text-center"
+                aria-label="Settings"
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <Settings size={16} />
+                  <span className="text-sm text-[#00ffff] pixel-text glow-cyan">Settings</span>
+                </div>
               </button>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-            {/* Volume Slider */}
-            <div className="space-y-2">
-              <span className="text-xs text-[#ff6bff] pixel-text glow-pink-subtle">Volume</span>
-              <div className="bg-[#1a0a2a]/60 border border-[#ff6bff]/50 rounded px-2 py-1">
-                <Slider
-                  value={[volume]}
-                  onValueChange={handleVolumeChange}
-                  max={100}
-                  min={0}
-                  step={1}
-                  className="w-full"
-                  orientation="horizontal"
-                />
-              </div>
-            </div>
-
-            {/* How to Play Button */}
-            <button
-              onClick={() => {
-                setShowHowToPlay(true)
-                setIsMenuOpen(false) // Tutup menu saat buka modal
-              }}
-              className="w-full p-2 bg-[#1a0a2a]/60 border-2 border-[#ff6bff]/50 hover:border-[#ff6bff] pixel-button hover:bg-[#ff6bff]/20 glow-pink-subtle rounded text-center"
-              aria-label="How to Play"
-            >
-              <div className="flex items-center justify-center gap-2">
-                <BookOpen size={16} />
-                <span className="text-sm text-[#00ffff] pixel-text glow-cyan">How to Play</span>
-              </div>
-            </button>
-
-            {/* Settings Button */}
-
-            <button
-              className="w-full p-2 bg-[#1a0a2a]/60 border-2 border-[#00ffff]/50 hover:border-[#00ffff] pixel-button hover:bg-[#00ffff]/20 glow-cyan-subtle rounded text-center"
-              aria-label="Settings"
-            >
-              <div className="flex items-center justify-center gap-2">
-                <Settings size={16} />
-                <span className="text-sm text-[#00ffff] pixel-text glow-cyan">Settings</span>
-              </div>
-            </button>
-          </div>
-        </motion.div>
-      )}
-      {/* Add a valid JSX element or remove this block */}
-
-      {/* How to Play Modal */}
-      {showHowToPlay && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          onClick={closeHowToPlay} // Tutup saat klik luar
-        >
-          {/* Backdrop */}
+      {/* How to Play Modal (paginated guide) */}
+      <AnimatePresence>
+        {showHowToPlay && (
           <motion.div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            onClick={(e) => e.stopPropagation()} // Cegah tutup saat klik modal
-          />
-
-          {/* Modal Content */}
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            className="relative w-full max-w-lg max-h-[85vh] overflow-hidden bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-2xl shadow-2xl shadow-[#ff6bff]/40 backdrop-blur-md pixel-card scrollbar-themed book-modal"
-            onClick={(e) => e.stopPropagation()}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            onClick={closeHowToPlay} // Close on backdrop click
           >
-            {/* Header */}
-            <CardHeader className="text-center border-b-2 border-[#ff6bff]/20 p-6">
-              <CardTitle className="text-2xl font-bold text-[#00ffff] pixel-text glow-cyan mb-2">
-                Crazy Race Guide
-              </CardTitle>
-              <CardDescription className="text-[#ff6bff]/80 text-base pixel-text glow-pink-subtle">
-                Flip through the pages to learn how to race and win!
-              </CardDescription>
-              <p className="text-xs text-gray-200 mt-2 pixel-text">Page {currentPage + 1} of {totalPages}</p>
-            </CardHeader>
+            {/* Backdrop */}
+            <motion.div
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              onClick={(e) => e.stopPropagation()} // Prevent close on modal click
+            />
 
-            {/* Paginated Content */}
-            <div className="flex-1 p-6 overflow-hidden">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentPage}
-                  initial={{ x: currentPage > 0 ? "100%" : "-100%", opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: currentPage > 0 ? "-100%" : "100%", opacity: 0 }}
-                  transition={{ duration: 0.4, ease: "easeInOut" }}
-                  className="h-full flex flex-col justify-center book-page"
-                >
-                  <div className="text-center mb-6">
-                    <motion.div
-
-                    >
-
-                    </motion.div>
-                    <h3 className="text-xl font-bold text-[#00ffff] mb-4 pixel-text glow-cyan">
-                      {steps[currentPage].title}
-                    </h3>
-                  </div>
-                  <p className="text-gray-200 leading-relaxed pixel-text text-center max-w-md mx-auto line-clamp-3">
-                    {steps[currentPage].content}
-                  </p>
-                  <div className="flex items-center justify-center gap-2 text-[#ff6bff] text-sm pixel-text glow-pink-subtle mt-4">
-
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            {/* Pagination Footer */}
-            <CardFooter className="border-t-2 border-[#ff6bff]/20 p-4 bg-[#1a0a2a]/50">
-              <div className="w-full flex items-center justify-between">
-                {/* Prev Button */}
-                <Button
-                  onClick={goToPrevPage}
-                  disabled={currentPage === 0}
-                  className={`flex items-center gap-2 px-4 py-2 bg-[#1a0a2a]/60 hover:bg-[#00ffff]/20 border-2 border-[#00ffff]/50 text-[#00ffff] pixel-button glow-cyan-subtle transition-all duration-200 ${currentPage === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  <ArrowLeft size={16} />
-                  Prev
-                </Button>
-
-                {/* Page Dots */}
-                <div className="flex space-x-2">
-                  {steps.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => goToPage(index)}
-                      className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentPage
-                        ? 'bg-[#a100ff] shadow-md shadow-[#a100ff]/50 scale-110'
-                        : 'bg-white/30 hover:bg-white/50'
-                        }`}
-                    />
-                  ))}
-                </div>
-
-                {/* Next / Got It Button */}
-                <Button
-                  onClick={goToNextPage}
-                  className={`flex items-center gap-2 px-4 py-2 bg-[#1a0a2a]/60 hover:bg-[#ff6bff]/20 border-2 border-[#ff6bff]/50 text-[#ff6bff] pixel-button glow-pink-subtle transition-all duration-200`}
-                >
-                  {currentPage === totalPages - 1 ? (
-                    <>
-                      Got It!
-                      <BookOpen size={16} />
-                    </>
-                  ) : (
-                    <>
-                      Next
-                      <ArrowRight size={16} />
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardFooter>
-
-            {/* Close Button */}
-            <button
-              onClick={closeHowToPlay}
-              className="absolute top-3 right-3 p-2 bg-[#1a0a2a]/60 border-2 border-[#ff6bff]/50 rounded-lg text-[#00ffff] hover:bg-[#ff6bff]/20 hover:border-[#ff6bff] transition-all duration-200 glow-cyan-subtle"
-              aria-label="Close"
+            {/* Modal Content */}
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-lg max-h-[85vh] overflow-hidden bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-2xl shadow-2xl shadow-[#ff6bff]/40 backdrop-blur-md pixel-card scrollbar-themed book-modal"
+              onClick={(e) => e.stopPropagation()}
             >
-              <X size={20} />
-            </button>
-          </motion.div>
-        </motion.div>
-      )}
+              {/* Header */}
+              <CardHeader className="text-center border-b-2 border-[#ff6bff]/20 p-6">
+                <CardTitle className="text-2xl font-bold text-[#00ffff] pixel-text glow-cyan mb-2">
+                  Crazy Race Guide
+                </CardTitle>
+                <CardDescription className="text-[#ff6bff]/80 text-base pixel-text glow-pink-subtle">
+                  Flip through the pages to learn how to race and win!
+                </CardDescription>
+                <p className="text-xs text-gray-200 mt-2 pixel-text">Page {currentPage + 1} of {totalPages}</p>
+              </CardHeader>
 
-      <div className="relative z-10 flex flex-col items-center justify-center h-full w-full"> {/* pt-20 untuk ruang burger */}
+              {/* Paginated Content */}
+              <div className="flex-1 p-6 overflow-hidden">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentPage}
+                    initial={{ x: currentPage > 0 ? "100%" : "-100%", opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    exit={{ x: currentPage > 0 ? "-100%" : "100%", opacity: 0 }}
+                    transition={{ duration: 0.4, ease: "easeInOut" }}
+                    className="h-full flex flex-col justify-center book-page"
+                  >
+                    <div className="text-center mb-6">
+                      <h3 className="text-xl font-bold text-[#00ffff] mb-4 pixel-text glow-cyan">
+                        {steps[currentPage].title}
+                      </h3>
+                    </div>
+                    <p className="text-gray-200 leading-relaxed pixel-text text-center max-w-md mx-auto line-clamp-3">
+                      {steps[currentPage].content}
+                    </p>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              {/* Pagination Footer */}
+              <CardFooter className="border-t-2 border-[#ff6bff]/20 p-4 bg-[#1a0a2a]/50">
+                <div className="w-full flex items-center justify-between">
+                  {/* Prev Button */}
+                  <Button
+                    onClick={goToPrevPage}
+                    disabled={currentPage === 0}
+                    className={`flex items-center gap-2 px-4 py-2 bg-[#1a0a2a]/60 hover:bg-[#00ffff]/20 border-2 border-[#00ffff]/50 text-[#00ffff] pixel-button glow-cyan-subtle transition-all duration-200 ${currentPage === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <ArrowLeft size={16} />
+                    Prev
+                  </Button>
+
+                  {/* Page Dots */}
+                  <div className="flex space-x-2">
+                    {steps.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => goToPage(index)}
+                        className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentPage
+                          ? 'bg-[#a100ff] shadow-md shadow-[#a100ff]/50 scale-110'
+                          : 'bg-white/30 hover:bg-white/50'
+                          }`}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Next / Got It Button */}
+                  <Button
+                    onClick={goToNextPage}
+                    className={`flex items-center gap-2 px-4 py-2 bg-[#1a0a2a]/60 hover:bg-[#ff6bff]/20 border-2 border-[#ff6bff]/50 text-[#ff6bff] pixel-button glow-pink-subtle transition-all duration-200`}
+                  >
+                    {currentPage === totalPages - 1 ? (
+                      <>
+                        Got It!
+                        <BookOpen size={16} />
+                      </>
+                    ) : (
+                      <>
+                        Next
+                        <ArrowRight size={16} />
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardFooter>
+
+              {/* Close Button (top-right) */}
+              <button
+                onClick={closeHowToPlay}
+                className="absolute top-3 right-3 p-2 bg-[#1a0a2a]/60 border-2 border-[#ff6bff]/50 rounded-lg text-[#00ffff] hover:bg-[#ff6bff]/20 hover:border-[#ff6bff] transition-all duration-200 glow-cyan-subtle"
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Content Area */}
+      <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
         {/* Main Title dengan efek pixel art */}
         <div className="text-center relative pb-5 sm:pt-3 pt-16 space-y-3">
           {/* Title Border */}
-          <div className="pixel-border-large mx-auto relative z-0">  {/* Tambah relative z-0 buat layering */}
-            <h1 className="font-bold bg-clip-text text-4xl md:text-5xl lg:text-6xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-[#ff6bff] to-[#00ffff]  tracking-wider drop-shadow-[0_0_4px_rgba(139,92,246,0.6)]">  {/* Tracking-wider buat spasiin huruf, kurangin glow ke 4px & opacity 0.6 */}
+          <div className="pixel-border-large mx-auto relative z-0">
+            <h1 className="font-bold bg-clip-text text-4xl md:text-5xl lg:text-6xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-[#ff6bff] to-[#00ffff] tracking-wider drop-shadow-[0_0_4px_rgba(139,92,246,0.6)]">
               CRAZY
             </h1>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff6bff] to-[#00ffff]  relative z-10">  {/* Tambah z-10 biar h2 di atas kalau ada overlap */}
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff6bff] to-[#00ffff] relative z-10">
               RACE
             </h2>
           </div>
-
-
 
           {/* Subtitle dengan pixel border */}
           <div
             className="pixel-border-small inline-block"
             style={{
-              border: '2px solid #ff6bff',  // Ubah warna & ketebalan border
-              boxShadow: '0 0 10px #ff6bff, 0 0 20px #ff6bff',  // Glow neon multi-layer
-              borderRadius: '4px'  // Opsional buat rounded
+              border: '2px solid #ff6bff',
+              boxShadow: '0 0 10px #ff6bff, 0 0 20px #ff6bff',
+              borderRadius: '4px'
             }}
           >
             <p className="text-sm md:text-base px-4 py-2 bg-[#1a0a2a] text-white">
@@ -553,11 +621,8 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Action Cards */}
-        <div className="
-        grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-4xl w-full px-4
-        grid-rows-none sm:grid-flow-row grid-flow-dense
-        max-sm:[grid-template-areas:'join'_'host']">
+        {/* Action Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-4xl w-full px-4 grid-rows-none sm:grid-flow-row grid-flow-dense max-sm:[grid-template-areas:'join'_'host']">
           {/* Host Game Card */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
@@ -566,7 +631,6 @@ export default function HomePage() {
             whileHover={{ scale: 1.02 }}
             className="group max-sm:[grid-area:host]"
           >
-
             <Card className="bg-[#1a0a2a]/70 border-[#00ffff]/70 hover:border-[#00ffff] transition-all duration-300 sm:h-full shadow-[0_0_15px_rgba(255,107,255,0.3)] pixel-card">
               <CardHeader className="text-center">
                 <motion.div
@@ -584,17 +648,15 @@ export default function HomePage() {
               </CardHeader>
               <CardContent>
                 <Link href="/host">
-                  <Button className="w-full bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white ] focus:ring-[#00ffff]/30 transition-all duration-200 ">
+                  <Button className="w-full bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white focus:ring-[#00ffff]/30 transition-all duration-200">
                     Create Room
                   </Button>
                 </Link>
-
               </CardContent>
             </Card>
-
           </motion.div>
-
-          {/* Join Race Card */}
+          
+          {/* Join Race / Tryout Card */}
           <motion.div
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
@@ -608,15 +670,15 @@ export default function HomePage() {
                 <div className="flex justify-center space-x-0 bg-[#1a0a2a]/50 rounded-xl p-1 mb-4">
                   <button
                     onClick={() => setActiveTab('join')}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${activeTab === 'join'
-                      ? 'bg-[#00ffff] text-black shadow-[0_0_10px_rgba(0,255,255,0.5)]'
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${activeTab === 'join' 
+                      ? 'bg-[#00ffff] text-black shadow-[0_0_10px_rgba(0,255,255,0.5)]' 
                       : 'text-[#00ffff] hover:bg-[#00ffff]/20'}`}
                   >
                     JOIN
                   </button>
                   <button
                     onClick={() => setActiveTab('tryout')}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${activeTab === 'tryout'
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${activeTab === 'tryout' 
                       ? 'bg-[#ff6bff] text-black shadow-[0_0_10px_rgba(255,107,255,0.5)]'
                       : 'text-[#ff6bff] hover:bg-[#ff6bff]/20'}`}
                   >
@@ -630,27 +692,25 @@ export default function HomePage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
-                  className={`w-16 h-16 border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ${activeTab === 'join'
-                      ? 'bg-gradient-to-br from-[#00ffff] to-[#1a0a2a] group-hover:shadow-[0_0_15px_rgba(0,255,255,0.7)]'
+                  className={`w-16 h-16 border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ${
+                    activeTab === 'join' 
+                      ? 'bg-gradient-to-br from-[#00ffff] to-[#1a0a2a] group-hover:shadow-[0_0_15px_rgba(0,255,255,0.7)]' 
                       : 'bg-gradient-to-br from-[#ff6bff] to-[#1a0a2a] group-hover:shadow-[0_0_15px_rgba(255,107,255,0.7)]'
-                    }`}
+                  }`}
                   whileHover={{ rotate: activeTab === 'join' ? -5 : 5 }}
                 >
-                  {activeTab === 'join' ? (
-                    <Users className="w-8 h-8 text-white" />
-                  ) : (
-                    // <Zap className="w-8 h-8 text-white" />
-                    <Users className="w-8 h-8 text-white" />
-                  )}
+                  <Users className="w-8 h-8 text-white" />
                 </motion.div>
-                <CardTitle className={`text-xl font-bold transition-all duration-300 ${activeTab === 'join' ? 'text-[#00ffff] glow-cyan' : 'text-[#ff6bff] glow-pink'
-                  } pixel-text`}>
+                <CardTitle className={`text-xl font-bold transition-all duration-300 ${
+                  activeTab === 'join' ? 'text-[#00ffff] glow-cyan' : 'text-[#ff6bff] glow-pink'
+                } pixel-text`}>
                   {activeTab === 'join' ? 'JOIN RACE' : 'SOLO TRYOUT'}
                 </CardTitle>
-                <CardDescription className={`text-sm transition-all duration-300 pixel-text ${activeTab === 'join' ? 'text-[#00ffff]/80 glow-cyan-subtle' : 'text-[#ff6bff]/80 glow-pink-subtle'
-                  }`}>
-                  {activeTab === 'join'
-                    ? 'Enter a code to join an existing race'
+                <CardDescription className={`text-sm transition-all duration-300 pixel-text ${
+                  activeTab === 'join' ? 'text-[#00ffff]/80 glow-cyan-subtle' : 'text-[#ff6bff]/80 glow-pink-subtle'
+                }`}>
+                  {activeTab === 'join' 
+                    ? 'Enter a code to join an existing race' 
                     : 'Start a practice session on your own'
                   }
                 </CardDescription>
@@ -659,17 +719,19 @@ export default function HomePage() {
               <CardContent className="space-y-2">
                 {activeTab === 'join' ? (
                   <>
+                    {/* Room Code Input */}
                     <Input
                       placeholder="Room Code"
                       value={roomCode}
                       maxLength={6}
                       onChange={(e) => {
-                        const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-                        setRoomCode(value);
+                        const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()
+                        setRoomCode(value)
                       }}
                       className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
                       aria-label="Room Code"
                     />
+                    {/* Nickname Input dengan generate button */}
                     <div className="relative">
                       <Input
                         placeholder="Nickname"
@@ -690,6 +752,7 @@ export default function HomePage() {
                     </div>
                   </>
                 ) : (
+                  /* Tryout Nickname Input (hanya nickname) */
                   <div className="relative">
                     <Input
                       placeholder="Nickname"
@@ -711,15 +774,20 @@ export default function HomePage() {
                 )}
               </CardContent>
 
+              {/* Action Button (Join atau Tryout) */}
               <CardFooter>
                 <Button
                   onClick={activeTab === 'join' ? handleJoin : handleTryout}
-                  className={`w-full transition-all duration-300 ease-in-out pixel-button-large retro-button ${activeTab === 'join'
-                      ? `bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white border-[#0070f3]/80 hover:border-[#0ea5e9]/80 glow-cyan cursor-pointer`  // Selalu cursor-pointer, gak ada opacity conditional
-                      : `bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] hover:to-[#ffb3ff] text-white border-[#ff6bff]/80 hover:border-[#ff8aff]/80 glow-pink cursor-pointer`  // Sama untuk tryout
-                    }`}
+                  disabled={joining}
+                  className={`w-full transition-all duration-300 ease-in-out pixel-button-large retro-button ${
+                    joining 
+                      ? 'opacity-50 cursor-not-allowed'
+                      : activeTab === 'join' 
+                        ? `bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white border-[#0070f3]/80 hover:border-[#0ea5e9]/80 glow-cyan cursor-pointer`
+                        : `bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] hover:to-[#ffb3ff] text-white border-[#ff6bff]/80 hover:border-[#ff8aff]/80 glow-pink cursor-pointer`
+                  }`}
                 >
-                  {activeTab === 'join' ? 'JOIN' : 'TRYOUT'}
+                  {joining ? 'JOINING...' : activeTab === 'join' ? 'JOIN' : 'TRYOUT'}
                 </Button>
               </CardFooter>
             </Card>
