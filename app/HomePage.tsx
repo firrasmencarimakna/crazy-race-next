@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
-import { Flag, Volume2, VolumeX, Settings, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight, HelpCircle } from "lucide-react"
+import { Flag, Volume2, VolumeX, Settings, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight, HelpCircle, User } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -82,13 +82,13 @@ const alertAudioRef = useRef<HTMLAudioElement>(null);
   }, [])
 
   //menambahkan fungsi simpan di local storage 
-//   useEffect(() => {
-//   const savedTryoutNickname = localStorage.getItem('tryout_nickname');
-//   if (savedTryoutNickname) {
-//     setNickname(savedTryoutNickname); // Load nickname untuk tryout
-//     setActiveTab('tryout'); // Opsional: default ke tab tryout jika ada saved
-//   }
-// }, []);
+  //   useEffect(() => {
+  //   const savedTryoutNickname = localStorage.getItem('tryout_nickname');
+  //   if (savedTryoutNickname) {
+  //     setNickname(savedTryoutNickname); // Load nickname untuk tryout
+  //     setActiveTab('tryout'); // Opsional: default ke tab tryout jika ada saved
+  //   }
+  // }, []);
 
   useEffect(() => {
     const code = searchParams.get("code")
@@ -215,12 +215,12 @@ const handleJoin = async () => {
   }
 
   //menambahkan fungsi handleTryout
-const handleTryout = () => {
-  if (!nickname || joining) return; // Validasi nickname
-  localStorage.setItem('tryout_nickname', nickname); // Simpan khusus untuk tryout (solo, beda key dari join)
-  localStorage.setItem('tryout_mode', 'solo'); // Opsional: tandai mode solo
-  router.push('/tryout'); // Route ke halaman tryout
-};
+  const handleTryout = () => {
+    if (!nickname || joining) return; // Validasi nickname
+    localStorage.setItem('tryout_nickname', nickname); // Simpan khusus untuk tryout (solo, beda key dari join)
+    localStorage.setItem('tryout_mode', 'solo'); // Opsional: tandai mode solo
+    router.push('/tryout'); // Route ke halaman tryout
+  };
 
   return (
     <div className="min-h-[100dvh] w-full relative overflow-hidden pixel-font p-2">
@@ -243,6 +243,9 @@ const handleTryout = () => {
         style={{ objectPosition: 'center' }}  // Ganti bg-center
       />
 
+      <h1 className="absolute top-6 md:top-4 left-4 w-42 h-10 md:w-100 md:h-16">
+        <Image src="/gameforsmartlogo.webp" alt="Gameforsmart Logo" width="256" height="0" />
+      </h1>
       {/* Audio Alert untuk gas.mp3 */}
         <audio
           ref={alertAudioRef}
@@ -481,8 +484,8 @@ const handleTryout = () => {
                       key={index}
                       onClick={() => goToPage(index)}
                       className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentPage
-                          ? 'bg-[#a100ff] shadow-md shadow-[#a100ff]/50 scale-110'
-                          : 'bg-white/30 hover:bg-white/50'
+                        ? 'bg-[#a100ff] shadow-md shadow-[#a100ff]/50 scale-110'
+                        : 'bg-white/30 hover:bg-white/50'
                         }`}
                     />
                   ))}
@@ -581,14 +584,14 @@ const handleTryout = () => {
                 </CardHeader>
                 <CardContent>
                 <Link href="/host">
-                <Button className="w-full bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white ] focus:ring-[#00ffff]/30 transition-all duration-200 ">
-                  Create Room
-                </Button>
+                  <Button className="w-full bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white ] focus:ring-[#00ffff]/30 transition-all duration-200 ">
+                    Create Room
+                  </Button>
                 </Link>
-   
-                </CardContent>
-              </Card>
-        
+
+              </CardContent>
+            </Card>
+
           </motion.div>
 
           {/* Join Race Card */}

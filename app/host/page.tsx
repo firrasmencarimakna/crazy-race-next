@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import LoadingRetro from "@/components/loadingRetro"
+import Image from "next/image"
 
 // List of background GIFs in filename order
 const backgroundGifs = [
@@ -187,8 +188,22 @@ export default function QuestionListPage() {
         aria-label="Back to Home"
         onClick={() => router.push('/')}
       >
-          <ArrowLeft size={20} className="text-white" />
+        <ArrowLeft size={20} className="text-white" />
       </motion.button>
+
+      <h1 className="absolute top-5 right-20 hidden md:block">
+        <Image
+          src="/gameforsmartlogo.webp"
+          alt="Gameforsmart Logo"
+          width={256}
+          height={0}
+        />
+      </h1>
+
+      <h1 className="absolute top-6 left-20 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">
+        Crazy Race
+      </h1>
+
 
       {/* Burger Menu Button - Fixed Top Right */}
       <motion.button
@@ -240,7 +255,7 @@ export default function QuestionListPage() {
             </div>
 
             {/* Settings Button */}
-            <button 
+            <button
               className="w-full p-2 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded text-center"
               aria-label="Settings"
             >
@@ -259,14 +274,14 @@ export default function QuestionListPage() {
 
       <div className="relative z-10 container mx-auto px-6 py-8 max-w-6xl">
         {/* Title */}
-        <div className="text-center mb-12">
+        <div className="text-center m-7">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="pixel-border-large inline-block p-6"
           >
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#00ffff] pixel-text glow-cyan">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#ffefff] pixel-text glow-pink">
               Select Quiz
             </h1>
           </motion.div>

@@ -12,6 +12,7 @@ import { useRouter, useParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
 import LoadingRetro from "@/components/loadingRetro"
+import Image from "next/image"
 
 // List of background GIFs (same as QuestionListPage for consistency)
 const backgroundGifs = [
@@ -143,7 +144,7 @@ export default function HostSettingsPage() {
     const shuffled = [...array]
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
-      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+        ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
     }
     return shuffled
   }
@@ -205,8 +206,21 @@ export default function HostSettingsPage() {
         aria-label="Back to Host"
         onClick={() => router.push('/host')}
       >
-          <ArrowLeft size={20} className="text-white" />
+        <ArrowLeft size={20} className="text-white" />
       </motion.button>
+
+      <h1 className="absolute top-5 right-20 hidden md:block">
+        <Image
+          src="/gameforsmartlogo.webp"
+          alt="Gameforsmart Logo"
+          width={256}
+          height={0}
+        />
+      </h1>
+
+      <h1 className="absolute top-6 left-20 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">
+        Crazy Race
+      </h1>
 
       {/* Burger Menu Button - Fixed Top Right */}
       <motion.button
@@ -258,7 +272,7 @@ export default function HostSettingsPage() {
             </div>
 
             {/* Settings Button */}
-            <button 
+            <button
               className="w-full p-2 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded text-center"
               aria-label="Settings"
             >
@@ -281,9 +295,9 @@ export default function HostSettingsPage() {
           transition={{ duration: 0.5 }}
           className="text-center mb-8"
         >
-          <div className="p-4 sm:p-6">
-            <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-[#00ffff] pixel-text glow-cyan">
-              Game Settings
+          <div className="p-4 sm:p-6 sm:mt-7">
+            <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-[#ffefff] pixel-text glow-pink">
+              Settings
             </h1>
           </div>
         </motion.div>
@@ -300,7 +314,7 @@ export default function HostSettingsPage() {
           >
             ERROR: QUIZ NOT FOUND
           </motion.p>
-        ) : ( 
+        ) : (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

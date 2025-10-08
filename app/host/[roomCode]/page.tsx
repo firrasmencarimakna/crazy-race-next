@@ -10,11 +10,12 @@ import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
 import QRCode from "react-qr-code";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogOverlay, DialogTitle } from "@/components/ui/dialog"
 import { calculateCountdown } from "@/utils/countdown"
 import LoadingRetro from "@/components/loadingRetro"
 import { Slider } from "@/components/ui/slider"
 import { breakOnCaps } from "@/utils/game"
+import Image from "next/image"
 
 // List of background GIFs (same as previous pages for consistency)
 const backgroundGifs = [
@@ -50,6 +51,17 @@ export default function HostRoomPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
   const audioRef = useRef<HTMLAudioElement>(null)
 
+  const channel = supabase.channel('game_room');
+
+  channel.on('presence', { event: 'sync' }, () => {
+    console.log('Presence synced');
+  });
+
+  channel.subscribe((status) => {
+    console.log('Realtime status:', status);
+  });
+
+
   // Fetch room details and set up real-time subscriptions
   useEffect(() => {
     const fetchRoomAndPlayers = async () => {
@@ -69,12 +81,6 @@ export default function HostRoomPage() {
       setRoom(roomData)
       setLoading(false)
 
-      // Jika room sudah dalam status countdown, sync countdown
-      if (roomData.status === 'countdown' && roomData.countdown_start) {
-        const remaining = calculateCountdown(roomData.countdown_start, 10);
-        setCountdown(remaining);
-      }
-
       // Fetch initial players
       const { data: playersData, error: playersError } = await supabase
         .from("players")
@@ -88,12 +94,13 @@ export default function HostRoomPage() {
       }
 
       // Set up real-time subscription for players
+      // Di dalam fetchRoomAndPlayers, ganti subscription players:
       const playersSubscription = supabase
         .channel(`host-players-${roomCode}`)
         .on(
           'postgres_changes',
           {
-            event: '*',
+            event: '*', // '*' cover INSERT, UPDATE, DELETE
             schema: 'public',
             table: 'players',
             filter: `room_id=eq.${roomData.id}`,
@@ -105,13 +112,29 @@ export default function HostRoomPage() {
                 if (exists) return prev;
                 return [...prev, payload.new];
               });
-            }
-            if (payload.eventType === 'DELETE') {
+            } else if (payload.eventType === 'UPDATE') {
+              // Tambah ini: Update existing player (e.g., car/nickname change)
+              setPlayers((prev) =>
+                prev.map((p) => p.id === payload.new.id ? { ...p, ...payload.new } : p)
+              );
+            } else if (payload.eventType === 'DELETE') {
               setPlayers((prev) => prev.filter((p) => p.id !== payload.old.id));
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => { // Tambah callback status
+          console.log('Players sub status:', status);
+          if (status === 'SUBSCRIBED') {
+            console.log('Players subscription active');
+          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            console.warn('Players sub dropped, retrying in 3s...');
+            // Auto-retry: Re-subscribe setelah delay
+            setTimeout(() => {
+              // Re-init subscription (call fetchRoomAndPlayers ulang atau recreate channel)
+              fetchRoomAndPlayers(); // Atau logic recreate spesifik
+            }, 3000);
+          }
+        });
 
       // Di useEffect fetchRoomAndPlayers, perbaiki room subscription:
       const roomSubscription = supabase
@@ -129,14 +152,6 @@ export default function HostRoomPage() {
             console.log('Host received room update:', newRoomData);
 
             setRoom(newRoomData);
-
-            // Jika status berubah menjadi countdown, trigger countdown
-            if (newRoomData.status === 'countdown' && newRoomData.countdown_start) {
-              console.log('Host detected countdown start:', newRoomData.countdown_start);
-              const remaining = calculateCountdown(newRoomData.countdown_start, 10);
-              console.log('Setting host countdown to:', remaining);
-              setCountdown(remaining);
-            }
           }
         )
         .subscribe();
@@ -159,70 +174,65 @@ export default function HostRoomPage() {
         hasCountdownStart: !!room?.countdown_start,
         status: room?.status
       });
+      setCountdown(0);
       return;
     }
 
-    console.log('Starting countdown sync for host:', room.countdown_start);
+    console.log('Starting wall-time countdown sync for host:', room.countdown_start);
 
-    const syncAndStartCountdown = () => {
-      const remaining = calculateCountdown(room.countdown_start, 10);
-      console.log('Host countdown remaining:', remaining);
+    const countdownStartTime = new Date(room.countdown_start).getTime();
+    const totalCountdown = 10;
 
+    const updateCountdown = async () => {
+      const now = Date.now();
+      const elapsed = Math.floor((now - countdownStartTime) / 1000);
+      const remaining = Math.max(0, totalCountdown - elapsed);
+
+      console.log('Wall-time remaining:', remaining);
       setCountdown(remaining);
 
       if (remaining <= 0) {
-        console.log('Host countdown finished, moving to game');
-        // Countdown sudah selesai, langsung pindah ke game
-        supabase.from("game_rooms")
-          .update({
-            status: "playing",
-            start: new Date().toISOString(),
-            countdown_start: null
-          })
-          .eq("room_code", roomCode)
-          .then(() => {
-            console.log('Host updated to playing status');
-            router.push(`/host/${roomCode}/game`);
-          });
-        return;
-      }
-
-      // Start countdown timer
-      const timer = setInterval(() => {
-        setCountdown(prev => {
-          const newCountdown = prev - 1;
-          console.log('Host countdown tick:', newCountdown);
-
-          if (newCountdown <= 0) {
-            clearInterval(timer);
-            console.log('Host countdown completed');
-            // Update status ke playing dan redirect
-            supabase.from("game_rooms")
+        console.log('Countdown finished via wall-time, moving to game');
+        clearInterval(countdownInterval);
+        // Delay 500ms biar player sync
+        setTimeout(async () => {
+          try {
+            const { error } = await supabase
+              .from("game_rooms")
               .update({
                 status: "playing",
                 start: new Date().toISOString(),
                 countdown_start: null
               })
-              .eq("room_code", roomCode)
-              .then(() => {
-                console.log('Host updated to playing status after countdown');
-                setLoading(true)
-                router.push(`/host/${roomCode}/game`);
-              });
-            return 0;
-          }
-          return newCountdown;
-        });
-      }, 1000);
+              .eq("room_code", roomCode);
 
-      return () => {
-        console.log('Cleaning up host countdown timer');
-        clearInterval(timer);
-      };
+            if (error) {
+              console.error('End countdown error:', error);
+            } else {
+              console.log('Host updated to playing status');
+              setLoading(true);
+              router.push(`/host/${roomCode}/game`);
+            }
+          } catch (err: unknown) {
+            console.error('End countdown error:', err);
+          }
+        }, 500); // Delay buat player catch up
+      }
     };
 
-    const timerCleanup = syncAndStartCountdown();
-    return timerCleanup;
+    // Initial update
+    updateCountdown();
+
+    // Interval setiap detik
+    const countdownInterval = setInterval(() => {
+      updateCountdown();
+    }, 1000);
+
+    // Cleanup
+    return () => {
+      console.log('Cleaning up countdown interval');
+      clearInterval(countdownInterval);
+    };
   }, [room?.countdown_start, room?.status, roomCode, router]);
 
   // Inisialisasi audio: play otomatis dengan volume default
@@ -395,7 +405,7 @@ export default function HostRoomPage() {
       <div className="min-h-screen z-50 bg-[#1a0a2a] flex items-center justify-center pixel-font"> {/* pt-20 untuk ruang burger */}
         <div className="text-center">
           <motion.div
-            className="text-6xl md:text-8xl font-bold text-[#00ffff] pixel-text glow-cyan race-pulse"
+            className="text-8xl md:text-9xl lg:text-[10rem] xl:text-[12rem] leading-none font-bold text-[#00ffff] pixel-text glow-cyan race-pulse"
             animate={{ scale: [1, 1.1, 1] }}
             transition={{ repeat: Infinity, duration: 0.5 }}
           >
@@ -445,6 +455,19 @@ export default function HostRoomPage() {
       >
         <ArrowLeft size={20} className="text-white" />
       </motion.button>
+
+      <h1 className="absolute top-5 right-20 hidden md:block">
+        <Image
+          src="/gameforsmartlogo.webp"
+          alt="Gameforsmart Logo"
+          width={256}
+          height={0}
+        />
+      </h1>
+
+      <h1 className="absolute top-6 left-20 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">
+        Crazy Race
+      </h1>
 
       {/* Burger Menu Button - Fixed Top Right */}
       <motion.button
@@ -504,11 +527,11 @@ export default function HostRoomPage() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-center pb-4 sm:pb-5"
+          className="text-center pb-4"
         >
-          <div className="inline-block p-4 sm:p-6">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#00ffff] pixel-text glow-cyan">
-              Crazy Race
+          <div className="inline-block py-4 md:pt-10">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#ffefff] pixel-text glow-pink">
+              Host Room
             </h1>
           </div>
         </motion.div>
@@ -518,7 +541,7 @@ export default function HostRoomPage() {
           <Card className="bg-[#1a0a2a]/60 border-2 sm:border-3 border-[#ff6bff]/50 pixel-card glow-pink-subtle p-4 sm:p-6 md:p-8 lg:col-span-2 order-1 lg:order-1">
             <div className="text-center space-y-3 sm:space-y-4">
               <div className="relative p-3 sm:p-4 md:p-5 bg-[#0a0a0f] rounded-lg">
-                <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#00ffff] pixel-text glow-cyan">{roomCode}</div>  
+                <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#00ffff] pixel-text glow-cyan">{roomCode}</div>
                 <Button
                   onClick={copyRoomCode}
                   className="absolute top-1 right-1 bg-transparent pixel-button hover:bg-gray-500/20 transition-colors p-1 sm:p-2"
@@ -547,7 +570,8 @@ export default function HostRoomPage() {
 
                 {/* Dialog */}
                 <Dialog open={open} onOpenChange={setOpen}>
-                  <DialogContent className="bg-[#0a0a0f] border-2 border-[#6a4c93] rounded-lg max-w-[100vw] sm:max-w-3xl p-4 sm:p-6">
+                  <DialogOverlay className="bg-[#1a0a2a]/80 backdrop-blur-sm fixed inset-0 z-50" />
+                  <DialogContent className=" backdrop-blur-sm border-none rounded-lg max-w-[100vw] sm:max-w-3xl p-4 sm:p-6">
                     <div className="flex justify-center">
                       <QRCode
                         value={joinLink}
@@ -569,6 +593,14 @@ export default function HostRoomPage() {
                   {copiedJoin ? <Check className="h-3 w-3 sm:h-4 sm:w-4 text-green-400" /> : <Copy className="h-3 w-3 sm:h-4 sm:w-4 text-white" />}
                 </Button>
               </div>
+              <Button
+                onClick={startGame}
+                disabled={players.length === 0 || gameStarted}
+                className="text-base sm:text-lg py-3 sm:py-4 bg-[#00ffff] border-2 sm:border-3 border-white pixel-button hover:bg-[#33ffff] glow-cyan text-black font-bold disabled:bg-[#6a4c93] disabled:cursor-not-allowed w-full sm:w-auto"
+              >
+                <Play className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                Start
+              </Button>
             </div>
           </Card>
 
@@ -578,14 +610,6 @@ export default function HostRoomPage() {
               <h2 className="text-xl sm:text-2xl font-bold text-[#00ffff] pixel-text glow-cyan text-center sm:text-left">
                 {players.length} Player{players.length <= 1 ? "" : "s"}
               </h2>
-              <Button
-                onClick={startGame}
-                disabled={players.length === 0 || gameStarted}
-                className="text-base sm:text-lg py-3 sm:py-4 bg-[#00ffff] border-2 sm:border-3 border-white pixel-button hover:bg-[#33ffff] glow-cyan text-black font-bold disabled:bg-[#6a4c93] disabled:cursor-not-allowed w-full sm:w-auto"
-              >
-                <Play className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                Start Game
-              </Button>
             </div>
 
             <div className="space-y-4 mb-6 sm:mb-8">
@@ -773,12 +797,6 @@ export default function HostRoomPage() {
           }
           .pixel-card {
             margin-bottom: 1rem;
-          }
-        }
-        
-        @media (max-width: 480px) {
-          .pixel-text {
-            font-size: 0.75rem;
           }
         }
       `}</style>

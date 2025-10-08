@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
 import { sortPlayersByProgress, formatTime, calculateRemainingTime } from "@/utils/game"
 import LoadingRetro from "@/components/loadingRetro"
+import Image from "next/image"
 
 // Background GIFs
 const backgroundGifs = [
@@ -70,7 +71,7 @@ export default function HostMonitorPage() {
       // Hitung total questions dan duration
       const questions = room.questions || [];
       setTotalQuestions(questions.length);
-      
+
       const settings = typeof room.settings === 'string' ? JSON.parse(room.settings) : room.settings;
       const duration = settings?.duration || 300;
       setGameDuration(duration);
@@ -110,11 +111,11 @@ export default function HostMonitorPage() {
       .channel(`host-monitor-${roomId}`)
       .on(
         "postgres_changes",
-        { 
-          event: "UPDATE", 
-          schema: "public", 
-          table: "players", 
-          filter: `room_id=eq.${roomId}` 
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "players",
+          filter: `room_id=eq.${roomId}`
         },
         (payload) => {
           setPlayers((prev) => {
@@ -140,7 +141,7 @@ export default function HostMonitorPage() {
         (payload) => {
           const newRoom = payload.new;
           setRoom(newRoom);
-          
+
           // Update timer jika status berubah
           if (newRoom.status === 'finished') {
             setGameTimeRemaining(0);
@@ -169,7 +170,7 @@ export default function HostMonitorPage() {
       const now = Date.now();
       const elapsed = Math.floor((now - gameStartTime) / 1000);
       const remaining = Math.max(0, gameDuration - elapsed);
-      
+
       console.log('Host monitor remaining:', remaining); // Optional log buat debug
       setGameTimeRemaining(remaining);
 
@@ -239,12 +240,12 @@ export default function HostMonitorPage() {
 
   const endGame = async () => {
     const endTime = new Date().toISOString();
-    
+
     const { error } = await supabase
       .from("game_rooms")
-      .update({ 
-        status: "finished", 
-        end: endTime 
+      .update({
+        status: "finished",
+        end: endTime
       })
       .eq("id", roomId);
 
@@ -323,6 +324,19 @@ export default function HostMonitorPage() {
         {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
       </motion.button>
 
+      <h1 className="absolute top-5 right-20 hidden md:block">
+        <Image
+          src="/gameforsmartlogo.webp"
+          alt="Gameforsmart Logo"
+          width={256}
+          height={0}
+        />
+      </h1>
+
+      <h1 className="absolute top-7 left-10 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">
+        Crazy Race
+      </h1>
+
       {/* Menu Dropdown - Muncul saat burger diklik, dari kanan */}
       {isMenuOpen && (
         <motion.div
@@ -367,18 +381,18 @@ export default function HostMonitorPage() {
         {/* Header dengan Timer dan Controls */}
         <div className="flex flex-col items-center text-center">
           <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center pb-4 sm:pb-5"
-        >
-          <div className="inline-block p-4 sm:p-6">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#00ffff] pixel-text glow-cyan">
-              Crazy Race
-            </h1>
-          </div>
-        </motion.div>
-          
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-center pb-4 sm:pb-5"
+          >
+            <div className="inline-block p-4 sm:p-6">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#00ffff] pixel-text glow-cyan">
+                Monitoring
+              </h1>
+            </div>
+          </motion.div>
+
           {/* Game Timer dan Controls */}
           <Card className="bg-[#1a0a2a]/60 border-[#ff6bff]/50 pixel-card px-6 py-4 mb-4 w-full ">
             <div className="flex items-center justify-between space-x-6">
@@ -390,9 +404,9 @@ export default function HostMonitorPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center space-x-4">
-                <Button 
+                <Button
                   onClick={endGame}
                   className="bg-red-500 hover:bg-red-600 pixel-button glow-red flex items-center space-x-2"
                 >
@@ -427,23 +441,22 @@ export default function HostMonitorPage() {
                       initial={{ opacity: 0, scale: 0.8, y: 20 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.8, y: -20 }}
-                      transition={{ 
-                        type: "spring", 
-                        stiffness: 300, 
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
                         damping: 30,
-                        duration: 0.6 
+                        duration: 0.6
                       }}
                       whileHover={{ scale: 1.05 }}
                       className={`group ${currentlyAnswering ? "glow-cyan animate-neon-pulse" : "glow-pink-subtle"}`}
                     >
                       <Card
-                        className={`p-3 bg-[#1a0a2a]/50 border-2 border-double transition-all duration-300 h-full gap-2 ${
-                          currentlyAnswering 
-                            ? "border-[#00ffff]/70 bg-[#00ffff]/10" 
+                        className={`p-3 bg-[#1a0a2a]/50 border-2 border-double transition-all duration-300 h-full gap-2 ${currentlyAnswering
+                            ? "border-[#00ffff]/70 bg-[#00ffff]/10"
                             : isCompleted
-                            ? "border-[#00ff00]/70 bg-[#00ff00]/10"
-                            : "border-[#ff6bff]/70"
-                        }`}
+                              ? "border-[#00ff00]/70 bg-[#00ff00]/10"
+                              : "border-[#ff6bff]/70"
+                          }`}
                       >
                         {/* Rank Badge */}
                         <div className="flex items-center">
@@ -460,15 +473,14 @@ export default function HostMonitorPage() {
                           <h3 className="font-bold text-white pixel-text text-sm leading-tight glow-text mb-2">
                             {player.nickname}
                           </h3>
-                          
+
                           {/* Progress Bar */}
                           <Progress
                             value={(progress / totalQuestions) * 100}
-                            className={`h-2 bg-[#1a0a2a]/50 border border-[#00ffff]/30 mb-2 ${
-                              isCompleted ? "bg-green-500/20" : ""
-                            }`}
+                            className={`h-2 bg-[#1a0a2a]/50 border border-[#00ffff]/30 mb-2 ${isCompleted ? "bg-green-500/20" : ""
+                              }`}
                           />
-                          
+
                           {/* Status */}
                           <div className="text-xs text-[#00ffff] pixel-text">
                             {progress}/{totalQuestions}
