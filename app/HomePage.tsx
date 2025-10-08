@@ -20,9 +20,9 @@ export default function HomePage() {
   const pathname = usePathname()
 
   // State untuk modal alert
-const [showAlert, setShowAlert] = useState(false);
-// Ref untuk audio alert (suara gas.mp3)  
-const alertAudioRef = useRef<HTMLAudioElement>(null);
+  const [showAlert, setShowAlert] = useState(false);
+  // Ref untuk audio alert (suara gas.mp3)  
+  const alertAudioRef = useRef<HTMLAudioElement>(null);
 
   const [activeTab, setActiveTab] = useState<'join' | 'tryout'>('join');
 
@@ -128,67 +128,67 @@ const alertAudioRef = useRef<HTMLAudioElement>(null);
       setIsMuted(false) // Auto unmute jika volume dinaikkan
     }
   }
-const handleJoin = async () => {
-  // Check kondisi: roomCode harus tepat 6 char, nickname gak kosong, dan gak lagi joining
-  if (roomCode.length !== 6 || !nickname.trim() || joining) {  // .trim() biar spasi kosong dianggap invalid
-    console.log("Trigger alert: Input belum lengkap");  // Debug log, bisa hapus nanti
-    setShowAlert(true);  // Show modal alert
-    if (alertAudioRef.current && !isMuted) {  // Play suara kalau gak muted
-      alertAudioRef.current.volume = volume / 100;
-      alertAudioRef.current.currentTime = 0;  // Reset audio biar play dari awal tiap kali
-      alertAudioRef.current.play().catch((e) => console.log("Audio error:", e));
+  const handleJoin = async () => {
+    // Check kondisi: roomCode harus tepat 6 char, nickname gak kosong, dan gak lagi joining
+    if (roomCode.length !== 6 || !nickname.trim() || joining) {  // .trim() biar spasi kosong dianggap invalid
+      console.log("Trigger alert: Input belum lengkap");  // Debug log, bisa hapus nanti
+      setShowAlert(true);  // Show modal alert
+      if (alertAudioRef.current && !isMuted) {  // Play suara kalau gak muted
+        alertAudioRef.current.volume = volume / 100;
+        alertAudioRef.current.currentTime = 0;  // Reset audio biar play dari awal tiap kali
+        alertAudioRef.current.play().catch((e) => console.log("Audio error:", e));
+      }
+      return;  // Stop, jangan lanjut join
     }
-    return;  // Stop, jangan lanjut join
-  }
-  
-  setJoining(true);  // Lanjut kalau valid
 
-  try {
-    // Verify room exists
-    const { data: roomData, error: roomError } = await supabase
-      .from("game_rooms")
-      .select("id, status")
-      .eq("room_code", roomCode)
-      .single()
+    setJoining(true);  // Lanjut kalau valid
 
-    if (roomError || !roomData) {
-      console.error("Error: Room not found", roomError)
+    try {
+      // Verify room exists
+      const { data: roomData, error: roomError } = await supabase
+        .from("game_rooms")
+        .select("id, status")
+        .eq("room_code", roomCode)
+        .single()
+
+      if (roomError || !roomData) {
+        console.error("Error: Room not found", roomError)
+        setJoining(false)
+        return
+      }
+
+      // Check if room is in 'waiting' status
+      if (roomData.status !== "waiting") {
+        console.error("Error: Room is not accepting players")
+        setJoining(false)
+        return
+      }
+
+      // Insert player
+      const { error: playerError } = await supabase
+        .from("players")
+        .insert({
+          room_id: roomData.id,
+          nickname: nickname.trim(),  // Trim biar clean
+          car: ["red", "blue", "green", "yellow", "purple"][Math.floor(Math.random() * 5)]
+        })
+
+      if (playerError) {
+        console.error("Error joining room:", playerError)
+        setJoining(false)
+        return
+      }
+
+      // Store nickname in localStorage
+      localStorage.setItem("nickname", nickname.trim())
+
+      // Navigate to game page
+      router.push(`/join/${roomCode}`)
+    } catch (error) {
+      console.error("Unexpected error:", error)
       setJoining(false)
-      return
     }
-
-    // Check if room is in 'waiting' status
-    if (roomData.status !== "waiting") {
-      console.error("Error: Room is not accepting players")
-      setJoining(false)
-      return
-    }
-
-    // Insert player
-    const { error: playerError } = await supabase
-      .from("players")
-      .insert({
-        room_id: roomData.id,
-        nickname: nickname.trim(),  // Trim biar clean
-        car: ["red", "blue", "green", "yellow", "purple"][Math.floor(Math.random() * 5)]
-      })
-
-    if (playerError) {
-      console.error("Error joining room:", playerError)
-      setJoining(false)
-      return
-    }
-
-    // Store nickname in localStorage
-    localStorage.setItem("nickname", nickname.trim())
-
-    // Navigate to game page
-    router.push(`/join/${roomCode}`)
-  } catch (error) {
-    console.error("Unexpected error:", error)
-    setJoining(false)
-  }
-};
+  };
 
   const isLoaded = usePreloader()
   if (!isLoaded) return <LoadingRetro />
@@ -243,79 +243,79 @@ const handleJoin = async () => {
         style={{ objectPosition: 'center' }}  // Ganti bg-center
       />
 
-      <h1 className="absolute top-6 md:top-4 left-4 w-42 h-10 md:w-100 md:h-16">
+      <h1 className="absolute top-6 md:top-4 left-4 w-42 md:w-50 lg:w-100">
         <Image src="/gameforsmartlogo.webp" alt="Gameforsmart Logo" width="256" height="0" />
       </h1>
       {/* Audio Alert untuk gas.mp3 */}
-        <audio
-          ref={alertAudioRef}
-          src="/assets/music/gas.mp3"  // Ganti path kalau beda
-          preload="auto"
-          className="hidden"
-        />
+      <audio
+        ref={alertAudioRef}
+        src="/assets/music/gas.mp3"  // Ganti path kalau beda
+        preload="auto"
+        className="hidden"
+      />
 
 
-{/* Modal Alert untuk Kondisi Belum Terpenuhi */}
-{showAlert && (
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    className="fixed inset-0 z-50 flex items-center justify-center p-4"
-    onClick={() => setShowAlert(false)}  // Close saat klik luar
-  >
-    {/* Backdrop */}
-    <motion.div
-      className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-      onClick={(e) => e.stopPropagation()}  // Jangan close saat klik modal
-    />
-    
-    {/* Modal Content */}
-    <motion.div
-      initial={{ scale: 0.9, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      exit={{ scale: 0.9, opacity: 0 }}
-      className="relative w-full max-w-md max-h-[70vh] overflow-hidden bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-2xl shadow-2xl shadow-[#ff6bff]/40 backdrop-blur-md pixel-card text-center p-6"
-      onClick={(e) => e.stopPropagation()}
-    >
-      {/* GIF Car */}
-      <div className="mb-4">
-        <Image
-          src="/assets/car/car3.webp"  // Ganti path kalau beda
-          alt="Car alert animation"
-          width={200}
-          height={150}
-          className="mx-auto rounded-lg"
-        />
-      </div>
-      
-      {/* Teks Warning */}
-      <CardTitle className="text-xl font-bold text-[#ff6bff] mb-2 pixel-text glow-pink">
-        Oops! Belum Siap Balapan!
-      </CardTitle>
-      <CardDescription className="text-[#00ffff]/80 mb-6 pixel-text glow-cyan-subtle">
-        Isi Room Code (6 huruf) dan Nickname dulu, ya! 🚀
-      </CardDescription>
-      
-      {/* Close Button */}
-      <Button
-        onClick={() => setShowAlert(false)}
-        className="w-full bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] text-white pixel-button glow-pink"
-      >
-        Oke, Saya Isi!
-      </Button>
-      
-      {/* Close Icon */}
-      <button
-        onClick={() => setShowAlert(false)}
-        className="absolute top-3 right-3 p-2 bg-[#1a0a2a]/60 border-2 border-[#ff6bff]/50 rounded-lg text-[#00ffff] hover:bg-[#ff6bff]/20 glow-cyan-subtle"
-        aria-label="Close alert"
-      >
-        <X size={20} />
-      </button>
-    </motion.div>
-  </motion.div>
-)}
+      {/* Modal Alert untuk Kondisi Belum Terpenuhi */}
+      {showAlert && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowAlert(false)}  // Close saat klik luar
+        >
+          {/* Backdrop */}
+          <motion.div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={(e) => e.stopPropagation()}  // Jangan close saat klik modal
+          />
+
+          {/* Modal Content */}
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="relative w-full max-w-md max-h-[70vh] overflow-hidden bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-2xl shadow-2xl shadow-[#ff6bff]/40 backdrop-blur-md pixel-card text-center p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* GIF Car */}
+            <div className="mb-4">
+              <Image
+                src="/assets/car/car3.webp"  // Ganti path kalau beda
+                alt="Car alert animation"
+                width={200}
+                height={150}
+                className="mx-auto rounded-lg"
+              />
+            </div>
+
+            {/* Teks Warning */}
+            <CardTitle className="text-xl font-bold text-[#ff6bff] mb-2 pixel-text glow-pink">
+              Oops! Belum Siap Balapan!
+            </CardTitle>
+            <CardDescription className="text-[#00ffff]/80 mb-6 pixel-text glow-cyan-subtle">
+              Isi Room Code (6 huruf) dan Nickname dulu, ya! 🚀
+            </CardDescription>
+
+            {/* Close Button */}
+            <Button
+              onClick={() => setShowAlert(false)}
+              className="w-full bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] text-white pixel-button glow-pink"
+            >
+              Oke, Saya Isi!
+            </Button>
+
+            {/* Close Icon */}
+            <button
+              onClick={() => setShowAlert(false)}
+              className="absolute top-3 right-3 p-2 bg-[#1a0a2a]/60 border-2 border-[#ff6bff]/50 rounded-lg text-[#00ffff] hover:bg-[#ff6bff]/20 glow-cyan-subtle"
+              aria-label="Close alert"
+            >
+              <X size={20} />
+            </button>
+          </motion.div>
+        </motion.div>
+      )}
 
       {/* Burger Menu Button - Fixed Top Right */}
       <motion.button
@@ -566,23 +566,23 @@ const handleJoin = async () => {
             whileHover={{ scale: 1.02 }}
             className="group max-sm:[grid-area:host]"
           >
-       
-              <Card className="bg-[#1a0a2a]/70 border-[#00ffff]/70 hover:border-[#00ffff] transition-all duration-300 sm:h-full shadow-[0_0_15px_rgba(255,107,255,0.3)] pixel-card">
-                <CardHeader className="text-center">
-                  <motion.div
-                    className="w-16 h-16 bg-gradient-to-br from-[#00ffff] to-[#120512] border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-[0_0_15px_rgba(255,107,255,0.7)] transition-all duration-300"
-                    whileHover={{ rotate: 5 }}
-                  >
-                    <Flag className="w-8 h-8 text-white" />
-                  </motion.div>
-                  <CardTitle className="text-xl font-bold text-[#00ffff] pixel-text glow-pink">
-                    HOST GAME
-                  </CardTitle>
-                  <CardDescription className="text-[#00ffff]/80 text-sm pixel-text glow-pink-subtle">
-                    Create your own race and challenge others
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+
+            <Card className="bg-[#1a0a2a]/70 border-[#00ffff]/70 hover:border-[#00ffff] transition-all duration-300 sm:h-full shadow-[0_0_15px_rgba(255,107,255,0.3)] pixel-card">
+              <CardHeader className="text-center">
+                <motion.div
+                  className="w-16 h-16 bg-gradient-to-br from-[#00ffff] to-[#120512] border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-[0_0_15px_rgba(255,107,255,0.7)] transition-all duration-300"
+                  whileHover={{ rotate: 5 }}
+                >
+                  <Flag className="w-8 h-8 text-white" />
+                </motion.div>
+                <CardTitle className="text-xl font-bold text-[#00ffff] pixel-text glow-pink">
+                  HOST GAME
+                </CardTitle>
+                <CardDescription className="text-[#00ffff]/80 text-sm pixel-text glow-pink-subtle">
+                  Create your own race and challenge others
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
                 <Link href="/host">
                   <Button className="w-full bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white ] focus:ring-[#00ffff]/30 transition-all duration-200 ">
                     Create Room
@@ -595,143 +595,139 @@ const handleJoin = async () => {
           </motion.div>
 
           {/* Join Race Card */}
-<motion.div
-  initial={{ opacity: 0, x: 50 }}
-  animate={{ opacity: 1, x: 0 }}
-  transition={{ delay: 0.3, duration: 0.8 }}
-  whileHover={{ scale: 1.02 }}
-  className="group max-sm:[grid-area:join]"
->
-  <Card className="bg-[#1a0a2a]/70 border-[#00ffff]/70 hover:border-[#00ffff] transition-all duration-300 h-full shadow-[0_0_15px_rgba(0,255,255,0.3)] pixel-card">
-    {/* Tab Selector */}
-    <CardHeader className="text-center pb-2">
-      <div className="flex justify-center space-x-0 bg-[#1a0a2a]/50 rounded-xl p-1 mb-4">
-        <button
-          onClick={() => setActiveTab('join')}
-          className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${activeTab === 'join' 
-            ? 'bg-[#00ffff] text-black shadow-[0_0_10px_rgba(0,255,255,0.5)]' 
-            : 'text-[#00ffff] hover:bg-[#00ffff]/20'}`}
-        >
-          JOIN 
-        </button>
-        <button
-          onClick={() => setActiveTab('tryout')}
-          className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${activeTab === 'tryout' 
-            ? 'bg-[#ff6bff] text-black shadow-[0_0_10px_rgba(255,107,255,0.5)]' 
-            : 'text-[#ff6bff] hover:bg-[#ff6bff]/20'}`}
-        >
-           TRYOUT
-        </button>
-      </div>
-
-      {/* Icon dan Title berdasarkan tab */}
-      <motion.div
-        key={activeTab}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className={`w-16 h-16 border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ${
-          activeTab === 'join' 
-            ? 'bg-gradient-to-br from-[#00ffff] to-[#1a0a2a] group-hover:shadow-[0_0_15px_rgba(0,255,255,0.7)]' 
-            : 'bg-gradient-to-br from-[#ff6bff] to-[#1a0a2a] group-hover:shadow-[0_0_15px_rgba(255,107,255,0.7)]'
-        }`}
-        whileHover={{ rotate: activeTab === 'join' ? -5 : 5 }}
-      >
-        {activeTab === 'join' ? (
-          <Users className="w-8 h-8 text-white" />
-        ) : (
-          // <Zap className="w-8 h-8 text-white" />
-            <Users className="w-8 h-8 text-white" />
-        )}
-      </motion.div>
-      <CardTitle className={`text-xl font-bold transition-all duration-300 ${
-        activeTab === 'join' ? 'text-[#00ffff] glow-cyan' : 'text-[#ff6bff] glow-pink'
-      } pixel-text`}>
-        {activeTab === 'join' ? 'JOIN RACE' : 'SOLO TRYOUT'}
-      </CardTitle>
-      <CardDescription className={`text-sm transition-all duration-300 pixel-text ${
-        activeTab === 'join' ? 'text-[#00ffff]/80 glow-cyan-subtle' : 'text-[#ff6bff]/80 glow-pink-subtle'
-      }`}>
-        {activeTab === 'join' 
-          ? 'Enter a code to join an existing race' 
-          : 'Start a practice session on your own'
-        }
-      </CardDescription>
-    </CardHeader>
-
-    <CardContent className="space-y-2">
-      {activeTab === 'join' ? (
-        <>
-          <Input
-            placeholder="Room Code"
-            value={roomCode}
-            maxLength={6}
-            onChange={(e) => {
-              const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-              setRoomCode(value);
-            }}
-            className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
-            aria-label="Room Code"
-          />
-          <div className="relative">
-            <Input
-              placeholder="Nickname"
-              value={nickname}
-              maxLength={26}
-              onChange={(e) => setNickname(e.target.value)}
-              className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30 pr-10"
-              aria-label="Nickname"
-            />
-            <button
-              type="button"
-              onClick={() => setNickname(generateNickname())}
-              className="absolute right-2 top-1/8 text-[#00ffff] hover:bg-[#00ffff]/20 hover:border-[#00ffff] transition-all duration-200 glow-cyan-subtle"
-              aria-label="Generate Nickname"
-            >
-              <span className="text-lg">🎲</span>
-            </button>
-          </div>
-        </>
-      ) : (
-        <div className="relative">
-          <Input
-            placeholder="Nickname"
-            value={nickname}
-            maxLength={26}
-            onChange={(e) => setNickname(e.target.value)}
-            className="bg-[#1a0a2a]/50 border-[#ff6bff]/50 text-[#ff6bff] placeholder:text-[#ff6bff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#ff6bff] focus:ring-[#ff6bff]/30 pr-10"
-            aria-label="Nickname"
-          />
-          <button
-            type="button"
-            onClick={() => setNickname(generateNickname())}
-            className="absolute right-2 top-1/8 text-[#ff6bff] hover:bg-[#ff6bff]/20 hover:border-[#ff6bff] transition-all duration-200 glow-pink-subtle"
-            aria-label="Generate Nickname"
+          <motion.div
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3, duration: 0.8 }}
+            whileHover={{ scale: 1.02 }}
+            className="group max-sm:[grid-area:join]"
           >
-            <span className="text-lg">🎲</span>
-          </button>
-        </div>
-      )}
-    </CardContent>
+            <Card className="bg-[#1a0a2a]/70 border-[#00ffff]/70 hover:border-[#00ffff] transition-all duration-300 h-full shadow-[0_0_15px_rgba(0,255,255,0.3)] pixel-card">
+              {/* Tab Selector */}
+              <CardHeader className="text-center pb-2">
+                <div className="flex justify-center space-x-0 bg-[#1a0a2a]/50 rounded-xl p-1 mb-4">
+                  <button
+                    onClick={() => setActiveTab('join')}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${activeTab === 'join'
+                      ? 'bg-[#00ffff] text-black shadow-[0_0_10px_rgba(0,255,255,0.5)]'
+                      : 'text-[#00ffff] hover:bg-[#00ffff]/20'}`}
+                  >
+                    JOIN
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('tryout')}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${activeTab === 'tryout'
+                      ? 'bg-[#ff6bff] text-black shadow-[0_0_10px_rgba(255,107,255,0.5)]'
+                      : 'text-[#ff6bff] hover:bg-[#ff6bff]/20'}`}
+                  >
+                    TRYOUT
+                  </button>
+                </div>
 
-    <CardFooter>
-<Button
-  onClick={activeTab === 'join' ? handleJoin : handleTryout}
-  className={`w-full transition-all duration-300 ease-in-out pixel-button-large retro-button ${
-    activeTab === 'join' 
-      ? `bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white border-[#0070f3]/80 hover:border-[#0ea5e9]/80 glow-cyan cursor-pointer`  // Selalu cursor-pointer, gak ada opacity conditional
-      : `bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] hover:to-[#ffb3ff] text-white border-[#ff6bff]/80 hover:border-[#ff8aff]/80 glow-pink cursor-pointer`  // Sama untuk tryout
-  }`}
->
-  {activeTab === 'join' ? 'JOIN' : 'TRYOUT'}
-</Button>
-    </CardFooter>
-  </Card>
-</motion.div>
+                {/* Icon dan Title berdasarkan tab */}
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className={`w-16 h-16 border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ${activeTab === 'join'
+                      ? 'bg-gradient-to-br from-[#00ffff] to-[#1a0a2a] group-hover:shadow-[0_0_15px_rgba(0,255,255,0.7)]'
+                      : 'bg-gradient-to-br from-[#ff6bff] to-[#1a0a2a] group-hover:shadow-[0_0_15px_rgba(255,107,255,0.7)]'
+                    }`}
+                  whileHover={{ rotate: activeTab === 'join' ? -5 : 5 }}
+                >
+                  {activeTab === 'join' ? (
+                    <Users className="w-8 h-8 text-white" />
+                  ) : (
+                    // <Zap className="w-8 h-8 text-white" />
+                    <Users className="w-8 h-8 text-white" />
+                  )}
+                </motion.div>
+                <CardTitle className={`text-xl font-bold transition-all duration-300 ${activeTab === 'join' ? 'text-[#00ffff] glow-cyan' : 'text-[#ff6bff] glow-pink'
+                  } pixel-text`}>
+                  {activeTab === 'join' ? 'JOIN RACE' : 'SOLO TRYOUT'}
+                </CardTitle>
+                <CardDescription className={`text-sm transition-all duration-300 pixel-text ${activeTab === 'join' ? 'text-[#00ffff]/80 glow-cyan-subtle' : 'text-[#ff6bff]/80 glow-pink-subtle'
+                  }`}>
+                  {activeTab === 'join'
+                    ? 'Enter a code to join an existing race'
+                    : 'Start a practice session on your own'
+                  }
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-2">
+                {activeTab === 'join' ? (
+                  <>
+                    <Input
+                      placeholder="Room Code"
+                      value={roomCode}
+                      maxLength={6}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                        setRoomCode(value);
+                      }}
+                      className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
+                      aria-label="Room Code"
+                    />
+                    <div className="relative">
+                      <Input
+                        placeholder="Nickname"
+                        value={nickname}
+                        maxLength={26}
+                        onChange={(e) => setNickname(e.target.value)}
+                        className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30 pr-10"
+                        aria-label="Nickname"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setNickname(generateNickname())}
+                        className="absolute right-2 top-1/8 text-[#00ffff] hover:bg-[#00ffff]/20 hover:border-[#00ffff] transition-all duration-200 glow-cyan-subtle"
+                        aria-label="Generate Nickname"
+                      >
+                        <span className="text-lg">🎲</span>
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="relative">
+                    <Input
+                      placeholder="Nickname"
+                      value={nickname}
+                      maxLength={26}
+                      onChange={(e) => setNickname(e.target.value)}
+                      className="bg-[#1a0a2a]/50 border-[#ff6bff]/50 text-[#ff6bff] placeholder:text-[#ff6bff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#ff6bff] focus:ring-[#ff6bff]/30 pr-10"
+                      aria-label="Nickname"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setNickname(generateNickname())}
+                      className="absolute right-2 top-1/8 text-[#ff6bff] hover:bg-[#ff6bff]/20 hover:border-[#ff6bff] transition-all duration-200 glow-pink-subtle"
+                      aria-label="Generate Nickname"
+                    >
+                      <span className="text-lg">🎲</span>
+                    </button>
+                  </div>
+                )}
+              </CardContent>
+
+              <CardFooter>
+                <Button
+                  onClick={activeTab === 'join' ? handleJoin : handleTryout}
+                  className={`w-full transition-all duration-300 ease-in-out pixel-button-large retro-button ${activeTab === 'join'
+                      ? `bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white border-[#0070f3]/80 hover:border-[#0ea5e9]/80 glow-cyan cursor-pointer`  // Selalu cursor-pointer, gak ada opacity conditional
+                      : `bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] hover:to-[#ffb3ff] text-white border-[#ff6bff]/80 hover:border-[#ff8aff]/80 glow-pink cursor-pointer`  // Sama untuk tryout
+                    }`}
+                >
+                  {activeTab === 'join' ? 'JOIN' : 'TRYOUT'}
+                </Button>
+              </CardFooter>
+            </Card>
+          </motion.div>
         </div>
       </div>
 
-     <style jsx>{`
+      <style jsx>{`
 
 
 

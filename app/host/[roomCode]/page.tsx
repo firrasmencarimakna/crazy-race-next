@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogOverlay, DialogTitle } from 
 import { calculateCountdown } from "@/utils/countdown"
 import LoadingRetro from "@/components/loadingRetro"
 import { Slider } from "@/components/ui/slider"
-import { breakOnCaps } from "@/utils/game"
+import { breakOnCaps, formatUrlBreakable } from "@/utils/game"
 import Image from "next/image"
 
 // List of background GIFs (same as previous pages for consistency)
@@ -583,8 +583,11 @@ export default function HostRoomPage() {
                 </Dialog>
               </div>
 
-              <div className="relative p-3 sm:p-4 md:p-5 bg-[#0a0a0f]  rounded-lg">
-                <div className="text-xs sm:text-sm text-[#00ffff] pixel-text glow-cyan break-keep">{joinLink}</div>
+              <div className="relative py-4 px-7 bg-[#0a0a0f] rounded-lg">
+                <div className="text-xs sm:text-sm text-[#00ffff] pixel-text glow-cyan break-words">
+  {formatUrlBreakable(joinLink)}
+</div>
+
                 <Button
                   onClick={copyJoinLink}
                   className="absolute top-1 right-1 bg-transparent pixel-button hover:bg-gray-500/20 transition-colors p-1 sm:p-2"
