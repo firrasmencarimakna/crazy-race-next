@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Tailwind CSS for modern styling -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
+<style>
     body {
       margin: 0;
       padding: 0;
@@ -17,6 +17,7 @@
     }
     #game-container {
       position: relative;
+      box-sizing: border-box; /* Pastiin container hitung border/margin benar */
       width: 100vw;
       height: 100vh;
       display: flex;
@@ -27,7 +28,8 @@
     #screen-area {
       flex: 1;
       width: 100%;
-      max-height: calc(100vh - 120px); /* Reserve space for controls + bezel */
+      margin: 0 8px 8px 8px; /* Hapus margin atas, biar nggak push ke atas berlebih. Bottom 8px aja buat jarak */
+      max-height: calc(100vh - 120px); /* Default: Reserve space for controls + bezel */
       position: relative;
       /* Background diganti ke 6.gif */
       background-image: url('images/background/6.gif');
@@ -36,7 +38,6 @@
       background-repeat: no-repeat;
       border: 8px solid #333;
       border-radius: 12px;
-      margin: 8px;
       box-sizing: border-box;
       box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
     }
@@ -45,6 +46,11 @@
         border: 20px solid #2d3748;
         margin: 20px;
         max-height: none;
+        flex: none;
+        height: 100vh;
+        margin: 0;
+        border: none;
+        border-radius: 0;
       }
     }
     #canvas {
@@ -54,8 +60,9 @@
       border-radius: 4px; /* Slight rounding inside bezel */
     }
     #controls-area {
+      box-sizing: border-box; /* Border masuk ke height 120px, total pas 120px */
       width: 100%;
-      height: 120px;
+      height: 130px;
       background: linear-gradient(to top, #1a202c, #2d3748);
       border-top: 4px solid #333;
       display: flex;
@@ -64,29 +71,24 @@
       position: relative;
       box-shadow: 0 -4px 12px rgba(0,0,0,0.5);
     }
-    #mobile-controls {
-      display: none; /* Default hidden */
-      position: relative; /* Changed from fixed to relative for separation */
-      bottom: auto;
-      left: auto;
-      right: auto;
-      z-index: 10;
-      padding: 0.5rem 2rem; /* Adjusted padding */
-      height: 100%;
-      pointer-events: none;
-      background: none; /* Remove gradient for clean separation */
-      justify-content: space-between;
-      width: 100%;
-      box-sizing: border-box;
-    }
+#mobile-controls {
+  /* ... kode lama tetap ... */
+  display: flex !important; /* Sudah ada, tapi pastikan */
+  justify-content: space-evenly; /* Ubah dari space-between ke space-evenly biar jarak super rata */
+  align-items: flex-end; /* Tombol rata di bawah */
+  width: 100%;
+ 
+  gap: 0.5rem; /* Tambah gap minimal antar tombol untuk handphone besar */
+  padding: 0 2rem; /* Padding samping biar tidak nempel pinggir layar */
+}
     #mobile-controls button {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
+      width: 100px;
+      height: 70px;
+      border-radius: 0%;
       border: none;
       font-size: 1.2rem;
-      color: #fff;
-      background: rgba(45, 55, 72, 0.95);
+      color: #000000;
+      background: rgb(160, 153, 153);
       backdrop-filter: blur(10px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       transition: all 0.15s ease;
@@ -98,25 +100,17 @@
       margin: 0 0.25rem;
     }
     #mobile-controls button:active {
-      background: rgba(45, 55, 72, 1);
+      background: rgb(17, 104, 255);
       transform: scale(0.95);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
     }
-    #accel-brake-controls {
-      display: flex;
-      justify-content: flex-start;
-      width: 60%;
-      height: 100%;
-      align-items: flex-end;
-      gap: 0.5rem;
-    }
-    #steering-controls {
-      display: flex;
-      justify-content: space-between;
-      width: 40%;
-      height: 100%;
-      align-items: flex-end;
-    }
+#accel-brake-controls,
+#steering-controls {
+  /* Hapus atau comment out seluruh style ini, karena kita gabungkan semua tombol langsung ke #mobile-controls */
+  /* Atau ganti jadi: display: contents; biar sub-container "hilang" dan tombol langsung flex di parent */
+  display: contents;
+  gap: 1.5rem;
+}
     #left, #right {
       background: rgba(59, 130, 246, 0.9); /* Soft blue */
     }
@@ -126,20 +120,31 @@
     #brake {
       background: rgba(239, 68, 68, 0.9); /* Soft red */
     }
-    /* Hide on desktop, show on mobile via JS */
+    /* Mobile specific: Show controls and adjust position */
+    @media (max-width: 767px) {
+      #mobile-controls {
+        display: flex !important;
+        margin-top: -130px; /* Sesuai permintaan: Naikkan tombol ke atas 230px */
+      }
+      #screen-area {
+        max-height: calc(100vh + 110px); /* Adjust: 120px controls - 230px naik = -110px efektif, jadi +110px ruang untuk overlap tanpa potong */
+        z-index: 5; /* Pastikan screen di belakang tombol (tombol z-index 10) */
+      }
+      #controls-area {
+        display: flex;
+        height: 350px; /* Adjust: Tinggi lebih besar (120px + 230px) agar margin-top -230px muat sepenuhnya tanpa keluar container */
+        align-items: flex-start; /* Align ke atas agar tombol start dari top controls-area */
+        padding-top: 230px; /* Offset internal agar tombol posisi pas di -230px relatif */
+      }
+    }
+    /* Hide on desktop */
     @media (min-width: 768px) {
       #mobile-controls {
         display: none !important;
+        margin-top: 0; /* Reset untuk desktop */
       }
       #controls-area {
         display: none;
-      }
-      #screen-area {
-        flex: none;
-        height: 100vh;
-        margin: 0;
-        border: none;
-        border-radius: 0;
       }
     }
     #controls {
@@ -306,7 +311,7 @@
       text-align: center;
       max-width: 80%;
     }
-  </style>
+</style>
 </head>
 <body>
   <div id="game-container">
