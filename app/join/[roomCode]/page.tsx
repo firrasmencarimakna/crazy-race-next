@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase"
 import LoadingRetro from "@/components/loadingRetro"
 import { calculateCountdown } from "@/utils/countdown"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogOverlay, DialogTitle } from "@/components/ui/dialog"
+
 import Image from "next/image"
 
 // Background GIFs
