@@ -25,7 +25,6 @@ export default function HomePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
-
   // State untuk tab selector (join atau tryout)
   const [activeTab, setActiveTab] = useState<'join' | 'tryout'>('join')
 
@@ -313,9 +312,8 @@ export default function HomePage() {
         style={{ objectPosition: 'center' }}
       />
 
-      {/* Logo (fixed top-left) */}
-      <h1 className="absolute top-6 md:top-4 left-4 w-42 h-10 md:w-100 md:h-16">
-        <Image src="/gameforsmartlogo.webp" alt="Gameforsmart Logo" width="256" height="64" />
+      <h1 className="absolute top-6 md:top-4 left-4 w-42 md:w-50 lg:w-100">
+        <Image src="/gameforsmartlogo.webp" alt="Gameforsmart Logo" width="256" height="0" />
       </h1>
 
       {/* Alert Audio (hidden, untuk efek suara) */}
@@ -657,7 +655,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
           </motion.div>
-
+          
           {/* Join Race / Tryout Card */}
           <motion.div
             initial={{ opacity: 0, x: 50 }}
@@ -681,7 +679,7 @@ export default function HomePage() {
                   <button
                     onClick={() => setActiveTab('tryout')}
                     className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${activeTab === 'tryout' 
-                      ? 'bg-[#ff6bff] text-black shadow-[0_0_10px_rgba(255,107,255,0.5)]' 
+                      ? 'bg-[#ff6bff] text-black shadow-[0_0_10px_rgba(255,107,255,0.5)]'
                       : 'text-[#ff6bff] hover:bg-[#ff6bff]/20'}`}
                   >
                     TRYOUT
@@ -797,7 +795,7 @@ export default function HomePage() {
         </div>
       </div>
 
-     <style jsx>{`
+      <style jsx>{`
 
 
 

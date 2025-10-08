@@ -43,3 +43,8 @@ export const formatTime = (seconds: number): string => {
 export function breakOnCaps(text: string) {
   return text.replace(/([a-z])([A-Z])/g, '$1\u200B$2');
 }
+
+export function formatUrlBreakable(url: string): string {
+  // Tambahkan zero-width space (\u200B) setelah karakter tertentu
+  return url.replace(/([./?&=_-])/g, '$1\u200B');
+}
