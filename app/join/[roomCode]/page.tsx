@@ -59,6 +59,25 @@ export default function LobbyPage() {
     car: null,
   });
 
+    const handleExit = async () => {
+    if (!currentPlayer.id) return;
+  
+    const { error } = await supabase
+      .from('players')
+      .delete()
+      .eq('id', currentPlayer.id);
+  
+    if (error) {
+      console.error('Error deleting player:', error);
+      // Optional: Tampilkan toast error jika punya
+    } else {
+      console.log('Player exited room successfully');
+      localStorage.removeItem('playerId'); // Optional: Hapus dari localStorage
+      router.push('/');
+    }
+    setShowExitDialog(false);
+  };
+
 
   const [players, setPlayers] = useState<any[]>([])
   const [room, setRoom] = useState<any>(null)
@@ -68,6 +87,7 @@ export default function LobbyPage() {
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [showCarDialog, setShowCarDialog] = useState(false) // State untuk dialog car
+  const [showExitDialog, setShowExitDialog] = useState(false) //exit 
 
   // Tambah useEffect baru: Monitor status room dan auto-redirect ke game
   useEffect(() => {
@@ -201,6 +221,17 @@ export default function LobbyPage() {
               isReady: true
             }
             setPlayers(prev => [...prev, newOne])
+          }
+        )
+          .on(  // Tambahan: Handler untuk DELETE
+          'postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'players', filter: `room_id=eq.${roomId}` },
+          payload => {
+            setPlayers(prev => prev.filter(p => p.id !== payload.old.id))
+            // Jika player yang keluar adalah current player, redirect ke home
+            if (payload.old.id === currentPlayer.id) {
+              router.push('/')
+            }
           }
         )
         .subscribe()
@@ -415,8 +446,38 @@ export default function LobbyPage() {
           <Button className="bg-[#ff6bff] border-4 border-white pixel-button-large hover:bg-[#ff8aff] glow-pink px-8 py-3" onClick={() => setShowCarDialog(true)}>
             <span className="pixel-text text-lg">CHOOSE CAR</span>
           </Button>
+          <Button className="bg-[#ff6bff] border-4 border-white pixel-button-large hover:bg-[#ff8aff] glow-pink px-8 py-3" onClick={() => setShowExitDialog(true)}>
+          <span className="pixel-text text-lg">EXIT</span>
+          </Button>
         </div>
       </div>
+
+      {/*Dialog Verifikasi exit  */}
+        <Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+        <DialogContent className="bg-[#1a0a2a]/90 border-[#ff6bff]/50 text-white max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-[#00ffff] pixel-text">Keluar Ruangan?</DialogTitle>
+            <DialogDescription className="text-gray-300">
+              Kamu akan keluar dari ruangan {roomCode}. Pilihan lain tidak bisa join lagi kecuali host restart.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowExitDialog(false)}
+              className="border-[#00ffff] text-[#00ffff] hover:bg-[#00ffff]/10"
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleExit}
+              className="bg-[#ff6bff] hover:bg-[#ff8aff] border-white"
+            >
+              Keluar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog/Modal Pilih Car - Mobile Friendly */}
       <Dialog open={showCarDialog} onOpenChange={setShowCarDialog}>
