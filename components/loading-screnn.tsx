@@ -8,7 +8,7 @@ export default function LoadingRetroScreen({ progress = 0 }: { progress?: number
   ];
 
   const tips = [
-    "Loading Assets....",
+    "Loading assets....",
     "Let it be slow but safe",
     "Loading depends on the internet",
     "Enjoy the race...",
@@ -58,10 +58,7 @@ export default function LoadingRetroScreen({ progress = 0 }: { progress?: number
               key={currentBgIndex}
               className="absolute inset-0 w-full h-full bg-cover bg-center opacity-30"
               style={{ backgroundImage: `url(${backgroundGifs[currentBgIndex]})` }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.3 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 1, ease: "easeInOut" }}
+
             />
           </AnimatePresence>
 
