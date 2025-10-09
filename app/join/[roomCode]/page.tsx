@@ -480,7 +480,7 @@ export default function LobbyPage() {
         />
       </div>
         <DialogDescription className="text-cyan-400 text-center">
-          Are you sure you want to exit the room? You will Go to the Homepage.
+         You will Go to the Homepage.
         </DialogDescription>
 
       <div className="flex justify-end space-x-3 pt-4">
