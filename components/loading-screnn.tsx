@@ -74,7 +74,7 @@ export default function LoadingRetroScreen({ progress = 0 }: { progress?: number
               transition={{ repeat: Infinity, duration: 1.2 }}
               className="text-3xl text-[#00ffff] pixel-text glow-cyan mb-4 uppercase tracking-wider"
             >
-              Loading...
+              Loading
             </motion.p>
 
             {/* Progress Percentage */}
