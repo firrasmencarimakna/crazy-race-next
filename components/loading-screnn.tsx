@@ -8,16 +8,10 @@ export default function LoadingRetroScreen({ progress = 0 }: { progress?: number
   ];
 
   const tips = [
-    "Initializing neural net...",
-    "Syncing with the cyber grid...",
-    "Hacking the mainframe...",
-    "Loading nitro boosters...",
-    "Preparing race tracks...",
-    "Calibrating speedometers...",
-    "Uploading trivia database...",
-    "Overclocking processors...",
-    "Decrypting victory codes...",
-    "Booting retro engines..."
+    "Loading Assets....",
+    "Let it be slow but safe",
+    "Loading depends on the internet",
+    "Enjoy the race...",
   ];
 
   const [currentBgIndex, setCurrentBgIndex] = useState(0);
