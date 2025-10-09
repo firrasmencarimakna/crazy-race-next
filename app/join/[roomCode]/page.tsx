@@ -4,13 +4,14 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Users, Activity, LogOut, ArrowLeft } from "lucide-react"
+import { Users, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
 import LoadingRetro from "@/components/loadingRetro"
 import { calculateCountdown } from "@/utils/countdown"
+import { DoorOpen } from "lucide-react";  // Atau ganti dengan LogOut jika lebih suka
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogOverlay, DialogTitle } from "@/components/ui/dialog"
 
 import Image from "next/image"
@@ -516,12 +517,12 @@ export default function LobbyPage() {
 
       {/* Dialog/Modal Pilih Car - Mobile Friendly */}
       <Dialog open={showCarDialog} onOpenChange={setShowCarDialog}>
-        <DialogOverlay className="bg-[#1a0a2a]/80 backdrop-blur-sm" />
+        <DialogOverlay className="bg-[#8B00FF]/60 backdrop-blur-sm" />
         <DialogContent className="bg-[#1a0a2a]/90 border-[#ff6bff]/50 backdrop-blur-sm sm:max-w-md sm:h-auto overflow-auto p-0">
-          <DialogHeader className="pt-4 pb-2 px-4"> {/* Kurangi padding top/bottom */}
+          <DialogHeader className="pt-4 pb-2 px-4">
             <DialogTitle className="text-[#00ffff] pixel-text glow-cyan text-center text-xl">Choose Your Car</DialogTitle>
           </DialogHeader>
-          <div className="px-4 pb-4 grid grid-cols-2 md:grid-cols-3 gap-4 overflow-y-auto"> {/* Tambah px-4 pb-4, gap tetap */}
+          <div className="px-4 pb-4 grid grid-cols-2 md:grid-cols-3 gap-4 overflow-y-auto">
             {availableCars.map((car) => (
               <motion.button
                 key={car.key}
@@ -536,7 +537,7 @@ export default function LobbyPage() {
                 <img
                   src={carGifMap[car.key]}
                   alt={car.label}
-                  className="h-20 w-24 mx-auto object-contain filter brightness-125 contrast-150 mb-2"
+                  className="h-24 w-32 mx-auto object-contain filter brightness-125 contrast-150 mb-2"
                 />
                 <p className="text-xs text-white mt-1 pixel-text text-center">{car.label}</p>
               </motion.button>
@@ -546,6 +547,7 @@ export default function LobbyPage() {
       </Dialog>
 
       <style jsx>{`
+
         .pixel-font {
           font-family: 'Press Start 2P', cursive, monospace;
           image-rendering: pixelated;
@@ -611,7 +613,7 @@ export default function LobbyPage() {
         @keyframes neon-bounce {
           0%, 100% { transform: translateY(0px); }
           50% { transform: translateY(-8px); }
-        }
+        }mi
 
         /* Neon pulse animation for borders */
 @keyframes neon-pulse {
