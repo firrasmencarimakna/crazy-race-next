@@ -99,7 +99,7 @@ export default function LoadingRetroScreen({ progress = 0 }: { progress?: number
             </motion.div>
 
             {/* Progress Bar */}
-            <div className="relative mb-6">
+            {/* <div className="relative mb-6">
               <div className="w-full h-3 bg-[#1a1a1a] border-2 border-[#00ffff]/30 rounded-sm pixel-border-small"></div>
               <motion.div
                 className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#00ffff] via-[#00ffff]/80 to-[#ff6bff] rounded-sm glow-cyan-subtle"
@@ -107,7 +107,7 @@ export default function LoadingRetroScreen({ progress = 0 }: { progress?: number
                 animate={{ width: `${progress}%` }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
               />
-            </div>
+            </div> */}
 
             {/* Simplified Animated Pixel Bars */}
             <div className="flex gap-0.5 justify-center mb-6">
