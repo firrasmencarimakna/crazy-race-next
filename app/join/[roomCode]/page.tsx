@@ -493,30 +493,42 @@ export default function LobbyPage() {
           </Button>
         </div>
       </div>
+      
+{/* Modal Dialog Verifikasi Exit - Enhanced */}
+<Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+  <DialogOverlay className="bg-[#000ffff] backdrop-blur-sm" />
+  <DialogContent className="bg-[#1a0a2a]/65 border-[#ff6bff]/50 backdrop-blur-md text-[#00ffff] max-w-lg mx-auto">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={{ duration: 0.3 }}
+    >
+      <DialogHeader>
+        <DialogTitle className="text-cyan-400 pixel-text glow-cyan text-center"> Exit Room?</DialogTitle>
 
-      {/*Dialog Verifikasi exit  */}
-      <Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
-        <DialogContent className="bg-[#1a0a2a]/90 border-[#ff6bff]/50 text-white max-w-md mx-auto">
-          <DialogHeader>
-            <DialogTitle className="text-[#00ffff] pixel-text">Keluar Ruangan?</DialogTitle>
-            <DialogDescription className="text-gray-300">
-              Kamu akan keluar dari ruangan {roomCode}. Pilihan lain tidak bisa join lagi kecuali host restart.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setShowExitDialog(false)}
-              className="border-[#00ffff] text-[#00ffff] hover:bg-[#00ffff]/10"
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={handleExit}
-              className="bg-[#ff6bff] hover:bg-[#ff8aff] border-white"
-            >
-              Keluar
-            </Button>
+      </DialogHeader>
+
+      {/* Car GIF - Enhanced */}
+      <div className="flex justify-center mb-4">
+        <img
+          src={carGifMap[currentPlayer.car || 'blue']}
+          alt="Your Car"
+          className="h-24 w-42 object-contain filter brightness-125 glow-cyan"
+        />
+      </div>
+        <DialogDescription className="text-cyan-400 text-center">
+         You will Go to the Homepage.
+        </DialogDescription>
+
+      <div className="flex justify-end space-x-3 pt-4">
+        <Button
+          variant="outline"
+          onClick={() => setShowExitDialog(false)}
+          className="text-[#00ffff] border-1 border-[#00ffff] hover:bg-[#00ffff] "
+        >
+          Cancel
+        </Button>
           </div>
         </DialogContent>
       </Dialog>

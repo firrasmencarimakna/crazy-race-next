@@ -16,7 +16,8 @@ import Image from "next/image"
 
 // Background GIFs
 const backgroundGifs = [
-  "/assets/background/host/4.webp",
+  "/assets/background/host/9.webp",
+  // "/assets/background/host/9.webp",
 ]
 
 // Mapping warna mobil ke file GIF mobil
@@ -234,7 +235,7 @@ export default function HostMonitorPage() {
   useEffect(() => {
     const bgInterval = setInterval(() => {
       setCurrentBgIndex((prev) => (prev + 1) % backgroundGifs.length)
-    }, 5000)
+    }, 9000)
     return () => clearInterval(bgInterval)
   }, [])
 

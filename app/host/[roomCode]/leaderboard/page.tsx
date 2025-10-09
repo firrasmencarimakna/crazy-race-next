@@ -25,7 +25,7 @@ type PlayerStats = {
 
 // Background GIFs (reuse from player results)
 const backgroundGifs = [
-  "/assets/background/host/4.webp",
+  "/assets/background/host/10.webp",
   // Add more if available, or cycle this one
 ]
 

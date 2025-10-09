@@ -11,8 +11,9 @@ import { motion, AnimatePresence } from "framer-motion"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import Image from "next/image"
-import { usePreloader } from "@/components/preloader"
+import { usePreloaderScreen } from "@/components/preloader-screen"
 import LoadingRetro from "@/components/loadingRetro"
+import LoadingRetroScreen from "@/components/loading-screnn"
 
 /**
  * HomePage Component
@@ -46,7 +47,7 @@ export default function HomePage() {
 
   // State untuk modal alert (spesifik berdasarkan reason)
   const [showAlert, setShowAlert] = useState(false)
-  const [alertReason, setAlertReason] = useState<'roomCode' | 'nickname' | 'both' | 'general' | ''>('')
+  const [alertReason, setAlertReason] = useState<'roomCode' | 'nickname' | 'both' | 'general' | 'roomNotFound' |''>('')
 
   // Refs untuk audio elements
   const audioRef = useRef<HTMLAudioElement>(null) // Background music
@@ -74,13 +75,15 @@ export default function HomePage() {
   const getAlertMessage = (reason: string) => {
     switch (reason) {
       case 'roomCode':
-        return "Room Code harus tepat 6 huruf. Cek lagi ya! 🔑"
+        return "The room code must be 6 letters."
       case 'nickname':
-        return "Nickname nggak boleh kosong. Buat yang unik dulu! 🚀"
+        return "The name cannot be blank, okay!"
       case 'both':
-        return "Lengkapi Room Code (6 huruf) dan Nickname dulu, ya! 📝"
+        return "Fill in the Room Code (6 letters) and Nickname first, OK!"
+      case 'roomNotFound':
+        return "Your room code is wrong"
       default:
-        return "Isi Room Code (6 huruf) dan Nickname dulu, ya! 🚀"
+        return "Fill in the Room Code (6 letters) and Nickname first, OK!"
     }
   }
 
@@ -197,19 +200,36 @@ export default function HomePage() {
 
     setJoining(true) // Mulai loading
 
-    try {
-      // Verify room exists dan status 'waiting'
-      const { data: roomData, error: roomError } = await supabase
-        .from("game_rooms")
-        .select("id, status")
-        .eq("room_code", roomCode)
-        .single()
+try {
+  // Verify room exists dan status 'waiting'
+  const { data: roomData, error: roomError } = await supabase
+    .from("game_rooms")
+    .select("id, status")
+    .eq("room_code", roomCode)
+    .single()
 
-      if (roomError || !roomData) {
-        console.error("Error: Room not found", roomError)
-        setJoining(false)
-        return
-      }
+  if (roomError || !roomData) {
+    console.error("Error: Room not found", roomError)
+    setJoining(false)
+    setAlertReason('roomNotFound')
+    setShowAlert(true)
+    // Play alert audio jika tidak muted
+    if (alertAudioRef.current && !isMuted) {
+      alertAudioRef.current.volume = volume / 100
+      alertAudioRef.current.currentTime = 0 // Reset untuk replay
+      alertAudioRef.current.play().catch((e) => console.log("Audio error:", e))
+    }
+    return
+  }
+
+  if (roomData.status !== "waiting") {
+    console.error("Error: Room is not accepting players")
+    setJoining(false)
+    // Opsional: Bisa tambah alert lain untuk status room (misal 'roomInProgress'), tapi sementara return aja
+    return
+  }
+
+  // ... (sisa kode insert player dan navigasi tetap sama)
 
       if (roomData.status !== "waiting") {
         console.error("Error: Room is not accepting players")
@@ -266,8 +286,8 @@ export default function HomePage() {
   }
 
   // Preload check: Tampilkan loading jika belum siap
-  const isLoaded = usePreloader()
-  if (!isLoaded) return <LoadingRetro />
+const { isLoaded, progress } = usePreloaderScreen()
+if (!isLoaded) return <LoadingRetroScreen progress={progress} />
 
   // Functions untuk modal How to Play
   const closeHowToPlay = () => {
@@ -287,12 +307,12 @@ export default function HomePage() {
     }
   }
 
-  const goToPage = (pageIndex: number) => {
+  const goToPage = (pageIndex: number) => { 
     setCurrentPage(pageIndex)
   }
 
   return (
-    <div className="min-h-[100dvh] w-full relative overflow-hidden pixel-font p-2">
+   <div className={`min-h-[100dvh] w-full relative overflow-hidden pixel-font ${isLoaded ? 'p-2' : ''}`}>
       {/* Background Music Audio (hidden) */}
       <audio
         ref={audioRef}
@@ -361,9 +381,10 @@ export default function HomePage() {
               
               {/* Dynamic Title berdasarkan reason */}
               <CardTitle className="text-xl font-bold text-[#ff6bff] mb-2 pixel-text glow-pink">
-                {alertReason === 'roomCode' ? 'Oops! Room Code Belum Lengkap!' : 
-                 alertReason === 'nickname' ? 'Oops! Nickname Kosong!' : 
-                 alertReason === 'both' ? 'Oops! Input Belum Lengkap!' : 'Oops! Belum Siap Balapan!'}
+                {alertReason === 'roomCode' ? 'Oops! Your Room Code!' :  
+                 alertReason === 'nickname' ? 'Oops! Empty name!' : 
+                 alertReason === 'both' ? 'Oops! Input Incomplete!' : 
+                 alertReason === 'roomNotFound' ? 'Oops Room not found!' : 'Oops Belum Siap Balapan'}
               </CardTitle>
               
               {/* Dynamic Description */}
@@ -376,7 +397,7 @@ export default function HomePage() {
                 onClick={closeAlert}
                 className="w-full bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] text-white pixel-button glow-pink"
               >
-                Oke, Saya Isi!
+                Okay!
               </Button>
               
               {/* Close Icon (top-right) */}
