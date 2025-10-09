@@ -122,7 +122,7 @@ export default function LobbyPage() {
       if (remaining <= 0) {
         console.log('Lobby countdown finished, redirecting to game');
         clearInterval(countdownInterval);
-        router.replace(`/join/${roomCode}/game`);
+        // router.replace(`/join/${roomCode}/game`);
       }
     };
 
@@ -169,6 +169,10 @@ export default function LobbyPage() {
         console.log('Bootstrap detected playing, immediate redirect');
         router.replace(`/join/${roomCode}/game`);
         return; // Stop bootstrap
+      } else if (room.status === 'finished') {
+        console.log('Bootstrap detected finished, immediate redirect to result');
+        router.replace(`/join/${roomCode}/result`);
+        return; // Stop bootstrap
       }
 
       // Sync countdown jika sudah mulai
@@ -209,7 +213,6 @@ export default function LobbyPage() {
       localStorage.setItem('playerId', me.id);
 
       // 5. Subscription untuk perubahan players
-      // 5. Subscription untuk perubahan players (updated: tambah UPDATE handler)
       const playerChannel = supabase
         .channel(`players:${roomCode}`)
         .on(
@@ -288,6 +291,9 @@ export default function LobbyPage() {
             if (newRoomData.status === 'playing') {
               console.log('Subscription detected playing, redirecting to game');
               router.replace(`/join/${roomCode}/game`);
+            } else if (newRoomData.status === 'finished') {
+              console.log('Subscription detected finished, redirecting to result');
+              router.replace(`/join/${roomCode}/result`);
             }
 
             // Jika status berubah menjadi countdown, sync countdown

@@ -59,97 +59,147 @@ export default function PlayerResultsPage() {
   const [playerId, setPlayerId] = useState<string>("")
   useEffect(() => {
     const pid = localStorage.getItem("playerId") || ""
-    if (!pid) router.replace(`/join/${roomCode}`)
+    if (!pid) router.replace(`/`)
     else setPlayerId(pid)
-  }, [roomCode, router])
+  }, [router])
 
   const [loading, setLoading] = useState(true)
   const [currentPlayerStats, setCurrentPlayerStats] = useState<PlayerStats | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
 
-  // Fetch data from Supabase
   useEffect(() => {
-    const fetchData = async () => {
+    if (!roomCode || !playerId) return;
+    let channel: any;
+    let playersCache: Record<string, { score: number; duration: number }> = {};
+
+    const setupInitialData = async () => {
       try {
-        setLoading(true)
-        setError(null)
+        setLoading(true);
+        setError(null);
 
-        // Fetch room data
+        // Ambil roomId dulu
         const { data: roomData, error: roomError } = await supabase
-          .from('game_rooms')
-          .select('id')
-          .eq('room_code', roomCode)
-          .single()
+          .from("game_rooms")
+          .select("id")
+          .eq("room_code", roomCode)
+          .single();
 
-        if (roomError || !roomData) {
-          throw new Error('Failed to load room data')
-        }
+        if (roomError || !roomData) throw new Error("Room not found");
 
-        // Fetch all players with completion = true
-        const { data: playersData, error: playersError } = await supabase
-          .from('players')
-          .select('id, nickname, result, car')
-          .eq('room_id', roomData.id)
-          .eq('completion', true)
+        // Ambil semua pemain yang sudah complete
+        const { data: players, error: playersError } = await supabase
+          .from("players")
+          .select("id, nickname, car, result, completion")
+          .eq("room_id", roomData.id)
+          .eq("completion", true);
 
-        if (playersError || !playersData || playersData.length === 0) {
-          throw new Error('No completed players found')
-        }
+        if (playersError) throw playersError;
+        if (!players || players.length === 0)
+          throw new Error("No completed players");
 
-        // Find current player
-        const currentPlayer = playersData.find((p: any) => p.id === playerId)
-        if (!currentPlayer) {
-          throw new Error('Player session not found')
-        }
+        // Isi cache awal
+        players.forEach((p) => {
+          const res = p.result?.[0];
+          if (!res) return;
+          playersCache[p.id] = {
+            score: res.score || 0,
+            duration: res.duration || Infinity,
+          };
+        });
 
-        // Parse result (assuming array with single object)
-        const result = currentPlayer.result && currentPlayer.result[0] ? currentPlayer.result[0] : null
-        if (!result) {
-          throw new Error('No results recorded for player')
-        }
+        // Ambil player saat ini
+        const currentPlayer = players.find((p) => p.id === playerId);
+        if (!currentPlayer) throw new Error("Player not found");
+        const result = currentPlayer.result?.[0];
+        if (!result) throw new Error("No result for current player");
 
-        // Calculate rank
-        const sortedPlayers = playersData
-          .filter((p: any) => p.result && p.result[0])
-          .map((p: any) => ({
-            playerId: p.id,
-            score: p.result[0].score || 0,
-          }))
-          .sort((a, b) => b.score - a.score)
-        const rank = sortedPlayers.findIndex((p) => p.playerId === playerId) + 1
+        const totalSeconds = result.duration || 0;
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
+        const totalTime = `${mins}:${secs.toString().padStart(2, "0")}`;
 
-        // Format duration
-        const totalSeconds = result.duration || 0
-        const mins = Math.floor(totalSeconds / 60)
-        const secs = totalSeconds % 60
-        const totalTime = `${mins}:${secs.toString().padStart(2, '0')}`
+        // Hitung rank awal
+        const sorted = Object.entries(playersCache)
+          .sort(
+            ([, a], [, b]) => b.score - a.score || a.duration - b.duration
+          )
+          .map(([id]) => id);
+        const rank = sorted.findIndex((id) => id === playerId) + 1;
 
-        // Set current player stats
         setCurrentPlayerStats({
           nickname: currentPlayer.nickname,
-          car: currentPlayer.car || 'blue',
+          car: currentPlayer.car || "blue",
           finalScore: result.score || 0,
           correctAnswers: result.correct || 0,
           totalQuestions: result.total_question || 0,
-          accuracy: result.accuracy || '0.00',
+          accuracy: result.accuracy || "0.00",
           totalTime,
           rank,
-          totalPlayers: sortedPlayers.length,
+          totalPlayers: sorted.length,
           playerId,
-        })
-      } catch (err: any) {
-        console.error('Error fetching data:', err)
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
-    }
+        });
 
-    if (roomCode && playerId) {
-      fetchData()
-    }
-  }, [roomCode, playerId])
+        channel = supabase
+          .channel(`realtime-rank-${roomData.id}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "UPDATE",
+              schema: "public",
+              table: "players",
+              filter: `room_id=eq.${roomData.id}`,
+            },
+            (payload) => {
+              const p = payload.new
+              const result = p.result?.[0]
+              if (!result) return
+
+              // 🚫 Skip pemain yang belum selesai
+              if (!p.completion) return
+
+              // Update cache
+              playersCache[p.id] = {
+                score: result.score || 0,
+                duration: result.duration || Infinity,
+              }
+
+              // Recalculate rank hanya untuk yang sudah completion
+              const sorted = Object.entries(playersCache)
+                .sort(
+                  ([, a], [, b]) => b.score - a.score || a.duration - b.duration
+                )
+                .map(([id]) => id)
+
+              const newRank = sorted.findIndex((id) => id === playerId) + 1
+
+              setCurrentPlayerStats((prev) =>
+                prev
+                  ? {
+                    ...prev,
+                    rank: newRank,
+                    totalPlayers: sorted.length,
+                  }
+                  : prev
+              )
+            }
+          )
+          .subscribe() 
+      } catch (err: any) {
+        console.error("Error setting up realtime:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    setupInitialData();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [roomCode, playerId]);
+
 
   // Background cycling
   useEffect(() => {
@@ -185,13 +235,7 @@ export default function PlayerResultsPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <LoadingRetro />
-    )
-  }
-
-  if (error || !currentPlayerStats) {
+  if (loading || error || !currentPlayerStats) {
     return (
       <LoadingRetro />
     )
