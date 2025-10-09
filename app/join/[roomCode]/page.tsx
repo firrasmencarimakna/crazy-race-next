@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Users, Activity } from "lucide-react"
+import { Users, Activity, LogOut, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
@@ -17,12 +17,12 @@ import Image from "next/image"
 
 // Background GIFs
 const backgroundGifs = [
-  // "/assets/background/host/1.webp",
-  // "/assets/background/host/2.webp",
+  "/assets/background/host/1.webp",
+  "/assets/background/host/2.webp",
   "/assets/background/host/3.webp",
-  // "/assets/background/host/4.webp",
-  // "/assets/background/host/5.webp",
-  // "/assets/background/host/7.webp",
+  "/assets/background/host/4.webp",
+  "/assets/background/host/5.webp",
+  "/assets/background/host/7.webp",
 ]
 
 const carGifMap: Record<string, string> = {
@@ -60,14 +60,14 @@ export default function LobbyPage() {
     car: null,
   });
 
-    const handleExit = async () => {
+  const handleExit = async () => {
     if (!currentPlayer.id) return;
-  
+
     const { error } = await supabase
       .from('players')
       .delete()
       .eq('id', currentPlayer.id);
-  
+
     if (error) {
       console.error('Error deleting player:', error);
       // Optional: Tampilkan toast error jika punya
@@ -208,11 +208,17 @@ export default function LobbyPage() {
       localStorage.setItem('playerId', me.id);
 
       // 5. Subscription untuk perubahan players
+      // 5. Subscription untuk perubahan players (updated: tambah UPDATE handler)
       const playerChannel = supabase
         .channel(`players:${roomCode}`)
         .on(
           'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'players', filter: `room_id=eq.${roomId}` },
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'players',
+            filter: `room_id=eq.${roomId}`
+          },
           payload => {
             const newOne = {
               id: payload.new.id,
@@ -222,11 +228,32 @@ export default function LobbyPage() {
               isReady: true
             }
             setPlayers(prev => [...prev, newOne])
+            console.log('New player joined:', payload.new.nickname); // Debug
           }
         )
-          .on(  // Tambahan: Handler untuk DELETE
+        .on(  // Tambah ini: Handler UPDATE untuk car change
           'postgres_changes',
-          { event: 'DELETE', schema: 'public', table: 'players', filter: `room_id=eq.${roomId}` },
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'players',
+            filter: `room_id=eq.${roomId}`
+          },
+          payload => {
+            console.log('Player updated:', payload.new.nickname, 'New car:', payload.new.car); // Debug
+            setPlayers(prev =>
+              prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p)
+            );
+          }
+        )
+        .on(  // Handler DELETE (udah ada, keep)
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'players',
+            filter: `room_id=eq.${roomId}`
+          },
           payload => {
             setPlayers(prev => prev.filter(p => p.id !== payload.old.id))
             // Jika player yang keluar adalah current player, redirect ke home
@@ -235,7 +262,14 @@ export default function LobbyPage() {
             }
           }
         )
-        .subscribe()
+        .subscribe((status) => {  // Optional: Status callback buat debug
+          console.log('Players sub status:', status);
+          if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            console.warn('Players sub dropped, retrying...');
+            // Auto-retry: Re-bootstrap setelah 3s
+            setTimeout(bootstrap, 3000);
+          }
+        });
 
       // 6. Subscription untuk perubahan room dengan countdown_start (updated: auto-redirect playing)
       const roomChannel = supabase
@@ -351,7 +385,7 @@ export default function LobbyPage() {
       {/* Header */}
       <div className="relative z-10 max-w-7xl mx-auto pt-8 px-4">
 
-        <h1 className="fixed top-5 right-20 hidden md:block">
+        <h1 className="fixed top-5 right-10 hidden md:block">
           <Image
             src="/gameforsmartlogo.webp"
             alt="Gameforsmart Logo"
@@ -360,13 +394,13 @@ export default function LobbyPage() {
           />
         </h1>
 
-        <h1 className="fixed top-7 left-20 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">
+        <h1 className="fixed top-7 left-10 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">
           Crazy Race
         </h1>
 
         {/* Judul Utama */}
-        <div className="text-center mb-8">
-          <h1 className="sm:max-w-none text-xl md:text-4xl lg:text-5xl font-bold text-[#00ffff] pixel-text glow-cyan mb-4 tracking-wider">
+        <div className="text-center md:m-8 mb-8">
+          <h1 className="sm:max-w-none text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#00ffff] pixel-text glow-cyan mb-4 tracking-wider">
             Waiting Room
           </h1>
         </div>
@@ -443,18 +477,18 @@ export default function LobbyPage() {
         </motion.div>
 
         {/* Button Pilih Car (ganti dari EXIT) */}
-        <div className="bg-[#1a0a2a]/50 sm:bg-transparent backdrop-blur-sm sm:backdrop-blur-none w-full text-center py-3 fixed bottom-0 left-1/2 transform -translate-x-1/2 z-10">
-          <Button className="bg-[#ff6bff] border-4 border-white pixel-button-large hover:bg-[#ff8aff] glow-pink px-8 py-3" onClick={() => setShowCarDialog(true)}>
-            <span className="pixel-text text-lg">CHOOSE CAR</span>
+        <div className="bg-[#1a0a2a]/50 sm:bg-transparent backdrop-blur-sm sm:backdrop-blur-none w-full text-center py-3 fixed bottom-0 left-1/2 transform -translate-x-1/2 z-10 space-x-2 items-center justify-center flex">
+          <Button className="bg-red-500 border-2 border-white pixel-button-large hover:bg-red-800 px-8 py-3" onClick={() => setShowExitDialog(true)}>
+            <ArrowLeft />
           </Button>
-          <Button className="bg-[#ff6bff] border-4 border-white pixel-button-large hover:bg-[#ff8aff] glow-pink px-8 py-3" onClick={() => setShowExitDialog(true)}>
-          <span className="pixel-text text-lg">EXIT</span>
+          <Button className="bg-[#ff6bff] border-2 border-white pixel-button-large hover:bg-[#ff8aff] glow-pink px-8 py-3" onClick={() => setShowCarDialog(true)}>
+            <span className="pixel-text text-lg">CHOOSE CAR</span>
           </Button>
         </div>
       </div>
 
       {/*Dialog Verifikasi exit  */}
-        <Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+      <Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
         <DialogContent className="bg-[#1a0a2a]/90 border-[#ff6bff]/50 text-white max-w-md mx-auto">
           <DialogHeader>
             <DialogTitle className="text-[#00ffff] pixel-text">Keluar Ruangan?</DialogTitle>
