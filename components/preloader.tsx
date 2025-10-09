@@ -28,6 +28,8 @@ export function usePreloader() {
             "/assets/background/host/6.webp",
             "/assets/background/host/7.webp",
             "/assets/background/host/8.webp",
+            "/assets/background/host/9.webp",
+            "/assets/background/host/10.webp",
         ]
 
         // const racingImages = [

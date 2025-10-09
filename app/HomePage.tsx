@@ -11,8 +11,9 @@ import { motion, AnimatePresence } from "framer-motion"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import Image from "next/image"
-import { usePreloader } from "@/components/preloader"
+import { usePreloaderScreen } from "@/components/preloader-screen"
 import LoadingRetro from "@/components/loadingRetro"
+import LoadingRetroScreen from "@/components/loading-screnn"
 
 /**
  * HomePage Component
@@ -285,8 +286,8 @@ try {
   }
 
   // Preload check: Tampilkan loading jika belum siap
-  const isLoaded = usePreloader()
-  if (!isLoaded) return <LoadingRetro />
+const { isLoaded, progress } = usePreloaderScreen()
+if (!isLoaded) return <LoadingRetroScreen progress={progress} />
 
   // Functions untuk modal How to Play
   const closeHowToPlay = () => {
