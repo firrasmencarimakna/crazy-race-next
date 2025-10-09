@@ -529,9 +529,18 @@ export default function LobbyPage() {
         >
           Cancel
         </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+
+        <Button
+          onClick={handleExit}
+          className="bg-[#000] border-1 text-[#00ffff] border-[#00ffff] hover:bg-[#00ffff] hover:text-[#000]"
+        >
+         
+          Exit
+        </Button>
+      </div>
+    </motion.div>
+  </DialogContent>
+</Dialog>
 
       {/* Dialog/Modal Pilih Car - Mobile Friendly */}
       <Dialog open={showCarDialog} onOpenChange={setShowCarDialog}>
