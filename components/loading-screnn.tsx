@@ -4,9 +4,7 @@ import { useState, useEffect } from "react";
 
 export default function LoadingRetroScreen({ progress = 0 }: { progress?: number }) {
   const backgroundGifs = [
-
     "/assets/background/host/10.webp",
-
   ];
 
   const tips = [
@@ -58,16 +56,16 @@ export default function LoadingRetroScreen({ progress = 0 }: { progress?: number
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center h-screen w-screen relative pixel-font overflow-hidden"
+          className="fixed inset-0 z-[9999] flex items-center justify-center h-screen w-screen relative pixel-font overflow-hidden bg-[#0a0a0a]"
         >
           {/* Background */}
           <AnimatePresence mode="wait">
             <motion.div
               key={currentBgIndex}
-              className="absolute inset-0 w-full h-full bg-cover bg-center"
+              className="absolute inset-0 w-full h-full bg-cover bg-center opacity-30"
               style={{ backgroundImage: `url(${backgroundGifs[currentBgIndex]})` }}
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              animate={{ opacity: 0.3 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 1, ease: "easeInOut" }}
             />
@@ -78,53 +76,54 @@ export default function LoadingRetroScreen({ progress = 0 }: { progress?: number
           <div className="noise-effect absolute inset-0 z-20"></div>
 
           {/* Main Loading Container */}
-          <div className="pixel-border-large p-8 text-center relative z-30 w-full max-w-md mx-auto">
+          <div className="pixel-border-large p-6 text-center relative z-30 w-full max-w-sm mx-auto">
             {/* Title */}
             <motion.p
-              animate={{ opacity: [1, 0.5, 1] }}
-              transition={{ repeat: Infinity, duration: 0.8 }}
-              className="text-2xl md:text-4xl text-[#00ffff] pixel-text glow-cyan mb-6"
+              animate={{ opacity: [1, 0.7, 1] }}
+              transition={{ repeat: Infinity, duration: 1.2 }}
+              className="text-3xl text-[#00ffff] pixel-text glow-cyan mb-4 uppercase tracking-wider"
             >
-              Loading
+              Loading...
             </motion.p>
 
             {/* Progress Percentage */}
             <motion.div
-              initial={{ scale: 0 }}
+              initial={{ scale: 0.8 }}
               animate={{ scale: 1 }}
-              className="mb-6"
+              transition={{ duration: 0.5 }}
+              className="mb-4"
             >
-              <p className="text-lg text-[#ff6bff] pixel-text glow-pink mb-2">
+              <p className="text-xl text-[#ff6b ff] pixel-text glow-pink">
                 {Math.round(progress)}%
               </p>
             </motion.div>
 
             {/* Progress Bar */}
-            <div className="relative mb-8">
-              <div className="w-full h-4 bg-[#1a0a2a]/80 border-2 border-[#00ffff]/50 rounded pixel-border-small"></div>
+            <div className="relative mb-6">
+              <div className="w-full h-3 bg-[#1a1a1a] border-2 border-[#00ffff]/30 rounded-sm pixel-border-small"></div>
               <motion.div
-                className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#00ffff] to-[#ff6bff] rounded glow-cyan"
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#00ffff] via-[#00ffff]/80 to-[#ff6bff] rounded-sm glow-cyan-subtle"
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
               />
             </div>
 
-            {/* Animated Pixel Bars (decorative) */}
-            <div className="flex gap-1 justify-center mb-8">
-              {[...Array(8)].map((_, i) => (
+            {/* Simplified Animated Pixel Bars */}
+            <div className="flex gap-0.5 justify-center mb-6">
+              {[...Array(10)].map((_, i) => (
                 <motion.div
                   key={i}
                   animate={{
-                    scaleY: [1, 1.5, 1],
-                    backgroundColor: ["#00ffff", "#ff6bff", "#00ffff"],
+                    scaleY: [1, 1.2, 1],
+                    opacity: [0.6, 1, 0.6],
                   }}
                   transition={{
                     repeat: Infinity,
-                    duration: 0.5,
-                    delay: i * 0.1,
+                    duration: 0.6,
+                    delay: i * 0.08,
                   }}
-                  className="w-2 h-6 bg-[#00ffff] rounded"
+                  className="w-1 h-4 bg-[#00ffff]/70 rounded"
                 />
               ))}
             </div>
@@ -133,11 +132,11 @@ export default function LoadingRetroScreen({ progress = 0 }: { progress?: number
             <AnimatePresence mode="wait">
               <motion.p
                 key={currentTipIndex}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.5 }}
-                className="text-sm text-[#ff6bff] pixel-text glow-pink-subtle italic"
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.4 }}
+                className="text-xs text-[#ff6bff]/90 pixel-text glow-pink-subtle leading-relaxed max-w-[200px] mx-auto"
               >
                 {tips[currentTipIndex]}
               </motion.p>
@@ -148,19 +147,29 @@ export default function LoadingRetroScreen({ progress = 0 }: { progress?: number
 
       <style jsx>{`
         .pixel-border-large {
-          border: 4px solid #00ffff;
-          background: linear-gradient(45deg, #1a0a2a, #2d1b69);
-          box-shadow: 0 0 20px rgba(255, 107, 255, 0.3);
+          border: 3px solid #00ffff;
+          background: rgba(10, 10, 10, 0.9);
+          box-shadow: 
+            0 0 0 1px rgba(255, 107, 255, 0.2),
+            inset 0 0 0 1px rgba(0, 255, 255, 0.1),
+            0 0 20px rgba(0, 255, 255, 0.2);
+          border-radius: 4px;
+          backdrop-filter: blur(2px);
         }
         .pixel-border-large::before {
           content: '';
           position: absolute;
-          top: -8px;
-          left: -8px;
-          right: -8px;
-          bottom: -8px;
-          border: 2px solid #ff6bff;
+          top: -4px;
+          left: -4px;
+          right: -4px;
+          bottom: -4px;
+          border: 1px solid #ff6bff;
           z-index: -1;
+          border-radius: 4px;
+        }
+        .pixel-border-small {
+          border-radius: 2px;
+          image-rendering: pixelated;
         }
         .crt-effect {
           position: absolute;
@@ -168,11 +177,16 @@ export default function LoadingRetroScreen({ progress = 0 }: { progress?: number
           left: 0;
           width: 100%;
           height: 100%;
-          background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-          background-size: 100% 4px;
-          z-index: 10;
+          background: 
+            repeating-linear-gradient(
+              0deg,
+              transparent,
+              transparent 2px,
+              rgba(0, 0, 0, 0.03) 2px,
+              rgba(0, 0, 0, 0.03) 4px
+            );
           pointer-events: none;
-          animation: scanline 8s linear infinite;
+          animation: scanline 6s linear infinite;
         }
         .noise-effect {
           position: absolute;
@@ -180,41 +194,59 @@ export default function LoadingRetroScreen({ progress = 0 }: { progress?: number
           left: 0;
           width: 100%;
           height: 100%;
-          background-image: url("data:image/svg+xml,%3Csvg%20viewBox%3D%270%200%20200%20200%27%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%3E%3Cfilter%20id%3D%27noiseFilter%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.65%27%20numOctaves%3D%273%27%20stitchTiles%3D%27stitch%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27100%25%27%20height%3D%27100%25%27%20filter%3D%27url(%23noiseFilter)%27%20opacity%3D%270.1%27%2F%3E%3C%2Fsvg%3E");
-          z-index: 20;
+          opacity: 0.05;
+          background-image: 
+            radial-gradient(2px 2px at 20px 30px, #000, transparent),
+            radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.1), transparent),
+            radial-gradient(1px 1px at 90px 40px, #000, transparent),
+            radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.1), transparent);
+          background-size: 200px 100px;
           pointer-events: none;
+          animation: noise 0.2s infinite linear alternate;
         }
         .glow-cyan {
-          animation: glow-cyan 1.5s ease-in-out infinite;
-          filter: drop-shadow(0 0 10px #00ffff);
+          text-shadow: 
+            0 0 4px #00ffff,
+            2px 2px 0 #000,
+            -2px -2px 0 #000;
+        }
+        .glow-cyan-subtle {
+          box-shadow: 0 0 6px rgba(0, 255, 255, 0.4);
         }
         .glow-pink {
-          animation: glow-pink 1.5s ease-in-out infinite;
-          filter: drop-shadow(0 0 10px #ff6bff);
+          text-shadow: 
+            0 0 4px #ff6bff,
+            2px 2px 0 #000,
+            -2px -2px 0 #000;
         }
         .glow-pink-subtle {
-          animation: glow-pink 2s ease-in-out infinite;
-          filter: drop-shadow(0 0 5px #ff6bff);
+          text-shadow: 0 0 2px rgba(255, 107, 255, 0.3);
         }
         .pixel-font {
           font-family: 'Press Start 2P', cursive, monospace;
           image-rendering: pixelated;
+          -webkit-font-smoothing: none;
         }
         .pixel-text {
           image-rendering: pixelated;
           text-shadow: 2px 2px 0px #000;
+          letter-spacing: 1px;
         }
         @keyframes scanline {
-          0% { background-position: 0 0; }
-          100% { background-position: 0 100%; }
+          0% { transform: translateY(0); }
+          100% { transform: translateY(100vh); }
+        }
+        @keyframes noise {
+          0% { transform: translate(0, 0); }
+          100% { transform: translate(1px, 1px); }
         }
         @keyframes glow-cyan {
-          0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 255, 0.7), 0 0 20px rgba(0, 255, 255, 0.5); }
-          50% { box-shadow: 0 0 15px rgba(0, 255, 255, 1), 0 0 30px rgba(0, 255, 255, 0.8); }
+          0%, 100% { text-shadow: 0 0 4px #00ffff, 2px 2px 0 #000; }
+          50% { text-shadow: 0 0 8px #00ffff, 2px 2px 0 #000; }
         }
         @keyframes glow-pink {
-          0%, 100% { box-shadow: 0 0 10px rgba(255, 107, 255, 0.7), 0 0 20px rgba(255, 107, 255, 0.5); }
-          50% { box-shadow: 0 0 15px rgba(255, 107, 255, 1), 0 0 30px rgba(255, 107, 255, 0.8); }
+          0%, 100% { text-shadow: 0 0 4px #ff6bff, 2px 2px 0 #000; }
+          50% { text-shadow: 0 0 8px #ff6bff, 2px 2px 0 #000; }
         }
       `}</style>
       <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
