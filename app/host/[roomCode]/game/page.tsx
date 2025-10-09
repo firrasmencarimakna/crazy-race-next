@@ -240,31 +240,52 @@ export default function HostMonitorPage() {
   }, [])
 
   const endGame = async () => {
-    const endTime = new Date().toISOString();
+  const endTime = new Date().toISOString();
+  
+  // Update room ke finished
+  const { error: roomError } = await supabase
+    .from("game_rooms")
+    .update({ 
+      status: "finished", 
+      end: endTime 
+    })
+    .eq("id", roomId);
 
-    const { error } = await supabase
-      .from("game_rooms")
-      .update({
-        status: "finished",
-        end: endTime
-      })
-      .eq("id", roomId);
+  if (roomError) {
+    console.error("Error ending game:", roomError);
+    return;
+  }
 
-    if (error) {
-      console.error("Error ending game:", error);
-      return;
-    }
-
-    console.log("Game ended successfully");
+  // Default result untuk player pasif (score 0, full duration penalty)
+  const defaultResult = {
+    score: 0,
+    correct: 0,
+    accuracy: "0",
+    duration: gameDuration, // Full time = lambat
+    current_question: 1, // Gak mulai
+    total_question: totalQuestions,
+    answers: new Array(totalQuestions).fill(null),
   };
 
-  // Monitor status untuk redirect ke leaderboard
-  useEffect(() => {
-    if (room?.status === 'finished' && !loading) {
-      console.log('Host monitor detected finished, redirecting to leaderboard');
-      router.push(`/host/${roomCode}/leaderboard`);
-    }
-  }, [room?.status, loading, roomCode, router]);
+  // Update HANYA player yang belum complete (completion: false) di room
+  const { error: playerError, count: updatedCount } = await supabase
+    .from("players")
+    .update({ 
+      result: [defaultResult],
+      completion: true 
+    })
+    .eq("room_id", roomId)
+    .eq("completion", false); // ← Filter: Hanya yang false (C&D)
+
+  if (playerError) {
+    console.error("Error completing passive players:", playerError);
+  } else {
+    console.log(`Auto-completed ${updatedCount || 0} passive players with default results`);
+  }
+
+  console.log("Game ended successfully");
+  router.push(`/host/${roomCode}/leaderboard`);
+};
 
   if (loading) {
     return (
@@ -396,7 +417,7 @@ export default function HostMonitorPage() {
 
           {/* Game Timer dan Controls */}
           <Card className="bg-[#1a0a2a]/60 border-[#ff6bff]/50 pixel-card px-6 py-4 mb-4 w-full ">
-            <div className="flex items-center justify-between space-x-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between space-x-6">
               <div className="flex items-center space-x-4">
                 <Clock className={`w-8 h-8 ${getTimeColor()}`} />
                 <div>
@@ -452,26 +473,35 @@ export default function HostMonitorPage() {
                       className={`group ${currentlyAnswering ? "glow-cyan animate-neon-pulse" : "glow-pink-subtle"}`}
                     >
                       <Card
-                        className={`p-3 bg-[#1a0a2a]/50 border-2 border-double transition-all duration-300 h-full gap-2 ${currentlyAnswering
-                            ? "border-[#00ffff]/70 bg-[#00ffff]/10"
-                            : isCompleted
-                              ? "border-[#00ff00]/70 bg-[#00ff00]/10"
-                              : "border-[#ff6bff]/70"
+                        className={`p-3 bg-[#1a0a2a]/50 border-2 border-double transition-all duration-300 h-full gap-4 ${currentlyAnswering
+                          ? "border-[#00ffff]/70 bg-[#00ffff]/10"
+                          : isCompleted
+                            ? "border-[#00ff00]/70 bg-[#00ff00]/10"
+                            : "border-[#ff6bff]/70"
                           }`}
                       >
                         {/* Rank Badge */}
                         <div className="flex items-center">
                           <div className="flex items-center justify-between space-x-2 w-full">
                             {getRankIcon(index)}
-                            {isCompleted && (
-                              <CheckCircle className="w-4 h-4 text-green-400" />
-                            )}
+                            <Badge>
+                              {progress}/{totalQuestions}
+                            </Badge>
                           </div>
+                        </div>
+
+                        <div className="relative mb-3">
+                          <img
+                            src={carGifMap[player.car] || '/assets/car/car5.webp'}
+                            alt={`${player.car} car`}
+                            className="h-28 w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
+                            style={{ transform: 'scaleX(-1)' }}
+                          />
                         </div>
 
                         {/* Player Info */}
                         <div className="text-center">
-                          <h3 className="font-bold text-white pixel-text text-sm leading-tight glow-text mb-2">
+                          <h3 className="text-white pixel-text text-sm leading-tight mb-2">
                             {player.nickname}
                           </h3>
 
@@ -484,7 +514,7 @@ export default function HostMonitorPage() {
 
                           {/* Status */}
                           <div className="text-xs text-[#00ffff] pixel-text">
-                            {progress}/{totalQuestions}
+
                           </div>
                         </div>
                       </Card>

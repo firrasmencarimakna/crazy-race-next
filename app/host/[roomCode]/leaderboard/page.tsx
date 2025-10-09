@@ -257,7 +257,7 @@ export default function HostLeaderboardPage() {
         />
       </AnimatePresence>
 
-      <h1 className="absolute top-5 right-10 hidden lg:block">
+      <h1 className="absolute top-5 right-10 hidden md:block">
         <Image
           src="/gameforsmartlogo.webp"
           alt="Gameforsmart Logo"
@@ -266,12 +266,12 @@ export default function HostLeaderboardPage() {
         />
       </h1>
 
-      <h1 className="absolute top-7 left-10 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden lg:block">
+      <h1 className="absolute top-7 left-10 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">
         Crazy Race
       </h1>
 
       <div className="relative z-10 max-w-5xl mx-auto p-4">
-        <div className="text-center pt-5">
+        <div className="text-center py-4 md:pt-14">
           <motion.h1
             className="text-4xl md:text-5xl font-bold text-[#00ffff] pixel-text glow-cyan tracking-wider animate-neon-glow"
             initial={{ opacity: 0, y: -20 }}
@@ -284,7 +284,7 @@ export default function HostLeaderboardPage() {
 
         {/* Podium - Top 3: Staggered steps with fixed heights for visual podium */}
         <motion.div
-          className="flex justify-center items-end gap-6 mb-12 h-[500px]" // Fixed container height for podium scaling
+          className="flex justify-center items-end gap-6 mb-12 md:h-[500px]" // Fixed container height for podium scaling
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}

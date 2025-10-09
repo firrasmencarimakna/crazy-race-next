@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Clock } from "lucide-react"
@@ -69,126 +69,92 @@ export default function QuizGamePage() {
     }
   }, [roomCode, router])
 
-  // Fetch game room and player data from Supabase
-  useEffect(() => {
-    const fetchGameData = async () => {
-      setLoading(true)
-      try {
-        // Fetch game room data
-        const { data: roomData, error: roomError } = await supabase
-          .from("game_rooms")
-          .select("id, settings, questions, status, start")
-          .eq("room_code", roomCode)
-          .single()
+  // Fetch game room and player data from Supabase (with retry)
+  const fetchGameData = useCallback(async (retryCount = 0) => {
+    setLoading(true)
+    setError(null) // Clear previous error on retry
+    try {
+      console.log(`Fetching game data (attempt ${retryCount + 1})`)
+      // Fetch game room data
+      const { data: roomData, error: roomError } = await supabase
+        .from("game_rooms")
+        .select("id, settings, questions, status, start")
+        .eq("room_code", roomCode)
+        .single()
 
-        if (roomError || !roomData) {
-          throw new Error("Failed to load game room data")
-        }
-
-        // Parse settings and questions
-        const settings = typeof roomData.settings === "string" ? JSON.parse(roomData.settings) : roomData.settings
-        const formattedQuestions: QuizQuestion[] = roomData.questions.map((q: any, index: number) => ({
-          id: `${roomCode}-${index}`,
-          question: q.question,
-          options: q.options,
-          correctAnswer: q.correct,
-        }))
-
-        // Set game start time and duration
-        setGameStartTime(roomData.start ? new Date(roomData.start).getTime() : null)
-        setGameDuration(settings.duration)
-
-        // Fetch player progress
-        const { data: playerData, error: playerError } = await supabase
-          .from("players")
-          .select("result, completion")
-          .eq("id", playerId)
-          .single()
-
-        if (playerError || !playerData) {
-          throw new Error("Failed to load player data")
-        }
-
-        const result = playerData.result && playerData.result[0] ? playerData.result[0] : {}
-        const savedAnswers = result.answers || new Array(formattedQuestions.length).fill(null)
-        const currentIndex = playerData.completion ? formattedQuestions.length : (result.current_question || 0)
-        const savedCorrect = result.correct || 0
-
-        setQuestions(formattedQuestions)
-        setAnswers(savedAnswers)
-        setCurrentQuestionIndex(currentIndex)
-        setCorrectAnswers(savedCorrect)
-        setLoading(false)
-      } catch (err: any) {
-        console.error("Error fetching game data:", err)
-        setError(err.message)
-        setLoading(false)
+      if (roomError || !roomData) {
+        throw new Error(`Room error: ${roomError?.message || 'No data'}`)
       }
-    }
 
+      if (roomData.status !== 'playing') {
+        throw new Error('Game not started yet')
+      }
+
+      // Parse settings and questions
+      const settings = typeof roomData.settings === "string" ? JSON.parse(roomData.settings) : roomData.settings
+      const formattedQuestions: QuizQuestion[] = roomData.questions.map((q: any, index: number) => ({
+        id: `${roomCode}-${index}`,
+        question: q.question,
+        options: q.options,
+        correctAnswer: q.correct,
+      }))
+
+      // Set game start time and duration
+      const startTime = roomData.start ? new Date(roomData.start).getTime() : null
+      if (!startTime) {
+        throw new Error('Game start time missing')
+      }
+      setGameStartTime(startTime)
+      setGameDuration(settings.duration)
+
+      // Fetch player progress
+      const { data: playerData, error: playerError } = await supabase
+        .from("players")
+        .select("result, completion")
+        .eq("id", playerId)
+        .single()
+
+      if (playerError || !playerData) {
+        throw new Error(`Player error: ${playerError?.message || 'No data'}`)
+      }
+
+      const result = playerData.result && playerData.result[0] ? playerData.result[0] : {}
+      const savedAnswers = result.answers || new Array(formattedQuestions.length).fill(null)
+      const currentIndex = playerData.completion ? formattedQuestions.length : (result.current_question || 0)
+      const savedCorrect = result.correct || 0
+
+      setQuestions(formattedQuestions)
+      setAnswers(savedAnswers)
+      setCurrentQuestionIndex(currentIndex)
+      setCorrectAnswers(savedCorrect)
+
+      // Only set loading false after ALL data is ready
+      setLoading(false)
+      console.log('Game data loaded successfully')
+    } catch (err: any) {
+      console.error("Error fetching game data:", err)
+      setError(err.message)
+      if (retryCount < 3) {
+        console.log(`Retrying in ${1000 * (retryCount + 1)}ms...`)
+        setTimeout(() => fetchGameData(retryCount + 1), 1000 * (retryCount + 1))
+      } else {
+        // Final fail: Back to lobby or show error
+        console.error('Max retries reached, redirecting to lobby')
+        router.replace(`/join/${roomCode}`)
+      }
+      setLoading(false) // Set false on error too, but show error UI
+    }
+  }, [roomCode, playerId, router])
+
+  useEffect(() => {
     if (roomCode && playerId) {
       fetchGameData()
     }
-  }, [roomCode, playerId])
+  }, [roomCode, playerId, fetchGameData])
 
-  // Realtime timer based on wall time from DB start
-  useEffect(() => {
-    if (!gameStartTime || loading || questions.length === 0 || gameDuration === 0) return
-
-    const updateRemaining = () => {
-      const now = Date.now()
-      const elapsed = Math.floor((now - gameStartTime) / 1000)
-      const remaining = gameDuration - elapsed
-      setTotalTimeRemaining(Math.max(0, remaining))
-
-      if (remaining <= 0) {
-        saveProgressAndRedirect()
-      }
-    }
-
-    // Initial update
-    updateRemaining()
-
-    const interval = setInterval(updateRemaining, 1000)
-    return () => clearInterval(interval)
-  }, [gameStartTime, loading, questions.length, gameDuration])
-
-  // Subscribe to game_rooms status changes
-  useEffect(() => {
-    const subscription = supabase
-      .channel(`game_rooms:${roomCode}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "game_rooms",
-          filter: `room_code=eq.${roomCode}`,
-        },
-        (payload) => {
-          if (payload.new.status === "finished") {
-            saveProgressAndRedirect()
-          }
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(subscription)
-    }
-  }, [roomCode, playerId, answers, correctAnswers, questions])
-
-  // Background image cycling
-  useEffect(() => {
-    const bgInterval = setInterval(() => {
-      setCurrentBgIndex((prev) => (prev + 1) % backgroundGifs.length)
-    }, 5000)
-    return () => clearInterval(bgInterval)
-  }, [])
-
-  // Save progress and redirect to result page
-  const saveProgressAndRedirect = async () => {
-    if (!gameStartTime) return
+  // Save progress and redirect to result page (useCallback for deps)
+  const saveProgressAndRedirect = useCallback(async () => {
+    if (!gameStartTime || !playerId) return
     const now = Date.now()
     const elapsedSeconds = Math.floor((now - gameStartTime) / 1000)
     const accuracy = totalQuestions > 0 ? ((correctAnswers / totalQuestions) * 100).toFixed(2) : "0.00"
@@ -215,9 +181,84 @@ export default function QuizGamePage() {
     }
 
     router.push(`/join/${roomCode}/result`)
-  }
+  }, [gameStartTime, playerId, correctAnswers, totalQuestions, currentQuestionIndex, answers, roomCode, router])
 
-  const handleAnswerSelect = async (answerIndex: number) => {
+  // Realtime timer based on wall time from DB start (updated: run even if partial, but safe)
+  useEffect(() => {
+    if (loading || questions.length === 0 || gameDuration === 0) return
+
+    console.log('Starting timer with startTime:', gameStartTime)
+
+    const updateRemaining = () => {
+      if (!gameStartTime) {
+        setTotalTimeRemaining(0)
+        return
+      }
+      const now = Date.now()
+      const elapsed = Math.floor((now - gameStartTime) / 1000)
+      const remaining = gameDuration - elapsed
+      setTotalTimeRemaining(Math.max(0, remaining))
+
+      if (remaining <= 0) {
+        saveProgressAndRedirect()
+      }
+    }
+
+    // Initial update
+    updateRemaining()
+
+    const interval = setInterval(updateRemaining, 1000)
+    return () => clearInterval(interval)
+  }, [gameStartTime, loading, questions.length, gameDuration, saveProgressAndRedirect])
+
+  // Subscribe to game_rooms status changes (fixed deps: minimal)
+  useEffect(() => {
+    if (!roomCode || !playerId) return
+
+    const channelName = `game-player:${roomCode}:${playerId}` // Unique per player
+    const subscription = supabase
+      .channel(channelName)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "game_rooms",
+          filter: `room_code=eq.${roomCode}`,
+        },
+        (payload) => {
+          console.log('Game room update:', payload.new.status)
+          if (payload.new.status === "finished") {
+            saveProgressAndRedirect()
+          } else if (payload.new.status === 'playing' && !gameStartTime) {
+            // Fallback: Re-fetch if start time missed
+            fetchGameData()
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('Subscription status:', status) // Debug
+        if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          console.warn('Subscription dropped, retrying...')
+          setTimeout(() => fetchGameData(), 3000) // Retry fetch on disconnect
+        }
+      })
+
+    return () => {
+      supabase.removeChannel(subscription)
+    }
+  }, [roomCode, playerId]) // Deps minimal
+
+  // Background image cycling
+  useEffect(() => {
+    const bgInterval = setInterval(() => {
+      setCurrentBgIndex((prev) => (prev + 1) % backgroundGifs.length)
+    }, 5000)
+    return () => clearInterval(bgInterval)
+  }, [])
+
+  
+  const handleAnswerSelect = useCallback(async (answerIndex: number) => {
     if (isAnswered) return
 
     // Mark question as answered
@@ -278,10 +319,11 @@ export default function QuizGamePage() {
           setShowResult(false)
         }
       } else {
-        saveProgressAndRedirect()
+        console.log('Game completed, redirecting to results')
+        router.push(`/join/${roomCode}/result`)
       }
     }, 500)
-  }
+  }, [isAnswered, answers, currentQuestionIndex, currentQuestion?.correctAnswer, correctAnswers, totalQuestions, gameStartTime, playerId, roomCode, totalQuestions, saveProgressAndRedirect])
 
   // Resume from mini-game
   useEffect(() => {
@@ -321,8 +363,32 @@ export default function QuizGamePage() {
     return "text-[#00ffff] glow-cyan"
   }
 
-  if (loading || error || !currentQuestion) {
-    return <LoadingRetro />
+  // Enhanced loading check: Stay loading until all critical data is ready
+  const isReady = !loading && !error && questions.length > 0 && gameStartTime && gameDuration > 0 && !!currentQuestion
+
+  if (!isReady) {
+    return (
+      <div className="min-h-screen bg-[#1a0a2a] flex items-center justify-center relative overflow-hidden pixel-font">
+        {/* Background cycling even in loading */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentBgIndex}
+            className="absolute inset-0 w-full h-full bg-cover bg-center"
+            style={{ backgroundImage: `url(${backgroundGifs[currentBgIndex]})` }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1 }}
+          />
+        </AnimatePresence>
+        <LoadingRetro /> {/* Show loading until fully ready */}
+        {error && (
+          <div className="absolute top-4 left-4 bg-red-500/90 text-white p-2 rounded pixel-text">
+            Error: {error} {/* Inline error message */}
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
