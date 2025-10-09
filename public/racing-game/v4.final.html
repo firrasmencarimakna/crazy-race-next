@@ -444,7 +444,7 @@
     var decel = -maxSpeed/5;
     var offRoadDecel = -maxSpeed/2;
     var offRoadLimit = maxSpeed/4;
-    var totalCars = 200;
+    var totalCars = 0;
     var currentLapTime = 0;
     var lastLapTime = null;
     var gameFinished = false; // New flag for finish
@@ -764,7 +764,10 @@
       addRoad(num, num, num, -ROAD.CURVE.EASY, -lastY()/segmentLength);
     }
 
-    function resetRoad() {
+
+    //default function resetroad
+    /*
+   function resetRoad() {
       segments = [];
       addStraight(ROAD.LENGTH.SHORT);
       addLowRollingHills();
@@ -784,6 +787,36 @@
       addStraight();
       addSCurves();
       addDownhillToEnd();
+      resetSprites(); 
+      resetCars();
+      segments[findSegment(playerZ).index + 2].color = COLORS.START;
+      segments[findSegment(playerZ).index + 3].color = COLORS.START;
+      for(var n = 0 ; n < rumbleLength ; n++) segments[segments.length-1-n].color = COLORS.FINISH;
+      trackLength = segments.length * segmentLength;
+    }*/
+
+    //fungsi resetroad yang ke dua 
+    
+      function resetRoad() {
+      segments = [];
+      // addStraight(ROAD.LENGTH.SHORT / 2);  // 12-13 segment
+      // addLowRollingHills(ROAD.LENGTH.SHORT / 2);  // Tambah param num ke fungsi ini jika perlu
+      addSCurves();  // Biarkan, tapi bisa dikurangi internal jika mau
+      // addCurve(ROAD.LENGTH.MEDIUM / 2, ROAD.CURVE.MEDIUM, ROAD.HILL.HIGH);
+      addBumps();  // Ini pendek, biarkan
+      // addLowRollingHills(ROAD.LENGTH.SHORT / 2);
+      addCurve(ROAD.LENGTH.LONG, ROAD.CURVE.MEDIUM, ROAD.HILL.MEDIUM);  // Kurangi dari LONG*2 jadi LONG
+      // addStraight(ROAD.LENGTH.SHORT);  // Ganti ke SHORT
+      // addHill(ROAD.LENGTH.MEDIUM / 2, ROAD.HILL.HIGH);
+      addSCurves();  // Biarkan
+      addCurve(ROAD.LENGTH.MEDIUM, -ROAD.CURVE.MEDIUM, ROAD.HILL.NONE);  // Ganti LONG ke MEDIUM
+      // addHill(ROAD.LENGTH.MEDIUM, ROAD.HILL.HIGH);  // Ganti LONG ke MEDIUM
+      addCurve(ROAD.LENGTH.MEDIUM, ROAD.CURVE.MEDIUM, -ROAD.HILL.HIGH);  // Ganti LONG ke MEDIUM
+      addBumps();
+      // addHill(ROAD.LENGTH.MEDIUM, -ROAD.HILL.MEDIUM);  // Ganti LONG ke MEDIUM
+      // addStraight(ROAD.LENGTH.SHORT);
+      addSCurves();
+      addDownhillToEnd(100);  // Kurangi dari default 200
       resetSprites();
       resetCars();
       segments[findSegment(playerZ).index + 2].color = COLORS.START;
@@ -791,6 +824,25 @@
       for(var n = 0 ; n < rumbleLength ; n++) segments[segments.length-1-n].color = COLORS.FINISH;
       trackLength = segments.length * segmentLength;
     }
+
+// function resetRoad() {
+//   segments = [];
+//   addStraight(ROAD.LENGTH.SHORT / 2);  // Straight datar
+//   addLowRollingHills(ROAD.LENGTH.SHORT / 2, 0);  // Hills height=0, cuma rolling curve
+//   addSCurves();  // SCurves datar
+//   addCurve(ROAD.LENGTH.SHORT, ROAD.CURVE.EASY, 0);  // Curve datar
+//   addBumps();  // Bumps kecil datar (sudah diedit di atas)
+//   addStraight(ROAD.LENGTH.SHORT);  // Straight
+//   addHill(ROAD.LENGTH.SHORT, 0);  // Hill height=0
+//   addCurve(ROAD.LENGTH.MEDIUM / 2, ROAD.CURVE.MEDIUM, 0);  // Curve datar
+//   addStraight(ROAD.LENGTH.SHORT * 2);  // Finish straight panjang datar
+//   resetSprites();
+//   resetCars();
+//   segments[findSegment(playerZ).index + 2].color = COLORS.START;
+//   segments[findSegment(playerZ).index + 3].color = COLORS.START;
+//   for(var n = 0 ; n < rumbleLength ; n++) segments[segments.length-1-n].color = COLORS.FINISH;
+//   trackLength = segments.length * segmentLength;
+// }
 
     function resetSprites() {
       var n, i;
