@@ -312,7 +312,7 @@ if (!isLoaded) return <LoadingRetroScreen progress={progress} />
   }
 
   return (
-    <div className="min-h-[100dvh] w-full relative overflow-hidden pixel-font p-2">
+   <div className={`min-h-[100dvh] w-full relative overflow-hidden pixel-font ${isLoaded ? 'p-2' : ''}`}>
       {/* Background Music Audio (hidden) */}
       <audio
         ref={audioRef}

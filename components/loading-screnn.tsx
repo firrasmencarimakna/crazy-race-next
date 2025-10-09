@@ -4,11 +4,9 @@ import { useState, useEffect } from "react";
 
 export default function LoadingRetroScreen({ progress = 0 }: { progress?: number }) {
   const backgroundGifs = [
-    "/assets/background/host/5.webp",
-    "/assets/background/host/7.webp",
-    "/assets/background/host/9.webp",
+
     "/assets/background/host/10.webp",
-    "/assets/background/host/1.webp",
+
   ];
 
   const tips = [
@@ -44,13 +42,23 @@ export default function LoadingRetroScreen({ progress = 0 }: { progress?: number
 
   return (
     <>
+      <style jsx global>{`
+        body {
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: hidden !important;
+        }
+        html {
+          overflow: hidden !important;
+        }
+      `}</style>
       <AnimatePresence>
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-50 flex items-center justify-center relative pixel-font"
+          className="fixed inset-0 z-[9999] flex items-center justify-center h-screen w-screen relative pixel-font overflow-hidden"
         >
           {/* Background */}
           <AnimatePresence mode="wait">
@@ -70,7 +78,7 @@ export default function LoadingRetroScreen({ progress = 0 }: { progress?: number
           <div className="noise-effect absolute inset-0 z-20"></div>
 
           {/* Main Loading Container */}
-          <div className="pixel-border-large p-8 text-center relative z-30 w-full max-w-md">
+          <div className="pixel-border-large p-8 text-center relative z-30 w-full max-w-md mx-auto">
             {/* Title */}
             <motion.p
               animate={{ opacity: [1, 0.5, 1] }}
