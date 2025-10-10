@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -27,21 +27,19 @@ const backgroundGifs = [
 ]
 
 const carGifMap: Record<string, string> = {
-  red: "/assets/car/car1.webp",
-  blue: "/assets/car/car2.webp",
-  green: "/assets/car/car3.webp",
-  yellow: "/assets/car/car4.webp",
-  purple: "/assets/car/car5.webp",
-  orange: "/assets/car/car5.webp",
+  purple: "/assets/car/car1.webp",
+  white: "/assets/car/car2.webp",
+  black: "/assets/car/car3.webp",
+  aqua: "/assets/car/car4.webp",
+  blue: "/assets/car/car5.webp",
 }
 
 const availableCars = [
-  { key: "red", label: "Red Racer" },
-  { key: "blue", label: "Blue Bolt" },
-  { key: "green", label: "Green Machine" },
-  { key: "yellow", label: "Yellow Fury" },
-  { key: "purple", label: "Purple Phantom" },
-  { key: "orange", label: "Orange Outlaw" },
+  { key: "purple", label: "Vortexia" },
+  { key: "white", label: "Glacier" },
+  { key: "black", label: "Noctis" },
+  { key: "aqua", label: "Hydracer" },
+  { key: "blue", label: "Skyburst" },
 ] as const
 
 interface Player {
@@ -397,7 +395,7 @@ export default function LobbyPage() {
             src="/gameforsmartlogo.webp"
             alt="Gameforsmart Logo"
             width={256}
-            height={0}
+            height={64}
           />
         </h1>
 
@@ -414,8 +412,8 @@ export default function LobbyPage() {
 
         {/* Players Grid - 5 per baris */}
         <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ y: 50 }}
+          animate={{ y: 0 }}
           transition={{ duration: 0.8 }}
         >
           <Card className="bg-[#1a0a2a]/40 backdrop-blur-sm border-[#ff6bff]/50 pixel-card py-5 gap-3 mb-10">
@@ -493,61 +491,61 @@ export default function LobbyPage() {
           </Button>
         </div>
       </div>
-      
-{/* Modal Dialog Verifikasi Exit - Enhanced */}
-<Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
-  <DialogOverlay className="bg-[#000ffff] backdrop-blur-sm" />
-  <DialogContent className="bg-[#1a0a2a]/65 border-[#ff6bff]/50 backdrop-blur-md text-[#00ffff] max-w-lg mx-auto">
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ duration: 0.3 }}
-    >
-      <DialogHeader>
-        <DialogTitle className="text-cyan-400 pixel-text glow-cyan text-center"> Exit Room?</DialogTitle>
 
-      </DialogHeader>
+      {/* Modal Dialog Verifikasi Exit - Enhanced */}
+      <Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+        <DialogOverlay className="bg-[#000ffff] backdrop-blur-sm" />
+        <DialogContent className="bg-[#1a0a2a]/65 border-[#ff6bff]/50 backdrop-blur-md text-[#00ffff] max-w-lg mx-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.3 }}
+          >
+            <DialogHeader>
+              <DialogTitle className="text-cyan-400 pixel-text glow-cyan text-center"> Exit Room?</DialogTitle>
 
-      {/* Car GIF - Enhanced */}
-      <div className="flex justify-center mb-4">
-        <img
-          src={carGifMap[currentPlayer.car || 'blue']}
-          alt="Your Car"
-          className="h-24 w-42 object-contain filter brightness-125 glow-cyan"
-        />
-      </div>
-        <DialogDescription className="text-cyan-400 text-center">
-         You will Go to the Homepage.
-        </DialogDescription>
+            </DialogHeader>
 
-      <div className="flex justify-end space-x-3 pt-4">
-        <Button
-          variant="outline"
-          onClick={() => setShowExitDialog(false)}
-          className="text-[#00ffff] border-1 border-[#00ffff] hover:bg-[#00ffff] "
-        >
-          Cancel
-        </Button>
+            {/* Car GIF - Enhanced */}
+            <div className="flex justify-center mb-4">
+              <img
+                src={carGifMap[currentPlayer.car || 'blue']}
+                alt="Your Car"
+                className="h-24 w-42 object-contain filter brightness-125 glow-cyan"
+              />
+            </div>
+            <DialogDescription className="text-cyan-400 text-center">
+              You will Go to the Homepage.
+            </DialogDescription>
 
-        <Button
-          onClick={handleExit}
-          className="bg-[#000] border-1 text-[#00ffff] border-[#00ffff] hover:bg-[#00ffff] hover:text-[#000]"
-        >
-         
-          Exit
-        </Button>
-      </div>
-    </motion.div>
-  </DialogContent>
-</Dialog>
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowExitDialog(false)}
+                className="text-[#00ffff] border-1 border-[#00ffff] hover:bg-[#00ffff] "
+              >
+                Cancel
+              </Button>
+
+              <Button
+                onClick={handleExit}
+                className="bg-[#000] border-1 text-[#00ffff] border-[#00ffff] hover:bg-red-500 hover:text-white"
+              >
+
+                Exit
+              </Button>
+            </div>
+          </motion.div>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog/Modal Pilih Car - Mobile Friendly */}
       <Dialog open={showCarDialog} onOpenChange={setShowCarDialog}>
         <DialogOverlay className="bg-[#8B00FF]/60 backdrop-blur-sm" />
         <DialogContent className="bg-[#1a0a2a]/90 border-[#ff6bff]/50 backdrop-blur-sm sm:max-w-md sm:h-auto overflow-auto p-0">
           <DialogHeader className="pt-4 pb-2 px-4">
-            <DialogTitle className="text-[#00ffff] pixel-text glow-cyan text-center text-xl">Choose Your Car</DialogTitle>
+            <DialogTitle className="text-[#00ffff] pixel-text glow-cyan text-center text-xl">Choose Car</DialogTitle>
           </DialogHeader>
           <div className="px-4 pb-4 grid grid-cols-2 md:grid-cols-3 gap-4 overflow-y-auto">
             {availableCars.map((car) => (

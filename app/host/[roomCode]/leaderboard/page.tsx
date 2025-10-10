@@ -30,12 +30,11 @@ const backgroundGifs = [
 ]
 
 const carGifMap: Record<string, string> = {
-  red: "/assets/car/car1.webp",
-  blue: "/assets/car/car2.webp",
-  green: "/assets/car/car3.webp",
-  yellow: "/assets/car/car4.webp",
-  purple: "/assets/car/car5.webp",
-  orange: "/assets/car/car5.webp",
+  purple: "/assets/car/car1.webp",
+  white: "/assets/car/car2.webp",
+  black: "/assets/car/car3.webp",
+  aqua: "/assets/car/car4.webp",
+  blue: "/assets/car/car5.webp",
 }
 
 export default function HostLeaderboardPage() {
@@ -262,7 +261,7 @@ export default function HostLeaderboardPage() {
           src="/gameforsmartlogo.webp"
           alt="Gameforsmart Logo"
           width={256}
-          height={0}
+          height={64}
         />
       </h1>
 

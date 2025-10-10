@@ -22,12 +22,11 @@ const backgroundGifs = [
 
 // Mapping warna mobil ke file GIF mobil
 const carGifMap: Record<string, string> = {
-  red: "/assets/car/car1.webp",
-  blue: "/assets/car/car2.webp",
-  green: "/assets/car/car3.webp",
-  yellow: "/assets/car/car4.webp",
-  purple: "/assets/car/car5.webp",
-  orange: "/assets/car/car5.webp",
+  purple: "/assets/car/car1.webp",
+  white: "/assets/car/car2.webp",
+  black: "/assets/car/car3.webp",
+  aqua: "/assets/car/car4.webp",
+  blue: "/assets/car/car5.webp",
 }
 
 export default function HostMonitorPage() {
@@ -340,7 +339,7 @@ export default function HostMonitorPage() {
         animate={{ opacity: 1, x: 0 }}
         whileHover={{ scale: 1.05 }}
         onClick={() => setIsMenuOpen(!isMenuOpen)}
-        className="fixed top-4 right-4 z-40 p-3 bg-[#ff6bff] border-2 border-white pixel-button hover:bg-[#ff8aff] glow-pink rounded-lg shadow-lg shadow-[#ff6bff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
+        className="absolute top-4 right-4 z-40 p-3 bg-[#ff6bff] border-2 border-white pixel-button hover:bg-[#ff8aff] glow-pink rounded-lg shadow-lg shadow-[#ff6bff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
         aria-label="Toggle menu"
       >
         {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -351,7 +350,7 @@ export default function HostMonitorPage() {
           src="/gameforsmartlogo.webp"
           alt="Gameforsmart Logo"
           width={256}
-          height={0}
+          height={64}
         />
       </h1>
 
@@ -365,7 +364,7 @@ export default function HostMonitorPage() {
           initial={{ opacity: 0, x: 300 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 300 }}
-          className="fixed top-20 right-4 z-30 w-64 bg-[#1a0a2a]/90 border border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm"
+          className="absolute top-20 right-4 z-30 w-64 bg-[#1a0a2a]/90 border border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm"
         >
           <div className="space-y-4">
             {/* Mute Toggle */}
