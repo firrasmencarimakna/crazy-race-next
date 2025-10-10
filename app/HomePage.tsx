@@ -243,7 +243,7 @@ try {
         .insert({
           room_id: roomData.id,
           nickname: nickname.trim(), // Trim whitespace
-          car: ["red", "blue", "green", "yellow", "purple"][Math.floor(Math.random() * 5)] // Random car color
+          car: ["purple", "white", "black", "aqua", "blue"][Math.floor(Math.random() * 5)]
         })
 
       if (playerError) {
@@ -333,16 +333,16 @@ if (!isLoaded) return <LoadingRetroScreen progress={progress} />
       />
 
       <h1 className="absolute top-6 md:top-4 left-4 w-42 md:w-50 lg:w-100">
-        <Image src="/gameforsmartlogo.webp" alt="Gameforsmart Logo" width="256" height="0" />
+        <Image src="/gameforsmartlogo.webp" alt="Gameforsmart Logo" width="256" height="64" priority/>
       </h1>
 
       {/* Alert Audio (hidden, untuk efek suara) */}
-      <audio
+      {/* <audio
         ref={alertAudioRef}
         src="/assets/music/gas.mp3"
         preload="auto"
         className="hidden"
-      />
+      /> */}
 
       {/* Modal Alert: Tampil jika showAlert true, dengan pesan dinamis berdasarkan alertReason */}
       <AnimatePresence>
@@ -419,7 +419,7 @@ if (!isLoaded) return <LoadingRetroScreen progress={progress} />
         animate={{ opacity: 1, x: 0 }}
         whileHover={{ scale: 1.05 }}
         onClick={() => setIsMenuOpen(!isMenuOpen)}
-        className="fixed top-4 right-4 z-40 p-3 bg-[#1a0a2a]/60 border-2 border-[#ff6bff]/50 hover:border-[#ff6bff] pixel-button hover:bg-[#ff6bff]/20 glow-pink-subtle rounded-lg shadow-lg shadow-[#ff6bff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
+        className="absolute top-4 right-4 z-40 p-3 bg-[#1a0a2a]/60 border-2 border-[#ff6bff]/50 hover:border-[#ff6bff] pixel-button hover:bg-[#ff6bff]/20 glow-pink-subtle rounded-lg shadow-lg shadow-[#ff6bff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
         aria-label="Toggle menu"
       >
         {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -432,7 +432,7 @@ if (!isLoaded) return <LoadingRetroScreen progress={progress} />
             initial={{ opacity: 0, x: 300 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 300 }}
-            className="fixed top-20 right-4 z-30 w-64 bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm scrollbar-themed"
+            className="absolute top-20 right-4 z-30 w-64 bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm scrollbar-themed"
           >
             <div className="space-y-4">
               {/* Mute Toggle */}

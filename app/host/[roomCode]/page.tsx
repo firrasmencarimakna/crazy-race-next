@@ -23,12 +23,11 @@ const backgroundGifs = [
 ]
 
 const carGifMap: Record<string, string> = {
-  red: "/assets/car/car1.webp",
-  blue: "/assets/car/car2.webp",
-  green: "/assets/car/car3.webp",
-  yellow: "/assets/car/car4.webp",
-  purple: "/assets/car/car5.webp",
-  orange: "/assets/car/car5.webp",
+  purple: "/assets/car/car1.webp",
+  white: "/assets/car/car2.webp",
+  black: "/assets/car/car3.webp",
+  aqua: "/assets/car/car4.webp",
+  blue: "/assets/car/car5.webp",
 }
 
 export default function HostRoomPage() {
@@ -274,7 +273,6 @@ export default function HostRoomPage() {
   }, [roomCode])
 
   // Effect untuk sinkronisasi countdown (updated)
-  // Effect untuk sinkronisasi countdown (updated)
   useEffect(() => {
     if (!room?.countdown_start || room.status !== 'countdown') {
       console.log('No countdown needed:', {
@@ -449,7 +447,7 @@ export default function HostRoomPage() {
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         whileHover={{ scale: 1.05 }}
-        className="fixed top-4 left-4 z-40 p-3 bg-[#00ffff]/20 border-2 border-[#00ffff] pixel-button hover:bg-[#33ffff]/20 glow-cyan rounded-lg shadow-lg shadow-[#00ffff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
+        className="absolute top-4 left-4 z-40 p-3 bg-[#00ffff]/20 border-2 border-[#00ffff] pixel-button hover:bg-[#33ffff]/20 glow-cyan rounded-lg shadow-lg shadow-[#00ffff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
         aria-label="Back to Host"
         onClick={() => router.push(`/host/${roomCode}/settings`)}
       >
@@ -461,7 +459,7 @@ export default function HostRoomPage() {
           src="/gameforsmartlogo.webp"
           alt="Gameforsmart Logo"
           width={256}
-          height={0}
+          height={64}
         />
       </h1>
 
@@ -475,7 +473,7 @@ export default function HostRoomPage() {
         animate={{ opacity: 1, x: 0 }}
         whileHover={{ scale: 1.05 }}
         onClick={() => setIsMenuOpen(!isMenuOpen)}
-        className="fixed top-4 right-4 z-40 p-3 bg-[#ff6bff]/20 border-2 border-[#ff6bff]/50 pixel-button hover:bg-[#ff8aff]/40 glow-pink rounded-lg shadow-lg shadow-[#ff6bff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
+        className="absolute top-4 right-4 z-40 p-3 bg-[#ff6bff]/20 border-2 border-[#ff6bff]/50 pixel-button hover:bg-[#ff8aff]/40 glow-pink rounded-lg shadow-lg shadow-[#ff6bff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
         aria-label="Toggle menu"
       >
         {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -487,7 +485,7 @@ export default function HostRoomPage() {
           initial={{ opacity: 0, x: 300 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 300 }}
-          className="fixed top-20 right-4 z-30 w-64 bg-[#1a0a2a]/90 border border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm"
+          className="absolute top-20 right-4 z-30 w-64 bg-[#1a0a2a]/90 border border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm"
         >
           <div className="space-y-4">
             {/* Mute Toggle */}

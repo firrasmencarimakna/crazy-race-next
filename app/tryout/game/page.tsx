@@ -22,12 +22,11 @@ const backgroundGifs = [
 
 // Car GIF mappings
 const carGifMap: Record<string, string> = {
-  red: "/assets/car/car1.gif",
-  blue: "/assets/car/car2.gif",
-  green: "/assets/car/car3.gif",
-  yellow: "/assets/car/car4.gif",
-  purple: "/assets/car/car5.gif",
-  orange: "/assets/car/car6.gif",
+  purple: "/assets/car/car1.webp",
+  white: "/assets/car/car2.webp",
+  black: "/assets/car/car3.webp",
+  aqua: "/assets/car/car4.webp",
+  blue: "/assets/car/car5.webp",
 }
 
 type QuizQuestion = {
