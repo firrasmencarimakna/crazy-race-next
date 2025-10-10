@@ -89,26 +89,15 @@ export default function LobbyPage() {
   const [showCarDialog, setShowCarDialog] = useState(false) // State untuk dialog car
   const [showExitDialog, setShowExitDialog] = useState(false) //exit 
 
-  // Wall-time helper (unified, UTC force)
-  const getCountdownRemaining = useCallback((startStr: string) => {
-    const startTimeStr = startStr.endsWith('Z') ? startStr : `${startStr}Z` // Force UTC
-    const startTime = new Date(startTimeStr).getTime()
-    const elapsed = Math.floor((Date.now() - startTime) / 1000)
-    return Math.max(0, 10 - elapsed) // Total 10s
-  }, [])
-
-  // Monitor status room dan auto-redirect ke game/result (sama)
+  // Tambah useEffect baru: Monitor status room dan auto-redirect ke game
   useEffect(() => {
     if (room?.status === 'playing' && !loading) {
       console.log('Lobby detected playing status, redirecting to game');
       router.replace(`/join/${roomCode}/game`);
-    } else if (room?.status === 'finished' && !loading) {
-      console.log('Lobby detected finished status, redirecting to result');
-      router.replace(`/join/${roomCode}/result`);
     }
   }, [room?.status, loading, roomCode, router]);
 
-  // Effect untuk sinkronisasi countdown (RAF precise, no interval drift)
+  // Effect untuk sinkronisasi countdown (updated ke wall-time)
   useEffect(() => {
     if (!room?.countdown_start || room.status !== 'countdown') {
       setCountdown(0);
@@ -117,52 +106,41 @@ export default function LobbyPage() {
 
     console.log('Starting wall-time countdown sync for lobby:', room.countdown_start);
 
-    let rafId: number | null = null
-    const totalCountdown = 10
+    const countdownStartTime = new Date(room.countdown_start).getTime();
+    const totalCountdown = 10; // Detik total
 
     const updateCountdown = () => {
-      const remaining = getCountdownRemaining(room.countdown_start)
-      console.log('Lobby countdown remaining:', remaining)
-      setCountdown(remaining)
+      const now = Date.now();
+      const elapsed = Math.floor((now - countdownStartTime) / 1000);
+      const remaining = Math.max(0, totalCountdown - elapsed);
+
+      console.log('Lobby countdown remaining:', remaining);
+      setCountdown(remaining);
 
       if (remaining <= 0) {
         console.log('Lobby countdown finished, redirecting to game');
-        if (rafId) cancelAnimationFrame(rafId)
-        router.replace(`/join/${roomCode}/game`)
-        return
+        clearInterval(countdownInterval);
+        // router.replace(`/join/${roomCode}/game`);
       }
-
-      rafId = requestAnimationFrame(updateCountdown) // Precise tick
-    }
+    };
 
     // Initial update
-    updateCountdown()
+    updateCountdown();
 
-    // Visibility listener (pause/resume di mobile)
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        // Pause RAF kalau hidden (hemat battery)
-        if (rafId) cancelAnimationFrame(rafId)
-      } else {
-        updateCountdown() // Resume & sync
-      }
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange)
+    // Interval setiap detik
+    const countdownInterval = setInterval(updateCountdown, 1000);
 
     // Cleanup
     return () => {
-      console.log('Cleaning up lobby countdown RAF');
-      if (rafId) cancelAnimationFrame(rafId)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      console.log('Cleaning up lobby countdown interval');
+      clearInterval(countdownInterval);
     };
-  }, [room?.countdown_start, room?.status, roomCode, router, getCountdownRemaining]);
+  }, [room?.countdown_start, room?.status, roomCode, router]);
 
   useEffect(() => {
     if (!roomCode) return;
 
     let roomId = ''
-    let playerChannel: any = null
-    let roomChannel: any = null
 
     const bootstrap = async () => {
       // 1. Dapatkan roomId dari roomCode dengan countdown_start
@@ -184,9 +162,9 @@ export default function LobbyPage() {
       setRoom(room)
       setGamePhase(room.status)
 
-      // Immediate check: Kalau udah playing/finished, redirect (handle refresh mid-game/end)
+      // Immediate check: Kalau udah playing, redirect (handle refresh mid-game)
       if (room.status === 'playing') {
-        console.log('Bootstrap detected playing, immediate redirect to game');
+        console.log('Bootstrap detected playing, immediate redirect');
         router.replace(`/join/${roomCode}/game`);
         return; // Stop bootstrap
       } else if (room.status === 'finished') {
@@ -195,9 +173,9 @@ export default function LobbyPage() {
         return; // Stop bootstrap
       }
 
-      // Initial countdown sync (wall-time, no calculateCountdown)
+      // Sync countdown jika sudah mulai
       if (room.status === 'countdown' && room.countdown_start) {
-        const remaining = getCountdownRemaining(room.countdown_start)
+        const remaining = calculateCountdown(room.countdown_start, 10);
         console.log('Player: Initial countdown sync, remaining:', remaining);
         setCountdown(remaining);
       }
@@ -232,12 +210,17 @@ export default function LobbyPage() {
       setCurrentPlayer({ id: me.id, nickname: me.nickname, car: me.car || 'blue' })
       localStorage.setItem('playerId', me.id);
 
-      // 5. Subscription untuk perubahan players (sama)
-      playerChannel = supabase
+      // 5. Subscription untuk perubahan players
+      const playerChannel = supabase
         .channel(`players:${roomCode}`)
         .on(
           'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'players', filter: `room_id=eq.${roomId}` },
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'players',
+            filter: `room_id=eq.${roomId}`
+          },
           payload => {
             const newOne = {
               id: payload.new.id,
@@ -247,25 +230,51 @@ export default function LobbyPage() {
               isReady: true
             }
             setPlayers(prev => [...prev, newOne])
+            console.log('New player joined:', payload.new.nickname); // Debug
           }
         )
-        .on('postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'players', filter: `room_id=eq.${roomId}` },
+        .on(  // Tambah ini: Handler UPDATE untuk car change
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'players',
+            filter: `room_id=eq.${roomId}`
+          },
           payload => {
-            setPlayers(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p))
+            console.log('Player updated:', payload.new.nickname, 'New car:', payload.new.car); // Debug
+            setPlayers(prev =>
+              prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p)
+            );
           }
         )
-        .on('postgres_changes',
-          { event: 'DELETE', schema: 'public', table: 'players', filter: `room_id=eq.${roomId}` },
+        .on(  // Handler DELETE (udah ada, keep)
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'players',
+            filter: `room_id=eq.${roomId}`
+          },
           payload => {
             setPlayers(prev => prev.filter(p => p.id !== payload.old.id))
-            if (payload.old.id === currentPlayer.id) router.push('/')
+            // Jika player yang keluar adalah current player, redirect ke home
+            if (payload.old.id === currentPlayer.id) {
+              router.push('/')
+            }
           }
         )
-        .subscribe()
+        .subscribe((status) => {  // Optional: Status callback buat debug
+          console.log('Players sub status:', status);
+          if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            console.warn('Players sub dropped, retrying...');
+            // Auto-retry: Re-bootstrap setelah 3s
+            setTimeout(bootstrap, 3000);
+          }
+        });
 
-      // 6. Subscription untuk perubahan room (sama, dengan wall-time sync)
-      roomChannel = supabase
+      // 6. Subscription untuk perubahan room dengan countdown_start (updated: auto-redirect playing)
+      const roomChannel = supabase
         .channel(`room:${roomCode}`)
         .on(
           'postgres_changes',
@@ -276,6 +285,7 @@ export default function LobbyPage() {
             setGamePhase(newRoomData.status)
             setRoom(newRoomData)
 
+            // Auto-redirect kalau status playing
             if (newRoomData.status === 'playing') {
               console.log('Subscription detected playing, redirecting to game');
               router.replace(`/join/${roomCode}/game`);
@@ -284,8 +294,9 @@ export default function LobbyPage() {
               router.replace(`/join/${roomCode}/result`);
             }
 
+            // Jika status berubah menjadi countdown, sync countdown
             if (newRoomData.status === 'countdown' && newRoomData.countdown_start) {
-              const remaining = getCountdownRemaining(newRoomData.countdown_start)
+              const remaining = calculateCountdown(newRoomData.countdown_start, 10);
               setCountdown(remaining);
             }
           }
@@ -293,15 +304,15 @@ export default function LobbyPage() {
         .subscribe()
 
       setLoading(false)
+
+      return () => {
+        supabase.removeChannel(playerChannel)
+        supabase.removeChannel(roomChannel)
+      }
     }
 
     bootstrap()
-
-    return () => {
-      if (playerChannel) supabase.removeChannel(playerChannel)
-      if (roomChannel) supabase.removeChannel(roomChannel)
-    }
-  }, [roomCode, router, getCountdownRemaining])
+  }, [roomCode, router])
 
   // Background image cycling
   useEffect(() => {
@@ -480,54 +491,54 @@ export default function LobbyPage() {
           </Button>
         </div>
       </div>
-      
-{/* Modal Dialog Verifikasi Exit - Enhanced */}
-<Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
-  <DialogOverlay className="bg-[#000ffff] backdrop-blur-sm" />
-  <DialogContent className="bg-[#1a0a2a]/65 border-[#ff6bff]/50 backdrop-blur-md text-[#00ffff] max-w-lg mx-auto">
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ duration: 0.3 }}
-    >
-      <DialogHeader>
-        <DialogTitle className="text-cyan-400 pixel-text glow-cyan text-center"> Exit Room?</DialogTitle>
 
-      </DialogHeader>
+      {/* Modal Dialog Verifikasi Exit - Enhanced */}
+      <Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+        <DialogOverlay className="bg-[#000ffff] backdrop-blur-sm" />
+        <DialogContent className="bg-[#1a0a2a]/65 border-[#ff6bff]/50 backdrop-blur-md text-[#00ffff] max-w-lg mx-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.3 }}
+          >
+            <DialogHeader>
+              <DialogTitle className="text-cyan-400 pixel-text glow-cyan text-center"> Exit Room?</DialogTitle>
 
-      {/* Car GIF - Enhanced */}
-      <div className="flex justify-center mb-4">
-        <img
-          src={carGifMap[currentPlayer.car || 'blue']}
-          alt="Your Car"
-          className="h-24 w-42 object-contain filter brightness-125 glow-cyan"
-        />
-      </div>
-        <DialogDescription className="text-cyan-400 text-center">
-         You will Go to the Homepage.
-        </DialogDescription>
+            </DialogHeader>
 
-      <div className="flex justify-end space-x-3 pt-4">
-        <Button
-          variant="outline"
-          onClick={() => setShowExitDialog(false)}
-          className="text-[#00ffff] border-1 border-[#00ffff] hover:bg-[#00ffff] "
-        >
-          Cancel
-        </Button>
+            {/* Car GIF - Enhanced */}
+            <div className="flex justify-center mb-4">
+              <img
+                src={carGifMap[currentPlayer.car || 'blue']}
+                alt="Your Car"
+                className="h-24 w-42 object-contain filter brightness-125 glow-cyan"
+              />
+            </div>
+            <DialogDescription className="text-cyan-400 text-center">
+              You will Go to the Homepage.
+            </DialogDescription>
 
-        <Button
-          onClick={handleExit}
-          className="bg-[#000] border-1 text-[#00ffff] border-[#00ffff] hover:bg-red-500 hover:text-white"
-        >
-         
-          Exit
-        </Button>
-      </div>
-    </motion.div>
-  </DialogContent>
-</Dialog>
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowExitDialog(false)}
+                className="text-[#00ffff] border-1 border-[#00ffff] hover:bg-[#00ffff] "
+              >
+                Cancel
+              </Button>
+
+              <Button
+                onClick={handleExit}
+                className="bg-[#000] border-1 text-[#00ffff] border-[#00ffff] hover:bg-red-500 hover:text-white"
+              >
+
+                Exit
+              </Button>
+            </div>
+          </motion.div>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog/Modal Pilih Car - Mobile Friendly */}
       <Dialog open={showCarDialog} onOpenChange={setShowCarDialog}>
