@@ -2,26 +2,30 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Copy, Users, Play, ArrowLeft, VolumeX, Volume2, Maximize2, Check, Menu, X } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
-import QRCode from "react-qr-code";
-import { Dialog, DialogContent, DialogHeader, DialogOverlay, DialogTitle } from "@/components/ui/dialog"
-import { calculateCountdown } from "@/utils/countdown"
+import QRCode from "react-qr-code"
+import { Dialog, DialogContent, DialogOverlay } from "@/components/ui/dialog"
 import LoadingRetro from "@/components/loadingRetro"
 import { Slider } from "@/components/ui/slider"
 import { breakOnCaps, formatUrlBreakable } from "@/utils/game"
 import Image from "next/image"
 
-// List of background GIFs (same as previous pages for consistency)
-const backgroundGifs = [
-  "/assets/background/4.webp",
-]
+/**
+ * Konstanta untuk background GIFs, digunakan untuk cycling background.
+ * Konsisten dengan halaman lain untuk tema visual.
+ */
+const backgroundGifs = ["/assets/background/4.webp"]
 
+/**
+ * Mapping GIF mobil berdasarkan warna mobil player.
+ * Digunakan untuk menampilkan animasi mobil di daftar player.
+ */
 const carGifMap: Record<string, string> = {
   purple: "/assets/car/car1.webp?v=2",
   white: "/assets/car/car2.webp?v=2",
@@ -30,70 +34,94 @@ const carGifMap: Record<string, string> = {
   blue: "/assets/car/car5.webp?v=2",
 }
 
+/**
+ * Komponen utama HostRoomPage.
+ * Halaman ini menampilkan room host, daftar player real-time via Supabase,
+ * QR code untuk join, dan tombol start game dengan countdown.
+ * Audio background dikelola dengan persist rendering untuk autoplay konsisten.
+ */
 export default function HostRoomPage() {
+  // Hooks navigasi dan params
   const params = useParams()
   const router = useRouter()
   const roomCode = params.roomCode as string
-  const [players, setPlayers] = useState<any[]>([])
-  const [room, setRoom] = useState<any>(null)
-  const [gameStarted, setGameStarted] = useState(false)
-  const [countdown, setCountdown] = useState(0)
-  const [isMuted, setIsMuted] = useState(false)
-  const [volume, setVolume] = useState(50) // 0-100, default 50%
-  const [currentBgIndex, setCurrentBgIndex] = useState(0)
-  const [isTransitioning, setIsTransitioning] = useState(false)
-  const [open, setOpen] = useState(false);
-  const [joinLink, setJoinLink] = useState('')
-  const [copiedRoom, setCopiedRoom] = useState(false);
-  const [copiedJoin, setCopiedJoin] = useState(false);
-  const [loading, setLoading] = useState(true)
-  const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
+
+  // State untuk data room dan player
+  const [players, setPlayers] = useState<any[]>([]) // Daftar player real-time
+  const [room, setRoom] = useState<any>(null) // Data room dari Supabase
+  const [gameStarted, setGameStarted] = useState(false) // Flag apakah game sudah dimulai
+  const [countdown, setCountdown] = useState(0) // Timer countdown (0 = tidak aktif)
+
+  // State untuk audio controls
+  const [isMuted, setIsMuted] = useState(false) // Status mute audio
+  const [volume, setVolume] = useState(50) // Volume audio (0-100)
+
+  // State untuk UI dan animasi
+  const [currentBgIndex, setCurrentBgIndex] = useState(0) // Index background GIF saat ini
+  const [isTransitioning, setIsTransitioning] = useState(false) // Flag transisi background
+  const [open, setOpen] = useState(false) // Dialog QR code
+  const [joinLink, setJoinLink] = useState('') // Link join room dengan query param
+  const [copiedRoom, setCopiedRoom] = useState(false) // Feedback copy room code
+  const [copiedJoin, setCopiedJoin] = useState(false) // Feedback copy join link
+  const [loading, setLoading] = useState(true) // Loading state untuk fetch data
+  const [isMenuOpen, setIsMenuOpen] = useState(false) // Toggle menu burger
+
+  // Ref untuk audio element
   const audioRef = useRef<HTMLAudioElement>(null)
 
-  const channel = supabase.channel('game_room');
-
+  // Channel Supabase global untuk presence (bisa dihapus jika tidak digunakan)
+  const channel = supabase.channel('game_room')
   channel.on('presence', { event: 'sync' }, () => {
-    console.log('Presence synced');
-  });
-
+    console.log('Presence synced')
+  })
   channel.subscribe((status) => {
-    console.log('Realtime status:', status);
-  });
+    console.log('Realtime status:', status)
+  })
 
-  // useEffect baru: Wait for user gesture to enable audio
-useEffect(() => {
-  let isFirstInteraction = true;
-
-  const enableAudioOnInteraction = () => {
-    if (isFirstInteraction && audioRef.current) {
-      isFirstInteraction = false;
-      audioRef.current.volume = isMuted ? 0 : (volume / 100);
-      audioRef.current.play().then(() => {
-        console.log("Audio started after user interaction!");
-      }).catch((e) => {
-        console.log("Still blocked:", e);
-      });
-      // Hapus listener setelah first play
-      document.removeEventListener('click', enableAudioOnInteraction);
-      document.removeEventListener('scroll', enableAudioOnInteraction);
-      document.removeEventListener('keydown', enableAudioOnInteraction);
-    }
-  };
-
-  // Listener untuk berbagai gesture
-  document.addEventListener('click', enableAudioOnInteraction);
-  document.addEventListener('scroll', enableAudioOnInteraction);
-  document.addEventListener('keydown', enableAudioOnInteraction);
-
-  return () => {
-    document.removeEventListener('click', enableAudioOnInteraction);
-    document.removeEventListener('scroll', enableAudioOnInteraction);
-    document.removeEventListener('keydown', enableAudioOnInteraction);
-  };
-}, [isMuted, volume]);  // Re-run kalau mute/volume berubah
-
-  // Fetch room details and set up real-time subscriptions
+  /**
+   * useEffect: Enable audio setelah user gesture pertama (handle autoplay policy browser).
+   * Listener dihapus setelah play sukses untuk performa.
+   */
   useEffect(() => {
+    let isFirstInteraction = true
+
+    const enableAudioOnInteraction = () => {
+      if (isFirstInteraction && audioRef.current) {
+        isFirstInteraction = false
+        audioRef.current.volume = isMuted ? 0 : (volume / 100)
+        audioRef.current.play().then(() => {
+          console.log("Audio started after user interaction!")
+        }).catch((e) => {
+          console.log("Still blocked:", e)
+        })
+        // Hapus listener setelah first play
+        document.removeEventListener('click', enableAudioOnInteraction)
+        document.removeEventListener('scroll', enableAudioOnInteraction)
+        document.removeEventListener('keydown', enableAudioOnInteraction)
+      }
+    }
+
+    // Listener untuk berbagai gesture
+    document.addEventListener('click', enableAudioOnInteraction)
+    document.addEventListener('scroll', enableAudioOnInteraction)
+    document.addEventListener('keydown', enableAudioOnInteraction)
+
+    return () => {
+      document.removeEventListener('click', enableAudioOnInteraction)
+      document.removeEventListener('scroll', enableAudioOnInteraction)
+      document.removeEventListener('keydown', enableAudioOnInteraction)
+    }
+  }, [isMuted, volume])
+
+  /**
+   * useEffect: Fetch data room dan player awal, setup subscription real-time.
+   * Subscription untuk players (INSERT/UPDATE/DELETE) dan room updates.
+   * Auto-retry jika subscription drop.
+   */
+  useEffect(() => {
+    let playersSubscription: any = null
+    let roomSubscription: any = null
+
     const fetchRoomAndPlayers = async () => {
       // Fetch room details
       const { data: roomData, error: roomError } = await supabase
@@ -123,14 +151,13 @@ useEffect(() => {
         setPlayers(playersData || [])
       }
 
-      // Set up real-time subscription for players
-      // Di dalam fetchRoomAndPlayers, ganti subscription players:
-      const playersSubscription = supabase
+      // Setup real-time subscription untuk players
+      playersSubscription = supabase
         .channel(`host-players-${roomCode}`)
         .on(
           'postgres_changes',
           {
-            event: '*', // '*' cover INSERT, UPDATE, DELETE
+            event: '*', // Cover INSERT, UPDATE, DELETE
             schema: 'public',
             table: 'players',
             filter: `room_id=eq.${roomData.id}`,
@@ -138,36 +165,31 @@ useEffect(() => {
           (payload) => {
             if (payload.eventType === 'INSERT') {
               setPlayers((prev) => {
-                const exists = prev.some((p) => p.id === payload.new.id);
-                if (exists) return prev;
-                return [...prev, payload.new];
-              });
+                const exists = prev.some((p) => p.id === payload.new.id)
+                if (exists) return prev
+                return [...prev, payload.new]
+              })
             } else if (payload.eventType === 'UPDATE') {
-              // Tambah ini: Update existing player (e.g., car/nickname change)
               setPlayers((prev) =>
                 prev.map((p) => p.id === payload.new.id ? { ...p, ...payload.new } : p)
-              );
+              )
             } else if (payload.eventType === 'DELETE') {
-              setPlayers((prev) => prev.filter((p) => p.id !== payload.old.id));
+              setPlayers((prev) => prev.filter((p) => p.id !== payload.old.id))
             }
           }
         )
-        .subscribe((status) => { // Tambah callback status
-          console.log('Players sub status:', status);
+        .subscribe((status) => {
+          console.log('Players sub status:', status)
           if (status === 'SUBSCRIBED') {
-            console.log('Players subscription active');
+            console.log('Players subscription active')
           } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-            console.warn('Players sub dropped, retrying in 3s...');
-            // Auto-retry: Re-subscribe setelah delay
-            setTimeout(() => {
-              // Re-init subscription (call fetchRoomAndPlayers ulang atau recreate channel)
-              fetchRoomAndPlayers(); // Atau logic recreate spesifik
-            }, 3000);
+            console.warn('Players sub dropped, retrying in 3s...')
+            setTimeout(fetchRoomAndPlayers, 3000) // Auto-retry
           }
-        });
+        })
 
-      // Di useEffect fetchRoomAndPlayers, perbaiki room subscription:
-      const roomSubscription = supabase
+      // Setup subscription untuk room updates
+      roomSubscription = supabase
         .channel(`host-room-${roomCode}`)
         .on(
           'postgres_changes',
@@ -178,53 +200,62 @@ useEffect(() => {
             filter: `room_code=eq.${roomCode}`,
           },
           (payload) => {
-            const newRoomData = payload.new;
-            console.log('Host received room update:', newRoomData);
-
-            setRoom(newRoomData);
+            const newRoomData = payload.new
+            console.log('Host received room update:', newRoomData)
+            setRoom(newRoomData)
           }
         )
-        .subscribe();
+        .subscribe()
 
+      // Cleanup subscriptions
       return () => {
-        supabase.removeChannel(playersSubscription)
-        supabase.removeChannel(roomSubscription)
+        if (playersSubscription) supabase.removeChannel(playersSubscription)
+        if (roomSubscription) supabase.removeChannel(roomSubscription)
       }
     }
 
     if (roomCode) {
       fetchRoomAndPlayers()
     }
+
+    return () => {
+      if (playersSubscription) supabase.removeChannel(playersSubscription)
+      if (roomSubscription) supabase.removeChannel(roomSubscription)
+    }
   }, [roomCode])
 
-  // Effect untuk sinkronisasi countdown
+  /**
+   * useEffect: Sinkronisasi countdown berdasarkan timestamp dari DB.
+   * Update setiap detik, redirect ke game saat selesai.
+   * Hanya aktif jika status 'countdown'.
+   */
   useEffect(() => {
     if (!room?.countdown_start || room.status !== 'countdown') {
       console.log('No countdown needed:', {
         hasCountdownStart: !!room?.countdown_start,
         status: room?.status
-      });
-      setCountdown(0);
-      return;
+      })
+      setCountdown(0)
+      return
     }
 
-    console.log('Starting wall-time countdown sync for host:', room.countdown_start);
+    console.log('Starting wall-time countdown sync for host:', room.countdown_start)
 
-    const countdownStartTime = new Date(room.countdown_start).getTime();
-    const totalCountdown = 10;
+    const countdownStartTime = new Date(room.countdown_start).getTime()
+    const totalCountdown = 10 // Detik total countdown
 
-    const updateCountdown = async () => {
-      const now = Date.now();
-      const elapsed = Math.floor((now - countdownStartTime) / 1000);
-      const remaining = Math.max(0, totalCountdown - elapsed);
+    const updateCountdown = () => {
+      const now = Date.now()
+      const elapsed = Math.floor((now - countdownStartTime) / 1000)
+      const remaining = Math.max(0, totalCountdown - elapsed)
 
-      console.log('Wall-time remaining:', remaining);
-      setCountdown(remaining);
+      console.log('Wall-time remaining:', remaining)
+      setCountdown(remaining)
 
       if (remaining <= 0) {
-        console.log('Countdown finished via wall-time, moving to game');
-        clearInterval(countdownInterval);
-        // Delay 500ms biar player sync
+        console.log('Countdown finished via wall-time, moving to game')
+        clearInterval(countdownInterval)
+        // Delay 500ms untuk sync player
         setTimeout(async () => {
           try {
             const { error } = await supabase
@@ -234,38 +265,39 @@ useEffect(() => {
                 start: new Date().toISOString(),
                 countdown_start: null
               })
-              .eq("room_code", roomCode);
+              .eq("room_code", roomCode)
 
             if (error) {
-              console.error('End countdown error:', error);
+              console.error('End countdown error:', error)
             } else {
-              console.log('Host updated to playing status');
-              setLoading(true);
-              router.push(`/host/${roomCode}/game`);
+              console.log('Host updated to playing status')
+              setLoading(true)
+              router.push(`/host/${roomCode}/game`)
             }
           } catch (err: unknown) {
-            console.error('End countdown error:', err);
+            console.error('End countdown error:', err)
           }
-        }, 500); // Delay buat player catch up
+        }, 500)
       }
-    };
+    }
 
     // Initial update
-    updateCountdown();
+    updateCountdown()
 
     // Interval setiap detik
-    const countdownInterval = setInterval(() => {
-      updateCountdown();
-    }, 1000);
+    const countdownInterval = setInterval(updateCountdown, 1000)
 
     // Cleanup
     return () => {
-      console.log('Cleaning up countdown interval');
-      clearInterval(countdownInterval);
-    };
-  }, [room?.countdown_start, room?.status, roomCode, router]);
+      console.log('Cleaning up countdown interval')
+      clearInterval(countdownInterval)
+    }
+  }, [room?.countdown_start, room?.status, roomCode, router])
 
-  // Inisialisasi audio: play otomatis dengan volume default
+  /**
+   * useEffect: Inisialisasi autoplay audio saat component mount.
+   * Ditangani dengan catch untuk policy browser.
+   */
   useEffect(() => {
     if (audioRef.current) {
       const initialVolume = volume / 100
@@ -276,101 +308,28 @@ useEffect(() => {
     }
   }, [])
 
-  // Update audio volume berdasarkan state volume dan isMuted
+  /**
+   * useEffect: Update volume audio saat state berubah.
+   */
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = isMuted ? 0 : (volume / 100)
     }
   }, [volume, isMuted])
 
-  // Handle toggle mute/unmute
-  const handleMuteToggle = () => {
-    setIsMuted(!isMuted)
-  }
-
-  // Handle volume change
-  const handleVolumeChange = (value: number[]) => {
-    setVolume(value[0])
-    if (isMuted && value[0] > 0) {
-      setIsMuted(false) // Auto unmute jika volume dinaikkan
-    }
-  }
-
-  // Base URL for the join link
+  /**
+   * useEffect: Generate join link dari window.location.
+   * Hanya run di client-side.
+   */
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setJoinLink(`${window.location.origin}/?code=${roomCode}`)
     }
   }, [roomCode])
 
-  // Effect untuk sinkronisasi countdown (updated)
-  useEffect(() => {
-    if (!room?.countdown_start || room.status !== 'countdown') {
-      console.log('No countdown needed:', {
-        hasCountdownStart: !!room?.countdown_start,
-        status: room?.status
-      });
-      setCountdown(0); // Reset kalau gak countdown
-      return;
-    }
-
-    console.log('Starting wall-time countdown sync for host:', room.countdown_start);
-
-    // Parse countdown_start ke timestamp (asumsi ISO string)
-    const countdownStartTime = new Date(room.countdown_start).getTime();
-    const totalCountdown = 10; // Detik total
-
-    const updateCountdown = async () => {
-      const now = Date.now();
-      const elapsed = Math.floor((now - countdownStartTime) / 1000);
-      const remaining = Math.max(0, totalCountdown - elapsed);
-
-      console.log('Wall-time remaining:', remaining);
-      setCountdown(remaining);
-
-      if (remaining <= 0) {
-        console.log('Countdown finished via wall-time, moving to game');
-        clearInterval(countdownInterval);
-        // Update DB dan redirect (hanya sekali)
-        try {
-          const { error } = await supabase
-            .from("game_rooms")
-            .update({
-              status: "playing",
-              start: new Date().toISOString(),
-              countdown_start: null
-            })
-            .eq("room_code", roomCode);
-
-          if (error) {
-            console.error('End countdown error:', error);
-          } else {
-            console.log('Host updated to playing status');
-            setLoading(true);
-            router.push(`/host/${roomCode}/game`);
-          }
-        } catch (err: unknown) {
-          console.error('End countdown error:', err);
-        }
-      }
-    };
-
-    // Initial update
-    updateCountdown();
-
-    // Interval setiap detik
-    const countdownInterval = setInterval(() => {
-      updateCountdown();
-    }, 1000);
-
-    // Cleanup
-    return () => {
-      console.log('Cleaning up countdown interval');
-      clearInterval(countdownInterval);
-    };
-  }, [room?.countdown_start, room?.status, roomCode, router]); // Depend sama, tapi logic gak re-start interval
-
-  // Background image cycling
+  /**
+   * useEffect: Cycling background GIF setiap 5 detik dengan transisi smooth.
+   */
   useEffect(() => {
     const bgInterval = setInterval(() => {
       setIsTransitioning(true)
@@ -384,32 +343,58 @@ useEffect(() => {
     return () => clearInterval(bgInterval)
   }, [])
 
+  /**
+   * Handler: Toggle mute/unmute audio.
+   */
+  const handleMuteToggle = () => {
+    setIsMuted(!isMuted)
+  }
+
+  /**
+   * Handler: Update volume dari slider, auto unmute jika volume >0.
+   */
+  const handleVolumeChange = (value: number[]) => {
+    setVolume(value[0])
+    if (isMuted && value[0] > 0) {
+      setIsMuted(false)
+    }
+  }
+
+  /**
+   * Handler: Copy room code ke clipboard dengan feedback toast-like.
+   */
   const copyRoomCode = async () => {
     try {
-      await navigator.clipboard.writeText(roomCode);
-      setCopiedRoom(true);
-      setTimeout(() => setCopiedRoom(false), 2000);
+      await navigator.clipboard.writeText(roomCode)
+      setCopiedRoom(true)
+      setTimeout(() => setCopiedRoom(false), 2000)
     } catch (err) {
-      console.error("Room copy failed:", err);
+      console.error("Room copy failed:", err)
     }
-  };
+  }
 
+  /**
+   * Handler: Copy join link ke clipboard dengan feedback.
+   */
   const copyJoinLink = async () => {
     try {
-      await navigator.clipboard.writeText(joinLink);
-      setCopiedJoin(true);
-      setTimeout(() => setCopiedJoin(false), 2000);
+      await navigator.clipboard.writeText(joinLink)
+      setCopiedJoin(true)
+      setTimeout(() => setCopiedJoin(false), 2000)
     } catch (err) {
-      console.error("Join copy failed:", err);
+      console.error("Join copy failed:", err)
     }
-  };
+  }
 
+  /**
+   * Handler: Start game dengan update status ke 'countdown' di Supabase.
+   * Set timestamp countdown_start.
+   */
   const startGame = async () => {
-    console.log('Host starting game...');
+    console.log('Host starting game...')
 
-    // Untuk timestamp with time zone, gunakan ISO string langsung
-    const countdownStart = new Date().toISOString();
-    console.log('Setting countdown_start to (ISO):', countdownStart);
+    const countdownStart = new Date().toISOString()
+    console.log('Setting countdown_start to (ISO):', countdownStart)
 
     const { error } = await supabase
       .from("game_rooms")
@@ -417,61 +402,30 @@ useEffect(() => {
         status: "countdown",
         countdown_start: countdownStart
       })
-      .eq("room_code", roomCode);
+      .eq("room_code", roomCode)
 
     if (error) {
-      console.error("startGame error:", error);
-      return;
+      console.error("startGame error:", error)
+      return
     }
 
-    console.log('Game countdown started successfully');
-    setGameStarted(true);
-  };
-
-  // Countdown display component
-  if (countdown > 0) {
-    return (
-      <div className="min-h-screen z-50 bg-[#1a0a2a] flex items-center justify-center pixel-font"> {/* pt-20 untuk ruang burger */}
-        <div className="text-center">
-          <motion.div
-            className="text-8xl md:text-9xl lg:text-[10rem] xl:text-[12rem] leading-none font-bold text-[#00ffff] pixel-text glow-cyan race-pulse"
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ repeat: Infinity, duration: 0.5 }}
-          >
-            {countdown}
-          </motion.div>
-        </div>
-      </div>
-    )
+    console.log('Game countdown started successfully')
+    setGameStarted(true)
   }
 
-  if (loading) {
-    return(
-      <>
-        {/* Audio tetap play saat loading */}
-        <audio
-          ref={audioRef}
-          src="/assets/music/robbers.mp3"
-          loop
-          preload="auto"
-          className="hidden"
-        />
-        <LoadingRetro />
-      </>
-   ) 
-  }
+  // Render utama: Semua conditional inline untuk persist audio dan background
   return (
-    
-    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font"> {/* pt-20 untuk ruang burger */}
-      {/* Audio Element untuk Background Music */}
+    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
+      {/* Audio Element: Selalu render untuk autoplay konsisten */}
       <audio
-          ref={audioRef}
-          src="/assets/music/robbers.mp3"
-          loop
-          preload="auto"
-          className="hidden"
-        />
-      {/* Background Image with Smooth Transition */}
+        ref={audioRef}
+        src="/assets/music/robbers.mp3"
+        loop
+        preload="auto"
+        className="hidden"
+      />
+
+      {/* Background Image Cycling dengan AnimatePresence */}
       <AnimatePresence mode="wait">
         <motion.div
           key={currentBgIndex}
@@ -484,6 +438,7 @@ useEffect(() => {
         />
       </AnimatePresence>
 
+      {/* Fixed Elements: Back Button, Logo, Title, Burger Menu */}
       {/* Back Button - Fixed Top Left */}
       <motion.button
         initial={{ opacity: 0, x: -20 }}
@@ -521,139 +476,162 @@ useEffect(() => {
         {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
       </motion.button>
 
-      {/* Menu Dropdown - Muncul saat burger diklik, dari kanan */}
-      {isMenuOpen && (
-        <motion.div
-          initial={{ opacity: 0, x: 300 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 300 }}
-          className="absolute top-20 right-4 z-30 w-64 bg-[#1a0a2a]/90 border border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm"
-        >
-          <div className="space-y-4">
-            {/* Mute Toggle */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-white pixel-text">Audio</span>
-              <button
-                onClick={handleMuteToggle}
-                className="p-2 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded"
-                aria-label={isMuted ? "Unmute" : "Mute"}
-              >
-                {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-              </button>
-            </div>
+      {/* Menu Dropdown: Audio controls dan settings */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, x: 300 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 300 }}
+            className="absolute top-20 right-4 z-30 w-64 bg-[#1a0a2a]/90 border border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm"
+          >
+            <div className="space-y-4">
+              {/* Mute Toggle */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-white pixel-text">Audio</span>
+                <button
+                  onClick={handleMuteToggle}
+                  className="p-2 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded"
+                  aria-label={isMuted ? "Unmute" : "Mute"}
+                >
+                  {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                </button>
+              </div>
 
-            {/* Volume Slider */}
-            <div className="space-y-2">
-              <span className="text-xs text-[#ff6bff] pixel-text">Volume</span>
-              <div className="bg-[#1a0a2a]/60 border border-[#ff6bff]/50 rounded px-2 py-1">
-                <Slider
-                  value={[volume]}
-                  onValueChange={handleVolumeChange}
-                  max={100}
-                  min={0}
-                  step={1}
-                  className="w-full"
-                  orientation="horizontal"
-                />
+              {/* Volume Slider */}
+              <div className="space-y-2">
+                <span className="text-xs text-[#ff6bff] pixel-text">Volume</span>
+                <div className="bg-[#1a0a2a]/60 border border-[#ff6bff]/50 rounded px-2 py-1">
+                  <Slider
+                    value={[volume]}
+                    onValueChange={handleVolumeChange}
+                    max={100}
+                    min={0}
+                    step={1}
+                    className="w-full"
+                    orientation="horizontal"
+                  />
+                </div>
               </div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Loading Overlay: Tampil saat loading, tapi DOM tetap */}
+      {loading && <LoadingRetro />}
+
+      {/* Countdown Overlay: Full-screen saat countdown aktif */}
+      {countdown > 0 && (
+        <div className="fixed inset-0 z-50 bg-[#1a0a2a] flex items-center justify-center pixel-font">
+          <div className="text-center">
+            <motion.div
+              className="text-8xl md:text-9xl lg:text-[10rem] xl:text-[12rem] leading-none font-bold text-[#00ffff] pixel-text glow-cyan race-pulse"
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ repeat: Infinity, duration: 0.5 }}
+            >
+              {countdown}
+            </motion.div>
           </div>
-        </motion.div>
+        </div>
       )}
 
-      <div className="relative z-10 max-w-8xl mx-auto p-4 sm:p-6 md:p-8">
-        {/* Title */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center pb-4"
-        >
-          <div className="inline-block py-4 md:pt-10">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#ffefff] pixel-text glow-pink">
-              Host Room
-            </h1>
-          </div>
-        </motion.div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-5">
-          {/* Room Info & QR Code */}
-          <Card className="bg-[#1a0a2a]/60 border-2 sm:border-3 border-[#ff6bff]/50 pixel-card glow-pink-subtle p-4 sm:p-6 md:p-8 lg:col-span-2 order-1 lg:order-1">
-            <div className="text-center space-y-3 sm:space-y-4">
-              <div className="relative p-3 sm:p-4 md:p-5 bg-[#0a0a0f] rounded-lg">
-                <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#00ffff] pixel-text glow-cyan">{roomCode}</div>
-                <Button
-                  onClick={copyRoomCode}
-                  className="absolute top-1 right-1 bg-transparent pixel-button hover:bg-gray-500/20 transition-colors p-1 sm:p-2"
-                  size="sm"
-                >
-                  {copiedRoom ? <Check className="h-3 w-3 sm:h-4 sm:w-4 text-green-400" /> : <Copy className="h-3 w-3 sm:h-4 sm:w-4 text-white" />}
-                </Button>
-              </div>
-
-              <div className="relative p-3 sm:p-4 md:p-5 bg-[#0a0a0f]  rounded-lg">
-                {/* QR normal */}
-                <QRCode
-                  value={joinLink}
-                  size={300}
-                  className="mx-auto w-fit rounded p-2 bg-white"
-                />
-
-                {/* Tombol maximize */}
-                <Button
-                  onClick={() => setOpen(true)}
-                  className="absolute top-1 right-1 bg-transparent hover:bg-gray-500/20 transition-colors p-1 sm:p-2"
-                  size="sm"
-                >
-                  <Maximize2 className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-                </Button>
-
-                {/* Dialog */}
-                <Dialog open={open} onOpenChange={setOpen}>
-                  <DialogOverlay className="bg-[#1a0a2a]/80 backdrop-blur-sm fixed inset-0 z-50" />
-                  <DialogContent className=" backdrop-blur-sm border-none rounded-lg max-w-[100vw] sm:max-w-3xl p-4 sm:p-6">
-                    <div className="flex justify-center">
-                      <QRCode
-                        value={joinLink}
-                        size={Math.min(625, window.innerWidth * 0.8)}
-                        className=" rounded w-fit bg-white p-2"
-                      />
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-
-              <div className="relative py-4 px-7 bg-[#0a0a0f] rounded-lg">
-                <div className="text-xs sm:text-sm text-[#00ffff] pixel-text glow-cyan break-words">
-  {formatUrlBreakable(joinLink)}
-</div>
-
-                <Button
-                  onClick={copyJoinLink}
-                  className="absolute top-1 right-1 bg-transparent pixel-button hover:bg-gray-500/20 transition-colors p-1 sm:p-2"
-                  size="sm"
-                >
-                  {copiedJoin ? <Check className="h-3 w-3 sm:h-4 sm:w-4 text-green-400" /> : <Copy className="h-3 w-3 sm:h-4 sm:w-4 text-white" />}
-                </Button>
-              </div>
-              <Button
-                onClick={startGame}
-                disabled={players.length === 0 || gameStarted}
-                className="text-base sm:text-lg py-3 sm:py-4 bg-[#00ffff] border-2 sm:border-3 border-white pixel-button hover:bg-[#33ffff] glow-cyan text-black font-bold disabled:bg-[#6a4c93] disabled:cursor-not-allowed w-full sm:w-auto"
-              >
-                <Play className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                Start
-              </Button>
+      {/* Main Content: Hanya tampil saat !loading && countdown === 0 */}
+      {!loading && countdown === 0 && (
+        <div className="relative z-10 max-w-8xl mx-auto p-4 sm:p-6 md:p-8">
+          {/* Title */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-center pb-4"
+          >
+            <div className="inline-block py-4 md:pt-10">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#ffefff] pixel-text glow-pink">
+                Host Room
+              </h1>
             </div>
-          </Card>
+          </motion.div>
 
-          {/* Players List */}
-          <Card className="bg-[#1a0a2a]/60 border-2 sm:border-3 border-[#ff6bff]/50 pixel-card glow-pink-subtle p-4 sm:p-6 md:p-8 lg:col-span-3 order-1 lg:order-2">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
-              <h2 className="text-xl sm:text-2xl font-bold text-[#00ffff] pixel-text glow-cyan text-center sm:text-left">
-                {players.length} Player{players.length <= 1 ? "" : "s"}
-              </h2>
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-5">
+            {/* Room Info & QR Code Card */}
+            <Card className="bg-[#1a0a2a]/60 border-2 sm:border-3 border-[#ff6bff]/50 pixel-card glow-pink-subtle p-4 sm:p-6 md:p-8 lg:col-span-2 order-1 lg:order-1">
+              <div className="text-center space-y-3 sm:space-y-4">
+                {/* Room Code Display */}
+                <div className="relative p-3 sm:p-4 md:p-5 bg-[#0a0a0f] rounded-lg">
+                  <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#00ffff] pixel-text glow-cyan">{roomCode}</div>
+                  <Button
+                    onClick={copyRoomCode}
+                    className="absolute top-1 right-1 bg-transparent pixel-button hover:bg-gray-500/20 transition-colors p-1 sm:p-2"
+                    size="sm"
+                  >
+                    {copiedRoom ? <Check className="h-3 w-3 sm:h-4 sm:w-4 text-green-400" /> : <Copy className="h-3 w-3 sm:h-4 sm:w-4 text-white" />}
+                  </Button>
+                </div>
+
+                {/* QR Code */}
+                <div className="relative p-3 sm:p-4 md:p-5 bg-[#0a0a0f] rounded-lg">
+                  <QRCode
+                    value={joinLink}
+                    size={300}
+                    className="mx-auto w-fit rounded p-2 bg-white"
+                  />
+                  <Button
+                    onClick={() => setOpen(true)}
+                    className="absolute top-1 right-1 bg-transparent hover:bg-gray-500/20 transition-colors p-1 sm:p-2"
+                    size="sm"
+                  >
+                    <Maximize2 className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                  </Button>
+
+                  {/* QR Dialog untuk maximize */}
+                  <Dialog open={open} onOpenChange={setOpen}>
+                    <DialogOverlay className="bg-[#1a0a2a]/80 backdrop-blur-sm fixed inset-0 z-50" />
+                    <DialogContent className="backdrop-blur-sm border-none rounded-lg max-w-[100vw] sm:max-w-3xl p-4 sm:p-6">
+                      <div className="flex justify-center">
+                        <QRCode
+                          value={joinLink}
+                          size={Math.min(625, window.innerWidth * 0.8)}
+                          className="rounded w-fit bg-white p-2"
+                        />
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+
+                {/* Join Link Display */}
+                <div className="relative py-4 px-7 bg-[#0a0a0f] rounded-lg">
+                  <div className="text-xs sm:text-sm text-[#00ffff] pixel-text glow-cyan break-words">
+                    {formatUrlBreakable(joinLink)}
+                  </div>
+                  <Button
+                    onClick={copyJoinLink}
+                    className="absolute top-1 right-1 bg-transparent pixel-button hover:bg-gray-500/20 transition-colors p-1 sm:p-2"
+                    size="sm"
+                  >
+                    {copiedJoin ? <Check className="h-3 w-3 sm:h-4 sm:w-4 text-green-400" /> : <Copy className="h-3 w-3 sm:h-4 sm:w-4 text-white" />}
+                  </Button>
+                </div>
+
+                {/* Start Game Button */}
+                <Button
+                  onClick={startGame}
+                  disabled={players.length === 0 || gameStarted}
+                  className="text-base sm:text-lg py-3 sm:py-4 bg-[#00ffff] border-2 sm:border-3 border-white pixel-button hover:bg-[#33ffff] glow-cyan text-black font-bold disabled:bg-[#6a4c93] disabled:cursor-not-allowed w-full sm:w-auto"
+                >
+                  <Play className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  Start
+                </Button>
+              </div>
+            </Card>
+
+            {/* Players List Card */}
+            <Card className="bg-[#1a0a2a]/60 border-2 sm:border-3 border-[#ff6bff]/50 pixel-card glow-pink-subtle p-4 sm:p-6 md:p-8 lg:col-span-3 order-1 lg:order-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
+                <h2 className="text-xl sm:text-2xl font-bold text-[#00ffff] pixel-text glow-cyan text-center sm:text-left">
+                  {players.length} Player{players.length <= 1 ? "" : "s"}
+                </h2>
+              </div>
 
             <div className="space-y-4 mb-6 sm:mb-8">
               {players.length === 0 ? (
@@ -685,22 +663,24 @@ useEffect(() => {
                           />
                         </div>
 
-                        {/* Player Nickname */}
-                        <div className="text-center">
-                          <p className="text-white text-xs leading-tight glow-text line-clamp-2 break-words">
-                            {breakOnCaps(player.nickname)}
-                          </p>
+                          {/* Player Nickname */}
+                          <div className="text-center">
+                            <p className="text-white text-xs leading-tight glow-text line-clamp-2 break-words">
+                              {breakOnCaps(player.nickname)}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
         </div>
-      </div>
+      )}
 
+      {/* Inline Styles: CSS untuk tema pixel-retro */}
       <style jsx>{`
         .pixel-font {
           font-family: 'Press Start 2P', cursive, monospace;
@@ -796,13 +776,10 @@ useEffect(() => {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.1); }
         }
-        
         @keyframes neon-bounce {
           0%, 100% { transform: translateY(0px); }
           50% { transform: translateY(-8px); }
         }
-
-        /* Neon pulse animation for borders */
         @keyframes neon-pulse {
           0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 255, 0.7), 0 0 20px rgba(0, 255, 255, 0.5); }
           50% { box-shadow: 0 0 15px rgba(0, 255, 255, 1), 0 0 30px rgba(0, 255, 255, 0.8); }
@@ -823,16 +800,12 @@ useEffect(() => {
         .glow-pink-subtle {
           animation: neon-pulse-pink 1.5s ease-in-out infinite;
         }
-        
-        /* Line clamp utility */
         .line-clamp-2 {
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
-        
-        /* Responsive improvements */
         @media (max-width: 640px) {
           .pixel-button {
             padding: 0.5rem;
