@@ -647,7 +647,7 @@
           setTimeout(() => {
             if (roomCode && startIndex) {
               localStorage.set
-              window.location.href = `/join/${roomCode}/game?startIndex=${startIndex}`;
+              window.location.replace = `/join/${roomCode}/game?startIndex=${startIndex}`;
             } else {
               // Fallback if no params
               window.history.back();

@@ -226,7 +226,7 @@ export default function QuizGamePage() {
         if (nextIndex % 7 === 0) {
           // Save next index for mini-game return
           localStorage.setItem("nextQuestionIndex", nextIndex.toString())
-          window.location.href = `/racing-game/v4.final.html?roomCode=solo` // Adaptasi untuk solo
+          window.location.replace(`/racing-game/v4.final.html?roomCode=solo`) // Adaptasi untuk solo
         } else {
           setCurrentQuestionIndex(nextIndex)
           setSelectedAnswer(null)

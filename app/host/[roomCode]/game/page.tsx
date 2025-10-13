@@ -10,7 +10,7 @@ import { Slider } from "@/components/ui/slider"
 import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
-import { sortPlayersByProgress, formatTime, calculateRemainingTime } from "@/utils/game"
+import { sortPlayersByProgress, formatTime, calculateRemainingTime, breakOnCaps } from "@/utils/game"
 import LoadingRetro from "@/components/loadingRetro"
 import Image from "next/image"
 
@@ -500,8 +500,8 @@ export default function HostMonitorPage() {
 
                         {/* Player Info */}
                         <div className="text-center">
-                          <h3 className="text-white pixel-text text-sm leading-tight mb-2">
-                            {player.nickname}
+                          <h3 className="text-white pixel-text text-sm leading-tight w-full mb-2 break-words line-clamp-2">
+                            {breakOnCaps(player.nickname)}
                           </h3>
 
                           {/* Progress Bar */}
