@@ -11,7 +11,7 @@ import { Slider } from "@/components/ui/slider"
 import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
-import { sortPlayersByProgress, formatTime, calculateRemainingTime } from "@/utils/game"
+import { sortPlayersByProgress, formatTime, calculateRemainingTime, breakOnCaps } from "@/utils/game"
 import LoadingRetro from "@/components/loadingRetro"
 import Image from "next/image"
 
@@ -538,14 +538,27 @@ export default function HostMonitorPage() {
                               </Badge>
                             </div>
                           </div>
-                          <div className="relative mb-3">
-                            <img
-                              src={carGifMap[player.car] || "/assets/car/car5.webp?v=2"}
-                              alt={`${player.car} car`}
-                              className="h-28 w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
-                              style={{ transform: "scaleX(-1)" }}
-                            />
-                          </div>
+                        <div className="relative mb-3">
+                          <img
+                            src={carGifMap[player.car] || '/assets/car/car5.webp?v=2'}
+                            alt={`${player.car} car`}
+                            className="h-28 w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
+                            style={{ transform: 'scaleX(-1)' }}
+                          />
+                        </div>
+
+                        {/* Player Info */}
+                        <div className="text-center">
+                          <h3 className="text-white pixel-text text-sm leading-tight w-full mb-2 break-words line-clamp-2">
+                            {breakOnCaps(player.nickname)}
+                          </h3>
+
+                          {/* Progress Bar */}
+                          <Progress
+                            value={(progress / totalQuestions) * 100}
+                            className={`h-2 bg-[#1a0a2a]/50 border border-[#00ffff]/30 mb-2 ${isCompleted ? "bg-green-500/20" : ""
+                              }`}
+                          />
                           <div className="text-center">
                             <h3 className="text-white pixel-text text-sm leading-tight mb-2">
                               {player.nickname}

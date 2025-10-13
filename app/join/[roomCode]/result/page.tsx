@@ -278,9 +278,9 @@ export default function PlayerResultsPage() {
           transition={{ duration: 0.5 }}
           className="text-center pb-4 sm:pb-5"
         >
-          <div className="inline-block p-4 sm:p-6">
+          <div className="inline-block p-4 md:pt-14">
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#ffefff] pixel-text glow-pink">
-              Crazy Race
+              Result
             </h1>
           </div>
         </motion.div>
@@ -304,7 +304,7 @@ export default function PlayerResultsPage() {
                 className="h-28 w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
               />
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-white pixel-text glow-text">{breakOnCaps(nickname)}</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-white pixel-text glow-text break-words line-clamp-2">{breakOnCaps(nickname)}</h2>
           </Card>
         </motion.div>
 
