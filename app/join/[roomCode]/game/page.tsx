@@ -86,7 +86,7 @@ export default function QuizGamePage() {
     // 🔹 Kalau masih racing (belum selesai)
     if (data && data.racing === true) {
       // arahkan kembali ke mini-game
-      window.location.replace(`/racing-game/v4.final.html?roomCode=${roomCode}`);
+      router.push(`/racing-game/v4.final.html?roomCode=${roomCode}`);
       return;
     }
   };
@@ -343,7 +343,7 @@ export default function QuizGamePage() {
           .eq("id", playerId);
 
         localStorage.setItem("nextQuestionIndex", nextIndex.toString());
-        window.location.replace(`/racing-game/v4.final.html?roomCode=${roomCode}`);
+        router.push(`/racing-game/v4.final.html?roomCode=${roomCode}`);
       } else {
         // Next question
         setCurrentQuestionIndex(nextIndex);
