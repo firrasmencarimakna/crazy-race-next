@@ -510,11 +510,6 @@ export default function HostMonitorPage() {
                             className={`h-2 bg-[#1a0a2a]/50 border border-[#00ffff]/30 mb-2 ${isCompleted ? "bg-green-500/20" : ""
                               }`}
                           />
-
-                          {/* Status */}
-                          <div className="text-xs text-[#00ffff] pixel-text">
-
-                          </div>
                         </div>
                       </Card>
                     </motion.div>
