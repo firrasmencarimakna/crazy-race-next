@@ -12,12 +12,12 @@ import { Button } from "react-day-picker"
 
 // Background GIFs
 const backgroundGifs = [
-  "/assets/gif/host/1.gif",
-  "/assets/gif/host/2.gif",
-  "/assets/gif/host/3.gif",
-  "/assets/gif/host/4.gif",
-  "/assets/gif/host/5.gif",
-  "/assets/gif/host/7.gif",
+  "/assets/background/host/1.webp",
+  "/assets/background/host/2.webp",
+  "/assets/background/host/3.webp",
+  "/assets/background/host/4.webp",
+  "/assets/background/host/5.webp",
+  "/assets/background/host/7.webp",
 ]
 
 // Car GIF mappings
@@ -190,7 +190,7 @@ export default function QuizGamePage() {
   const handleAnswerSelect = (answerIndex: number) => {
     if (isAnswered) return
 
-    // Mark question as answered
+    // Mark question as answered/
     setSelectedAnswer(answerIndex)
     setIsAnswered(true)
     setShowResult(true)
