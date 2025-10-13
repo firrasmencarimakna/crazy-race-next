@@ -67,6 +67,7 @@ export default function HostRoomPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false) // Toggle menu burger
 
   // Ref untuk audio element
+  
   const audioRef = useRef<HTMLAudioElement>(null)
 
   // Channel Supabase global untuk presence (bisa dihapus jika tidak digunakan)
