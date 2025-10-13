@@ -60,6 +60,37 @@ export default function HostRoomPage() {
     console.log('Realtime status:', status);
   });
 
+  // useEffect baru: Wait for user gesture to enable audio
+useEffect(() => {
+  let isFirstInteraction = true;
+
+  const enableAudioOnInteraction = () => {
+    if (isFirstInteraction && audioRef.current) {
+      isFirstInteraction = false;
+      audioRef.current.volume = isMuted ? 0 : (volume / 100);
+      audioRef.current.play().then(() => {
+        console.log("Audio started after user interaction!");
+      }).catch((e) => {
+        console.log("Still blocked:", e);
+      });
+      // Hapus listener setelah first play
+      document.removeEventListener('click', enableAudioOnInteraction);
+      document.removeEventListener('scroll', enableAudioOnInteraction);
+      document.removeEventListener('keydown', enableAudioOnInteraction);
+    }
+  };
+
+  // Listener untuk berbagai gesture
+  document.addEventListener('click', enableAudioOnInteraction);
+  document.addEventListener('scroll', enableAudioOnInteraction);
+  document.addEventListener('keydown', enableAudioOnInteraction);
+
+  return () => {
+    document.removeEventListener('click', enableAudioOnInteraction);
+    document.removeEventListener('scroll', enableAudioOnInteraction);
+    document.removeEventListener('keydown', enableAudioOnInteraction);
+  };
+}, [isMuted, volume]);  // Re-run kalau mute/volume berubah
 
   // Fetch room details and set up real-time subscriptions
   useEffect(() => {
@@ -415,20 +446,31 @@ export default function HostRoomPage() {
   }
 
   if (loading) {
-    return <LoadingRetro />
+    return(
+      <>
+        {/* Audio tetap play saat loading */}
+        <audio
+          ref={audioRef}
+          src="/assets/music/robbers.mp3"
+          loop
+          preload="auto"
+          className="hidden"
+        />
+        <LoadingRetro />
+      </>
+   ) 
   }
-
   return (
+    
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font"> {/* pt-20 untuk ruang burger */}
       {/* Audio Element untuk Background Music */}
       <audio
-        ref={audioRef}
-        src="/assets/music/robbers.mp3"
-        loop
-        preload="auto"
-        className="hidden"
-      />
-
+          ref={audioRef}
+          src="/assets/music/robbers.mp3"
+          loop
+          preload="auto"
+          className="hidden"
+        />
       {/* Background Image with Smooth Transition */}
       <AnimatePresence mode="wait">
         <motion.div
