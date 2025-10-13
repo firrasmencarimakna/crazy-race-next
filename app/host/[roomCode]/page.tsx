@@ -23,11 +23,11 @@ const backgroundGifs = [
 ]
 
 const carGifMap: Record<string, string> = {
-  purple: "/assets/car/car1.webp",
-  white: "/assets/car/car2.webp",
-  black: "/assets/car/car3.webp",
-  aqua: "/assets/car/car4.webp",
-  blue: "/assets/car/car5.webp",
+  purple: "/assets/car/car1.webp?v=2",
+  white: "/assets/car/car2.webp?v=2",
+  black: "/assets/car/car3.webp?v=2",
+  aqua: "/assets/car/car4.webp?v=2",
+  blue: "/assets/car/car5.webp?v=2",
 }
 
 export default function HostRoomPage() {
@@ -636,7 +636,7 @@ export default function HostRoomPage() {
                         {/* Car GIF */}
                         <div className="relative mb-2 sm:mb-3">
                           <img
-                            src={carGifMap[player.car] || '/assets/car/car5.webp'}
+                            src={carGifMap[player.car] || '/assets/car/car5.webp?v=2'}
                             alt={`${player.car} car`}
                             className="h-16 sm:h-20 md:h-24 lg:h-28 w-20 sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce
                        filter brightness-125 contrast-150"
