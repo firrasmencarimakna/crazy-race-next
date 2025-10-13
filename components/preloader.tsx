@@ -7,11 +7,11 @@ export function usePreloader() {
 
     useEffect(() => {
         const globalAssets = [
-            "/assets/car/car1.webp",
-            "/assets/car/car2.webp",
-            "/assets/car/car3.webp",
-            "/assets/car/car4.webp",
-            "/assets/car/car5.webp",
+            "/assets/car/car1.webp?v=2",
+            "/assets/car/car2.webp?v=2",
+            "/assets/car/car3.webp?v=2",
+            "/assets/car/car4.webp?v=2",
+            "/assets/car/car5.webp?v=2",
             "/assets/background/1.webp",
         ]
         const assetsImages = [

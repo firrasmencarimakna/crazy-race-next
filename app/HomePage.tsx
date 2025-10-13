@@ -371,7 +371,7 @@ if (!isLoaded) return <LoadingRetroScreen progress={progress} />
               {/* Alert Car GIF */}
               <div className="mb-4">
                 <Image
-                  src="/assets/car/car3.webp"
+                  src="/assets/car/car3.webp?v=2"
                   alt="Car alert animation"
                   width={200}
                   height={150}

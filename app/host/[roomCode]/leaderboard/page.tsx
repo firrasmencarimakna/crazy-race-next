@@ -30,11 +30,11 @@ const backgroundGifs = [
 ]
 
 const carGifMap: Record<string, string> = {
-  purple: "/assets/car/car1.webp",
-  white: "/assets/car/car2.webp",
-  black: "/assets/car/car3.webp",
-  aqua: "/assets/car/car4.webp",
-  blue: "/assets/car/car5.webp",
+  purple: "/assets/car/car1.webp?v=2",
+  white: "/assets/car/car2.webp?v=2",
+  black: "/assets/car/car3.webp?v=2",
+  aqua: "/assets/car/car4.webp?v=2",
+  blue: "/assets/car/car5.webp?v=2",
 }
 
 export default function HostLeaderboardPage() {
@@ -299,7 +299,7 @@ export default function HostLeaderboardPage() {
               <Card className="p-5 text-center pixel-card border-gray-300/50 bg-[#1a0a2a]/70 animate-pulse-silver">
                 <div className={`text-3xl font-bold mb-2 ${getRankColor(2)} pixel-text`}>#2</div>
                 <img
-                  src={carGifMap[topThree[1].car] || '/assets/car/car5.webp'}
+                  src={carGifMap[topThree[1].car] || '/assets/car/car5.webp?v=2'}
                   alt={`${carGifMap[topThree[1].car]} car`}
                   className="h-16 sm:h-20 md:h-24 lg:h-28 w-20 sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce
                     filter brightness-125 contrast-150"
@@ -322,7 +322,7 @@ export default function HostLeaderboardPage() {
               <Card className="p-6 text-center pixel-card border-yellow-400/70 bg-[#1a0a2a]/80 animate-pulse-gold">
                 <div className={`text-5xl font-bold mb-3 ${getRankColor(1)} pixel-text`}>#1</div>
                 <img
-                  src={carGifMap[topThree[0].car] || '/assets/car/car5.webp'}
+                  src={carGifMap[topThree[0].car] || '/assets/car/car5.webp?v=2'}
                   alt={`${topThree[0].car} car`}
                   className="h-16 sm:h-20 md:h-24 lg:h-28 w-20 sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce
                 filter brightness-125 contrast-150"
@@ -345,7 +345,7 @@ export default function HostLeaderboardPage() {
               <Card className="p-5 text-center pixel-card border-amber-600/50 bg-[#1a0a2a]/70 animate-pulse-bronze">
                 <div className={`text-3xl font-bold mb-2 ${getRankColor(3)} pixel-text`}>#3</div>
                 <img
-                  src={carGifMap[topThree[2].car] || '/assets/car/car5.webp'}
+                  src={carGifMap[topThree[2].car] || '/assets/car/car5.webp?v=2'}
                   alt={`${carGifMap[topThree[2].car]} car`}
                   className="h-16 sm:h-20 md:h-24 lg:h-28 w-20 sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce
                     filter brightness-125 contrast-150"

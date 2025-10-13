@@ -22,11 +22,11 @@ const backgroundGifs = [
 
 // Car GIF mappings
 const carGifMap: Record<string, string> = {
-  purple: "/assets/car/car1.webp",
-  white: "/assets/car/car2.webp",
-  black: "/assets/car/car3.webp",
-  aqua: "/assets/car/car4.webp",
-  blue: "/assets/car/car5.webp",
+  purple: "/assets/car/car1.webp?v=2",
+  white: "/assets/car/car2.webp?v=2",
+  black: "/assets/car/car3.webp?v=2",
+  aqua: "/assets/car/car4.webp?v=2",
+  blue: "/assets/car/car5.webp?v=2",
 }
 
 type QuizQuestion = {
@@ -55,19 +55,44 @@ export default function QuizGamePage() {
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [gameStartTime, setGameStartTime] = useState<number | null>(null)
   const [gameDuration, setGameDuration] = useState(0)
+  const [racing, isRacing] = useState(false)
 
   const currentQuestion = questions[currentQuestionIndex]
   const totalQuestions = questions.length
 
   // Initialize playerId and check session
   useEffect(() => {
-    const pid = localStorage.getItem("playerId") || ""
+  const checkPlayerState = async () => {
+    const pid = localStorage.getItem("playerId") || "";
     if (!pid) {
-      router.replace(`/join/${roomCode}`)
-    } else {
-      setPlayerId(pid)
+      router.replace(`/join/${roomCode}`);
+      return;
     }
-  }, [roomCode, router])
+
+    setPlayerId(pid);
+
+    // 🔹 Ambil status dari Supabase
+    const { data, error } = await supabase
+      .from("players")
+      .select("racing")
+      .eq("id", pid)
+      .single();
+
+    if (error) {
+      console.error("Error fetching player:", error);
+      return;
+    }
+
+    // 🔹 Kalau masih racing (belum selesai)
+    if (data && data.racing === true) {
+      // arahkan kembali ke mini-game
+      window.location.href = `/racing-game/v4.final.html?roomCode=${roomCode}`;
+      return;
+    }
+  };
+
+  checkPlayerState();
+}, [roomCode, router]);
 
   // Fetch game room and player data from Supabase (with retry)
   const fetchGameData = useCallback(async (retryCount = 0) => {
@@ -257,85 +282,113 @@ export default function QuizGamePage() {
     return () => clearInterval(bgInterval)
   }, [])
 
-  
+
   const handleAnswerSelect = useCallback(async (answerIndex: number) => {
-    if (isAnswered) return
+  if (isAnswered) return;
 
-    // Mark question as answered
-    setSelectedAnswer(answerIndex)
-    setIsAnswered(true)
-    setShowResult(true)
+  // Mark as answered
+  setSelectedAnswer(answerIndex);
+  setIsAnswered(true);
+  setShowResult(true);
 
-    // Update answers array
-    const newAnswers = [...answers]
-    newAnswers[currentQuestionIndex] = answerIndex
-    setAnswers(newAnswers)
+  // Update local answers
+  const newAnswers = [...answers];
+  newAnswers[currentQuestionIndex] = answerIndex;
+  setAnswers(newAnswers);
 
-    // Calculate progress
-    const isCorrect = answerIndex === currentQuestion.correctAnswer
-    const newCorrectAnswers = correctAnswers + (isCorrect ? 1 : 0)
-    setCorrectAnswers(newCorrectAnswers)
-    const accuracy = totalQuestions > 0 ? ((newCorrectAnswers / totalQuestions) * 100).toFixed(2) : "0.00"
+  // Calculate progress
+  const isCorrect = answerIndex === currentQuestion.correctAnswer;
+  const newCorrectAnswers = correctAnswers + (isCorrect ? 1 : 0);
+  setCorrectAnswers(newCorrectAnswers);
+  const accuracy =
+    totalQuestions > 0
+      ? ((newCorrectAnswers / totalQuestions) * 100).toFixed(2)
+      : "0.00";
 
-    if (!gameStartTime) return
-    const now = Date.now()
-    const elapsedSeconds = Math.floor((now - gameStartTime) / 1000)
+  if (!gameStartTime) return;
+  const now = Date.now();
+  const elapsedSeconds = Math.floor((now - gameStartTime) / 1000);
 
-    // Save progress to Supabase
-    const updatedResult = {
-      score: newCorrectAnswers * 10,
-      correct: newCorrectAnswers,
-      accuracy,
-      duration: elapsedSeconds,
-      current_question: currentQuestionIndex + 1,
-      total_question: totalQuestions,
-      answers: newAnswers,
-    }
+  // Save progress to Supabase
+  const updatedResult = {
+    score: newCorrectAnswers * 10,
+    correct: newCorrectAnswers,
+    accuracy,
+    duration: elapsedSeconds,
+    current_question: currentQuestionIndex + 1,
+    total_question: totalQuestions,
+    answers: newAnswers,
+  };
 
-    const { error } = await supabase
-      .from("players")
-      .update({
-        result: [updatedResult],
-        completion: currentQuestionIndex + 1 === totalQuestions,
-      })
-      .eq("id", playerId)
+  const { error } = await supabase
+    .from("players")
+    .update({
+      result: [updatedResult],
+      completion: currentQuestionIndex + 1 === totalQuestions,
+    })
+    .eq("id", playerId);
 
-    if (error) {
-      console.error("Error updating player result:", error)
-    }
+  if (error) console.error("Error updating player result:", error);
 
-    // Move to next question, mini-game, or result
-    setTimeout(() => {
-      const nextIndex = currentQuestionIndex + 1
-      if (nextIndex < totalQuestions) {
-        if (nextIndex % 7 === 0) {
-          // Save next index for mini-game return
-          localStorage.setItem("nextQuestionIndex", nextIndex.toString())
-          window.location.href = `/racing-game/v4.final.html?roomCode=${roomCode}`
-        } else {
-          setCurrentQuestionIndex(nextIndex)
-          setSelectedAnswer(null)
-          setIsAnswered(false)
-          setShowResult(false)
-        }
+  // Move to next question or mini-game
+  const nextIndex = currentQuestionIndex + 1;
+
+  setTimeout(async () => {
+    if (nextIndex < totalQuestions) {
+      if (nextIndex % 7 === 0) {
+        // Mini-game time
+        await supabase
+          .from("players")
+          .update({ racing: true })
+          .eq("id", playerId);
+
+        localStorage.setItem("nextQuestionIndex", nextIndex.toString());
+        window.location.href = `/racing-game/v4.final.html?roomCode=${roomCode}`;
       } else {
-        console.log('Game completed, redirecting to results')
-        router.push(`/join/${roomCode}/result`)
+        // Next question
+        setCurrentQuestionIndex(nextIndex);
+        setSelectedAnswer(null);
+        setIsAnswered(false);
+        setShowResult(false);
       }
-    }, 500)
-  }, [isAnswered, answers, currentQuestionIndex, currentQuestion?.correctAnswer, correctAnswers, totalQuestions, gameStartTime, playerId, roomCode, totalQuestions, saveProgressAndRedirect])
+    } else {
+      // Game finished
+      router.push(`/join/${roomCode}/result`);
+    }
+  }, 500);
+}, [
+  isAnswered,
+  answers,
+  currentQuestionIndex,
+  currentQuestion?.correctAnswer,
+  correctAnswers,
+  totalQuestions,
+  gameStartTime,
+  playerId,
+  roomCode,
+  router,
+]);
 
-  // Resume from mini-game
-  useEffect(() => {
-    const nextIndex = localStorage.getItem("nextQuestionIndex")
+// Resume from mini-game
+useEffect(() => {
+  const resumeGame = async () => {
+    const nextIndex = localStorage.getItem("nextQuestionIndex");
     if (nextIndex && questions.length > 0) {
-      const index = parseInt(nextIndex, 10)
+      await supabase
+        .from("players")
+        .update({ racing_finished: true }) // selesai racing
+        .eq("id", playerId);
+
+      const index = parseInt(nextIndex, 10);
       if (!isNaN(index) && index >= 0 && index < totalQuestions) {
-        setCurrentQuestionIndex(index)
-        localStorage.removeItem("nextQuestionIndex")
+        setCurrentQuestionIndex(index);
+        localStorage.removeItem("nextQuestionIndex");
       }
     }
-  }, [questions.length, totalQuestions])
+  };
+  resumeGame();
+}, [questions.length, totalQuestions, playerId]);
+
 
   const getOptionStyle = (optionIndex: number) => {
     // mode normal (belum submit)
