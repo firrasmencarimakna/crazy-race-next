@@ -19,8 +19,9 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
-        <link rel="preload" as="image" href="/assets/background/1.webp" type="image/webp" fetchPriority="high" />
         <link rel="preload" as="image" href="/gameforsmartlogo.webp" type="image/webp" fetchPriority="high" />
+        <link rel="preload" as="image" href="/assets/background/1.webp" type="image/webp" fetchPriority="high" />
+        <link rel="preload" as="image" href="/assets/background/host/10.webp" type="image/webp" fetchPriority="high" />
       </head>
       <body>
         {children}
