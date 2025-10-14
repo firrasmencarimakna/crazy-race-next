@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogOverlay } from "@/components/ui/dialog"
 import LoadingRetro from "@/components/loadingRetro"
 import { Slider } from "@/components/ui/slider"
 import { breakOnCaps, formatUrlBreakable } from "@/utils/game"
+import { calculateCountdown } from "@/utils/countdown"  // Tambah ini
 import Image from "next/image"
 
 /**
@@ -46,6 +47,9 @@ export default function HostRoomPage() {
   const router = useRouter()
   const roomCode = params.roomCode as string
 
+  // Ref buat interval countdown (stabil, gak cause re-render)
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
   // State untuk data room dan player
   const [players, setPlayers] = useState<any[]>([]) // Daftar player real-time
   const [room, setRoom] = useState<any>(null) // Data room dari Supabase
@@ -70,6 +74,7 @@ export default function HostRoomPage() {
   const [kickDialogOpen, setKickDialogOpen] = useState(false) // Dialog konfirmasi kick
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null) // ID player yang dipilih untuk kick
   const [selectedPlayerName, setSelectedPlayerName] = useState<string>('') // Nama player yang dipilih untuk kick
+  const [selectedPlayerCar, setSelectedPlayerCar] = useState<string>('') // Warna mobil player yang dipilih untuk kick
 
   // Ref untuk audio element
   const audioRef = useRef<HTMLAudioElement>(null)
@@ -82,6 +87,71 @@ export default function HostRoomPage() {
   channel.subscribe((status) => {
     console.log('Realtime status:', status)
   })
+
+  /**
+   * Fungsi sync countdown (pakai util calculateCountdown, mirip Lobby)
+   */
+  const startCountdownSync = useCallback((startTimestamp: string, duration: number = 10) => {
+    // Clear existing
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+
+    // Initial calc
+    let remaining = calculateCountdown(startTimestamp, duration);
+    setCountdown(remaining);
+
+    if (remaining <= 0) {
+      console.log('Countdown already finished on start');
+      return;
+    }
+
+    // Interval update
+    countdownIntervalRef.current = setInterval(() => {
+      remaining = calculateCountdown(startTimestamp, duration);
+      setCountdown(remaining);
+
+      console.log('Countdown tick:', remaining);
+
+      if (remaining <= 0) {
+        clearInterval(countdownIntervalRef.current!);
+        countdownIntervalRef.current = null;
+        setCountdown(0);
+        // End countdown: Update DB dan redirect
+        setTimeout(async () => {
+          try {
+            const { error } = await supabase
+              .from("game_rooms")
+              .update({
+                status: "playing",
+                start: new Date().toISOString(),
+                countdown_start: null
+              })
+              .eq("room_code", roomCode);
+
+            if (error) {
+              console.error('End countdown error:', error);
+            } else {
+              console.log('Host updated to playing status');
+              setLoading(true);
+              router.push(`/host/${roomCode}/game`);
+            }
+          } catch (err: unknown) {
+            console.error('End countdown error:', err);
+          }
+        }, 500);  // Delay untuk sync player
+      }
+    }, 1000);
+  }, [roomCode, router]);
+
+  const stopCountdownSync = useCallback(() => {
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+    setCountdown(0);
+  }, []);
 
   /**
    * useEffect: Enable audio setelah user gesture pertama (handle autoplay policy browser).
@@ -119,9 +189,19 @@ export default function HostRoomPage() {
   }, [isMuted, volume])
 
   /**
+   * useEffect: Monitor status room dan auto-redirect (tambah 'finished' kalau perlu)
+   */
+  useEffect(() => {
+    if (room?.status === 'playing' && !loading) {
+      console.log('Host detected playing status, redirecting to game');
+      router.push(`/host/${roomCode}/game`);
+    }
+  }, [room?.status, loading, roomCode, router]);
+
+  /**
    * useEffect: Fetch data room dan player awal, setup subscription real-time.
    * Subscription untuk players (INSERT/UPDATE/DELETE) dan room updates.
-   * Auto-retry jika subscription drop.
+   * Auto-retry jika subscription drop. Trigger countdown sync di sini.
    */
   useEffect(() => {
     let playersSubscription: any = null
@@ -143,6 +223,13 @@ export default function HostRoomPage() {
 
       setRoom(roomData)
       setLoading(false)
+
+      // Initial countdown sync
+      if (roomData.status === 'countdown' && roomData.countdown_start) {
+        startCountdownSync(roomData.countdown_start, 10);
+      } else {
+        stopCountdownSync();
+      }
 
       // Fetch initial players
       const { data: playersData, error: playersError } = await supabase
@@ -193,7 +280,7 @@ export default function HostRoomPage() {
           }
         })
 
-      // Setup subscription untuk room updates
+      // Setup subscription untuk room updates (trigger sync!)
       roomSubscription = supabase
         .channel(`host-room-${roomCode}`)
         .on(
@@ -208,6 +295,13 @@ export default function HostRoomPage() {
             const newRoomData = payload.new
             console.log('Host received room update:', newRoomData)
             setRoom(newRoomData)
+
+            // Sync countdown on status change
+            if (newRoomData.status === 'countdown' && newRoomData.countdown_start) {
+              startCountdownSync(newRoomData.countdown_start, 10);
+            } else {
+              stopCountdownSync();
+            }
           }
         )
         .subscribe()
@@ -223,81 +317,13 @@ export default function HostRoomPage() {
       fetchRoomAndPlayers()
     }
 
+    // Cleanup global
     return () => {
+      stopCountdownSync();
       if (playersSubscription) supabase.removeChannel(playersSubscription)
       if (roomSubscription) supabase.removeChannel(roomSubscription)
     }
-  }, [roomCode])
-
-  /**
-   * useEffect: Sinkronisasi countdown berdasarkan timestamp dari DB.
-   * Update setiap detik, redirect ke game saat selesai.
-   * Hanya aktif jika status 'countdown'.
-   */
-  useEffect(() => {
-    if (!room?.countdown_start || room.status !== 'countdown') {
-      console.log('No countdown needed:', {
-        hasCountdownStart: !!room?.countdown_start,
-        status: room?.status
-      })
-      setCountdown(0)
-      return
-    }
-
-    console.log('Starting wall-time countdown sync for host:', room.countdown_start)
-
-    const countdownStartTime = new Date(room.countdown_start).getTime()
-    const totalCountdown = 10 // Detik total countdown
-
-    const updateCountdown = () => {
-      const now = Date.now()
-      const elapsed = Math.floor((now - countdownStartTime) / 1000)
-      const remaining = Math.max(0, totalCountdown - elapsed)
-
-      console.log('Wall-time remaining:', remaining)
-      setCountdown(remaining)
-
-      if (remaining <= 0) {
-        console.log('Countdown finished via wall-time, moving to game')
-        clearInterval(countdownInterval)
-        // Delay 500ms untuk sync player
-        setTimeout(async () => {
-          try {
-            const { error } = await supabase
-              .from("game_rooms")
-              .update({
-                status: "playing",
-                start: new Date().toISOString(),
-                countdown_start: null
-              })
-              .eq("room_code", roomCode)
-
-            if (error) {
-              console.error('End countdown error:', error)
-            } else {
-              console.log('Host updated to playing status')
-              setLoading(true)
-              router.push(`/host/${roomCode}/game`)
-            }
-          } catch (err: unknown) {
-            console.error('End countdown error:', err)
-          }
-        }, 500)
-      }
-    }
-
-    // Initial update
-    updateCountdown()
-
-    // Interval setiap detik
-    const countdownInterval = setInterval(updateCountdown, 1000)
-
-    // Cleanup
-    return () => {
-      console.log('Cleaning up countdown interval')
-      clearInterval(countdownInterval)
-    }
-  }, [room?.countdown_start, room?.status, roomCode, router])
+  }, [roomCode, startCountdownSync, stopCountdownSync])
 
   /**
    * useEffect: Inisialisasi autoplay audio saat component mount.
@@ -422,9 +448,10 @@ export default function HostRoomPage() {
    * Handler: Kick player dengan konfirmasi.
    * Hapus player dari Supabase, subscription akan handle UI update.
    */
-  const handleKickPlayer = async (playerId: string, playerName: string) => {
+  const handleKickPlayer = (playerId: string, playerName: string, playerCar: string) => {
     setSelectedPlayerId(playerId)
     setSelectedPlayerName(playerName)
+    setSelectedPlayerCar(playerCar)
     setKickDialogOpen(true)
   }
 
@@ -450,6 +477,7 @@ export default function HostRoomPage() {
     setKickDialogOpen(false)
     setSelectedPlayerId(null)
     setSelectedPlayerName('')
+    setSelectedPlayerCar('')
   }
 
   // Render utama: Semua conditional inline untuk persist audio dan background
@@ -565,7 +593,7 @@ export default function HostRoomPage() {
       {loading && <LoadingRetro />}
 
       {/* Countdown Overlay: Full-screen saat countdown aktif */}
-      {countdown > 0 && (
+      {countdown > 0 && room?.status === 'countdown' && (  // Tambah check status
         <div className="fixed inset-0 z-50 bg-[#1a0a2a] flex items-center justify-center pixel-font">
           <div className="text-center">
             <motion.div
@@ -713,18 +741,18 @@ export default function HostRoomPage() {
                             </p>
                           </div>
 
-                          {/* Kick Button - Muncul saat hover */}
-                          <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {/* Kick Button - Selalu tampil, posisi disesuaikan untuk tidak overlap */}
+                          <div className="absolute top-1 right-1 opacity-100 transition-all duration-200 hover:scale-110">
                             <Button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                handleKickPlayer(player.id, player.nickname)
+                                handleKickPlayer(player.id, player.nickname, player.car)
                               }}
                               size="sm"
-                              className="bg-[#ff6b00]/80 border-2 border-white hover:bg-[#ff8c00]/80 text-white pixel-button p-1 min-w-0"
+                              className="bg-[#ffff000]/90 text-red pixel-button "
                               aria-label={`Kick ${player.nickname}`}
                             >
-                              <X size={12} className="text-white" />
+                              <X size={4} className="text-white" />
                             </Button>
                           </div>
                         </div>
@@ -740,31 +768,50 @@ export default function HostRoomPage() {
 
       {/* Kick Confirmation Dialog */}
       <Dialog open={kickDialogOpen} onOpenChange={setKickDialogOpen}>
-        <DialogOverlay className="bg-[#1a0a2a]/80 backdrop-blur-sm fixed inset-0 z-50" />
-        <DialogContent className="backdrop-blur-sm border-2 border-[#ff6bff]/50 rounded-lg max-w-md p-6 bg-[#1a0a2a]/90">
-          <CardHeader className="text-center">
-            <CardTitle className="text-[#ff6bff] pixel-text glow-pink">Kick Player?</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-white text-sm pixel-text text-center">
-              Apakah kamu yakin ingin kick <span className="text-[#00ffff] font-bold">{selectedPlayerName}</span> dari room?
-            </p>
-            <div className="flex justify-center space-x-3">
-              <Button
-                onClick={() => setKickDialogOpen(false)}
-                variant="outline"
-                className="border-[#ff6bff] text-white hover:bg-[#ff6bff]/20 pixel-button"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={confirmKick}
-                className="bg-[#ff6b00] border-2 border-white hover:bg-[#ff8c00] text-black font-bold pixel-button"
-              >
-                Kick
-              </Button>
-            </div>
-          </CardContent>
+        <DialogOverlay className="bg-[#1a0a2a]/40 backdrop-blur-md fixed inset-0 z-50" />
+        <DialogContent className="backdrop-blur-md border-2 border-[#ff6bff]/60 rounded-xl max-w-sm p-0 bg-[#1a0a2a]/95 shadow-2xl shadow-[#ff6bff]/20">
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="p-6 space-y-4"
+          >
+            <CardHeader className="text-center space-y-3">
+              {/* Car GIF di atas */}
+              <div className="relative mx-auto mb-3">
+                <img
+                  src={carGifMap[selectedPlayerCar] || '/assets/car/car5.webp?v=2'}
+                  alt={`${selectedPlayerCar} car`}
+                  className="h-16 w-20 object-contain animate-neon-bounce filter brightness-110 contrast-140 mx-auto"
+                />
+              </div>
+              <div className="mx-auto w-12 h-12 bg-[#ff6b00]/20 rounded-full flex items-center justify-center">
+                <X className="h-6 w-6 text-[#ff6b00]" />
+              </div>
+              <CardTitle className="text-xl text-[#ffefff] pixel-text glow-pink">Kick Player?</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 space-y-4">
+              <p className="text-gray-300 text-sm pixel-text text-center leading-relaxed">
+                Yakin ingin mengeluarkan <span className="text-[#00ffff] font-semibold">{selectedPlayerName}</span> dari room ini?
+              </p>
+              <div className="flex justify-center space-x-3 pt-2">
+                <Button
+                  onClick={() => setKickDialogOpen(false)}
+                  variant="outline"
+                  className="border-[#ff6bff]/50 text-gray-300 hover:bg-[#ff6bff]/10 hover:border-[#ff6bff]/70 pixel-button flex-1 max-w-20"
+                >
+                  Batal
+                </Button>
+                <Button
+                  onClick={confirmKick}
+                  className="bg-gradient-to-r from-[#ff6b00] to-[#ff8c00] border border-white/20 hover:from-[#ff8c00] hover:to-[#ffb366] text-white font-bold pixel-button flex-1 max-w-20 shadow-lg shadow-[#ff6b00]/30 hover:shadow-xl"
+                >
+                  Kick
+                </Button>
+              </div>
+            </CardContent>
+          </motion.div>
         </DialogContent>
       </Dialog>
 
