@@ -334,7 +334,7 @@ export default function QuizGamePage() {
 
     setTimeout(async () => {
       if (nextIndex < totalQuestions) {
-        if (nextIndex % 7 === 0) {
+        if (nextIndex % 3 === 0) {
           // Mini-game time
           await supabase
             .from("players")
