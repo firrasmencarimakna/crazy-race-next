@@ -68,7 +68,7 @@ export default function RacingGame() {
         function handleMessage(event: MessageEvent) {
             if (!event.data || typeof event.data !== 'object') return;
 
-            if (event.data.type === 'RACING_FINISHED') {
+            if (event.data.type === 'racing_finished') {
                 console.log('Racing finished detected from iframe');
 
                 // ✅ Update racing=false di Supabase
