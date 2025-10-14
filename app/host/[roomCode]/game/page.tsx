@@ -29,6 +29,22 @@ const carGifMap: Record<string, string> = {
   blue: "/assets/car/car5.webp?v=2",
 }
 
+type PlayerResult = {
+  score?: number;
+  correct?: number;
+  accuracy?: string;
+  duration?: number;
+  current_question?: number;
+  total_question?: number;
+  answers?: (number | null)[];
+};
+
+type Player = {
+  id: string;
+  result: PlayerResult[] | string | null;
+  completion: boolean;
+};
+
 export default function HostMonitorPage() {
   const params = useParams()
   const router = useRouter()
@@ -239,52 +255,66 @@ export default function HostMonitorPage() {
   }, [])
 
   const endGame = async () => {
-  const endTime = new Date().toISOString();
-  
-  // Update room ke finished
-  const { error: roomError } = await supabase
-    .from("game_rooms")
-    .update({ 
-      status: "finished", 
-      end: endTime 
-    })
-    .eq("id", roomId);
+    const endTime = new Date().toISOString();
 
-  if (roomError) {
-    console.error("Error ending game:", roomError);
-    return;
-  }
+    // Update room ke finished
+    const { error: roomError } = await supabase
+      .from("game_rooms")
+      .update({
+        status: "finished",
+        end: endTime
+      })
+      .eq("id", roomId);
 
-  // Default result untuk player pasif (score 0, full duration penalty)
-  const defaultResult = {
-    score: 0,
-    correct: 0,
-    accuracy: "0",
-    duration: gameDuration, // Full time = lambat
-    current_question: 1, // Gak mulai
-    total_question: totalQuestions,
-    answers: new Array(totalQuestions).fill(null),
+    setLoading(true)
+
+    if (roomError) {
+      console.error("Error ending game:", roomError);
+      return;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+
+    const { data: inactivePlayers } = await supabase
+      .from("players")
+      .select("id, result, completion")
+      .eq("room_id", roomId)
+      .eq("completion", false);
+
+    const afkPlayers = inactivePlayers?.filter((p: Player) => {
+      try {
+        const result = Array.isArray(p.result) ? p.result[0] : JSON.parse(p.result || "null");
+        return !result || !result.answers || result.answers.every((a: number | null) => a === null);
+      } catch {
+        return true;
+      }
+    }) ?? [];
+
+    if (afkPlayers.length > 0) {
+      const defaultResult = {
+        score: 0,
+        correct: 0,
+        accuracy: "0",
+        duration: gameDuration,
+        current_question: 1,
+        total_question: totalQuestions,
+        answers: new Array(totalQuestions).fill(null),
+        is_host_end: true,
+      };
+
+      await supabase
+        .from("players")
+        .update({
+          result: [defaultResult],
+          completion: true,
+        })
+        .in("id", afkPlayers.map((p) => p.id));
+
+      console.log(`✅ ${afkPlayers.length} AFK players auto-marked.`);
+    }
+
+    router.push(`/host/${roomCode}/leaderboard`);
   };
-
-  // Update HANYA player yang belum complete (completion: false) di room
-  const { error: playerError, count: updatedCount } = await supabase
-    .from("players")
-    .update({ 
-      result: [defaultResult],
-      completion: true 
-    })
-    .eq("room_id", roomId)
-    .eq("completion", false); // ← Filter: Hanya yang false (C&D)
-
-  if (playerError) {
-    console.error("Error completing passive players:", playerError);
-  } else {
-    console.log(`Auto-completed ${updatedCount || 0} passive players with default results`);
-  }
-
-  console.log("Game ended successfully");
-  router.push(`/host/${roomCode}/leaderboard`);
-};
 
   if (loading) {
     return (
