@@ -14,7 +14,10 @@ export const calculateCountdown = (countdownStart: string | null, duration: numb
     }
     
     const elapsed = Math.floor((now - startTime) / 1000);
-    const remaining = Math.max(0, duration - elapsed);
+    let remaining = duration - elapsed;
+    
+    // FIX: Cap remaining antara 0 dan duration (hindari >10 karena skew/latency)
+    remaining = Math.min(duration, Math.max(0, remaining));
     
     console.log(`Countdown calc: start=${countdownStart}, startTime=${startTime}, now=${now}, elapsed=${elapsed}s, remaining=${remaining}s`);
     
