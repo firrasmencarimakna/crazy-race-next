@@ -10,7 +10,7 @@ import { Slider } from "@/components/ui/slider"
 import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
-import { sortPlayersByProgress, formatTime, calculateRemainingTime, breakOnCaps } from "@/utils/game"
+import { sortPlayersByProgress, formatTime, calculateRemainingTime } from "@/utils/game"
 import LoadingRetro from "@/components/loadingRetro"
 import Image from "next/image"
 
@@ -62,6 +62,7 @@ export default function HostMonitorPage() {
   const [volume, setVolume] = useState(50) // 0-100, default 50%
   const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
   const audioRef = useRef<HTMLAudioElement>(null)
+  const [hasInteracted, setHasInteracted] = useState(false);
 
   // Fetch initial game data (updated)
   useEffect(() => {
@@ -212,14 +213,34 @@ export default function HostMonitorPage() {
 
   // Inisialisasi audio: play otomatis dengan volume default
   useEffect(() => {
-    if (audioRef.current) {
-      const initialVolume = volume / 100
-      audioRef.current.volume = isMuted ? 0 : initialVolume
-      audioRef.current.play().catch((e) => {
-        console.log("Autoplay dicegah oleh browser:", e)
-      })
+  const enableAudioOnInteraction = () => {
+    if (!hasInteracted && audioRef.current) {
+      setHasInteracted(true);
+      const initialVolume = volume / 100;
+      audioRef.current.volume = isMuted ? 0 : initialVolume;
+      audioRef.current.play().then(() => {
+        console.log("Audio started after user interaction!");
+      }).catch((e) => {
+        console.log("Still blocked:", e);
+      });
+      // Hapus listener setelah sukses
+      document.removeEventListener('click', enableAudioOnInteraction);
+      document.removeEventListener('scroll', enableAudioOnInteraction);
+      document.removeEventListener('keydown', enableAudioOnInteraction);
     }
-  }, [])
+  };
+
+  // Tambah listener global
+  document.addEventListener('click', enableAudioOnInteraction);
+  document.addEventListener('scroll', enableAudioOnInteraction);
+  document.addEventListener('keydown', enableAudioOnInteraction);
+
+  return () => {
+    document.removeEventListener('click', enableAudioOnInteraction);
+    document.removeEventListener('scroll', enableAudioOnInteraction);
+    document.removeEventListener('keydown', enableAudioOnInteraction);
+  };
+}, [hasInteracted, isMuted, volume]); // Dependensi untuk update volume jika berubah
 
   // Update audio volume berdasarkan state volume dan isMuted
   useEffect(() => {
@@ -316,11 +337,12 @@ export default function HostMonitorPage() {
     router.push(`/host/${roomCode}/leaderboard`);
   };
 
-  if (loading) {
-    return (
-      <LoadingRetro />
-    );
-  }
+    if (loading) {
+      return <LoadingRetro />;
+    }
+    if (room?.status === 'finished') {
+      router.push(`/host/${roomCode}/leaderboard`)
+    }
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -349,6 +371,14 @@ export default function HostMonitorPage() {
 
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
+      <audio
+      ref={audioRef}
+      src="/assets/music/robbers.mp3"
+      loop
+      preload="auto"
+      className="hidden"
+    />
+
 
       {/* Background */}
       <AnimatePresence mode="wait">
@@ -530,8 +560,8 @@ export default function HostMonitorPage() {
 
                         {/* Player Info */}
                         <div className="text-center">
-                          <h3 className="text-white pixel-text text-sm leading-tight w-full mb-2 break-words line-clamp-2">
-                            {breakOnCaps(player.nickname)}
+                          <h3 className="text-white pixel-text text-sm leading-tight mb-2">
+                            {player.nickname}
                           </h3>
 
                           {/* Progress Bar */}
@@ -540,10 +570,16 @@ export default function HostMonitorPage() {
                             className={`h-2 bg-[#1a0a2a]/50 border border-[#00ffff]/30 mb-2 ${isCompleted ? "bg-green-500/20" : ""
                               }`}
                           />
+
+                          {/* Status */}
+                          <div className="text-xs text-[#00ffff] pixel-text">
+
+                          </div>
                         </div>
                       </Card>
                     </motion.div>
                   );
+
                 })}
               </AnimatePresence>
             </div>
@@ -560,13 +596,7 @@ export default function HostMonitorPage() {
       </div>
 
       {/* Audio Element untuk Background Music */}
-      <audio
-        ref={audioRef}
-        src="/assets/music/robbers.mp3"
-        loop
-        preload="auto"
-        className="hidden"
-      />
+
 
       <style jsx>{`
         .pixel-font {
