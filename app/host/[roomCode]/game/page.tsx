@@ -501,7 +501,7 @@ export default function HostMonitorPage() {
           >
             <div className="inline-block p-4 sm:p-6">
               <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#00ffff] pixel-text glow-cyan">
-                Monitoring
+                Race Progress
               </h1>
             </div>
           </motion.div>
