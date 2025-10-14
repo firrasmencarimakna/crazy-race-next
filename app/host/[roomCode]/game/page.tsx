@@ -213,34 +213,34 @@ export default function HostMonitorPage() {
 
   // Inisialisasi audio: play otomatis dengan volume default
   useEffect(() => {
-  const enableAudioOnInteraction = () => {
-    if (!hasInteracted && audioRef.current) {
-      setHasInteracted(true);
-      const initialVolume = volume / 100;
-      audioRef.current.volume = isMuted ? 0 : initialVolume;
-      audioRef.current.play().then(() => {
-        console.log("Audio started after user interaction!");
-      }).catch((e) => {
-        console.log("Still blocked:", e);
-      });
-      // Hapus listener setelah sukses
+    const enableAudioOnInteraction = () => {
+      if (!hasInteracted && audioRef.current) {
+        setHasInteracted(true);
+        const initialVolume = volume / 100;
+        audioRef.current.volume = isMuted ? 0 : initialVolume;
+        audioRef.current.play().then(() => {
+          console.log("Audio started after user interaction!");
+        }).catch((e) => {
+          console.log("Still blocked:", e);
+        });
+        // Hapus listener setelah sukses
+        document.removeEventListener('click', enableAudioOnInteraction);
+        document.removeEventListener('scroll', enableAudioOnInteraction);
+        document.removeEventListener('keydown', enableAudioOnInteraction);
+      }
+    };
+
+    // Tambah listener global
+    document.addEventListener('click', enableAudioOnInteraction);
+    document.addEventListener('scroll', enableAudioOnInteraction);
+    document.addEventListener('keydown', enableAudioOnInteraction);
+
+    return () => {
       document.removeEventListener('click', enableAudioOnInteraction);
       document.removeEventListener('scroll', enableAudioOnInteraction);
       document.removeEventListener('keydown', enableAudioOnInteraction);
-    }
-  };
-
-  // Tambah listener global
-  document.addEventListener('click', enableAudioOnInteraction);
-  document.addEventListener('scroll', enableAudioOnInteraction);
-  document.addEventListener('keydown', enableAudioOnInteraction);
-
-  return () => {
-    document.removeEventListener('click', enableAudioOnInteraction);
-    document.removeEventListener('scroll', enableAudioOnInteraction);
-    document.removeEventListener('keydown', enableAudioOnInteraction);
-  };
-}, [hasInteracted, isMuted, volume]); // Dependensi untuk update volume jika berubah
+    };
+  }, [hasInteracted, isMuted, volume]); // Dependensi untuk update volume jika berubah
 
   // Update audio volume berdasarkan state volume dan isMuted
   useEffect(() => {
@@ -302,14 +302,33 @@ export default function HostMonitorPage() {
       .eq("room_id", roomId)
       .eq("completion", false);
 
-    const afkPlayers = inactivePlayers?.filter((p: Player) => {
-      try {
-        const result = Array.isArray(p.result) ? p.result[0] : JSON.parse(p.result || "null");
-        return !result || !result.answers || result.answers.every((a: number | null) => a === null);
-      } catch {
-        return true;
-      }
-    }) ?? [];
+    if (!inactivePlayers || inactivePlayers.length === 0) {
+      router.push(`/host/${roomCode}/leaderboard`);
+      return;
+    }
+
+    // Pisahkan AFK total vs yang sempat jawab sebagian
+    const { afkPlayers, partialPlayers } = inactivePlayers.reduce(
+      (acc, p: Player) => {
+        try {
+          const result = Array.isArray(p.result)
+            ? p.result[0]
+            : JSON.parse(p.result || "null");
+
+          const isAfk =
+            !result ||
+            !result.answers ||
+            result.answers.every((a: number | null) => a === null);
+
+          if (isAfk) acc.afkPlayers.push(p);
+          else acc.partialPlayers.push(p);
+        } catch {
+          acc.afkPlayers.push(p);
+        }
+        return acc;
+      },
+      { afkPlayers: [] as Player[], partialPlayers: [] as Player[] }
+    );
 
     if (afkPlayers.length > 0) {
       const defaultResult = {
@@ -331,18 +350,27 @@ export default function HostMonitorPage() {
         })
         .in("id", afkPlayers.map((p) => p.id));
 
-      console.log(`✅ ${afkPlayers.length} AFK players auto-marked.`);
+      console.log(`✅ ${afkPlayers.length} AFK players auto-marked with default result.`);
+    }
+
+    if (partialPlayers.length > 0) {
+      await supabase
+        .from("players")
+        .update({ completion: true })
+        .in("id", partialPlayers.map((p) => p.id));
+
+      console.log(`✅ ${partialPlayers.length} partially active players marked as completed.`);
     }
 
     router.push(`/host/${roomCode}/leaderboard`);
   };
 
-    if (loading) {
-      return <LoadingRetro />;
-    }
-    if (room?.status === 'finished') {
-      router.push(`/host/${roomCode}/leaderboard`)
-    }
+  if (loading) {
+    return <LoadingRetro />;
+  }
+  if (room?.status === 'finished') {
+    router.push(`/host/${roomCode}/leaderboard`)
+  }
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -372,12 +400,12 @@ export default function HostMonitorPage() {
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
       <audio
-      ref={audioRef}
-      src="/assets/music/robbers.mp3"
-      loop
-      preload="auto"
-      className="hidden"
-    />
+        ref={audioRef}
+        src="/assets/music/robbers.mp3"
+        loop
+        preload="auto"
+        className="hidden"
+      />
 
 
       {/* Background */}
