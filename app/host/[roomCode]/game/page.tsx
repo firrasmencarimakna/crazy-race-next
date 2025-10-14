@@ -402,7 +402,7 @@ export default function HostMonitorPage() {
         className="absolute top-4 right-4 z-40 p-3 bg-[#ff6bff] border-2 border-white pixel-button hover:bg-[#ff8aff] glow-pink rounded-lg shadow-lg shadow-[#ff6bff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
         aria-label="Toggle menu"
       >
-        {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        {isMenuOpen ? <X size={20} /> : <Volume2 size={20} />}
       </motion.button>
 
       <h1 className="absolute top-5 right-20 hidden md:block">
@@ -419,44 +419,48 @@ export default function HostMonitorPage() {
       </h1>
 
       {/* Menu Dropdown - Muncul saat burger diklik, dari kanan */}
-      {isMenuOpen && (
-        <motion.div
-          initial={{ opacity: 0, x: 300 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 300 }}
-          className="absolute top-20 right-4 z-30 w-64 bg-[#1a0a2a]/90 border border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm"
-        >
-          <div className="space-y-4">
-            {/* Mute Toggle */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-white pixel-text">Audio</span>
-              <button
-                onClick={handleMuteToggle}
-                className="p-2 bg-[#00ffff] border-2 border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded"
-                aria-label={isMuted ? "Unmute" : "Mute"}
+            {isMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, x: 300 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 300 }}
+                className="absolute top-20 right-4 z-30 w-64 bg-[#1a0a2a]/20 border border-[#ff6bff]/50 rounded-lg p-3 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm"
               >
-                {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-              </button>
-            </div>
-
-            {/* Volume Slider */}
-            <div className="space-y-2">
-              <span className="text-xs text-[#ff6bff] pixel-text">Volume</span>
-              <div className="bg-[#1a0a2a]/60 border border-[#ff6bff]/50 rounded px-2 py-1">
-                <Slider
-                  value={[volume]}
-                  onValueChange={handleVolumeChange}
-                  max={100}
-                  min={0}
-                  step={1}
-                  className="w-full"
-                  orientation="horizontal"
-                />
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      )}
+                <div className="space-y-2">
+                  {/* Integrated Mute + Volume: Single row for button + slider, with label above for simplicity */}
+                  <div className="p-1.5 bg-[#ff6bff]/10 rounded space-y-1"> {/* Unified bg for the whole section; adjusted to /10 for subtle highlight */}
+                    {/* <span className="text-xs text-white pixel-text block">Suara</span> Moved "Suara" label here as section header; changed color to white for better contrast */}
+                    
+                    {/* New flex row: Mute button on left, slider on right; tight spacing */}
+                    <div className="flex items-center space-x-2 bg-[#1a0a2a]/60 border border-[#ff6bff]/30 rounded px-2 py-1"> {/* Shared container for row; reduced px-1 to px-2 for button fit, py-0.5 to py-1 */}
+                      <button
+                        onClick={handleMuteToggle}
+                        className="p-1.5 bg-[#00ffff] border border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded flex-shrink-0" // Added flex-shrink-0 to prevent button compression
+                        aria-label={isMuted ? "Unmute" : "Mute"}
+                      >
+                        {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                      </button>
+                      
+                      <div className="flex-1"> {/* Wrapper for slider to take remaining space */}
+                        <Slider
+                          value={[volume]}
+                          onValueChange={handleVolumeChange}
+                          max={100}
+                          min={0}
+                          step={1}
+                          className="w-full"
+                          orientation="horizontal"
+                          aria-label="Volume slider"
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Volume value below slider for quick glance; optional but keeps info visible without cluttering row */}
+                    <span className="text-xs text-[#ff6bff] pixel-text">Volume: {volume}%</span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
       <div className="relative z-10 max-w-7xl mx-auto p-4 sm:p-6 md:p-10">
         {/* Header dengan Timer dan Controls */}
