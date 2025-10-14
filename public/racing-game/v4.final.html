@@ -558,22 +558,22 @@
       triggerHapticFeedback('light');
     }
 
-    async function updateRacingStatus() {
-      if (!playerId) return console.error("Missing playerId");
+    // async function updateRacingStatus() {
+    //   if (!playerId) return console.error("Missing playerId");
 
-      try {
-        const res = await fetch("/api/update-racing", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ playerId, racing: false }),
-        });
+    //   try {
+    //     const res = await fetch("/api/update-racing", {
+    //       method: "POST",
+    //       headers: { "Content-Type": "application/json" },
+    //       body: JSON.stringify({ playerId, racing: false }),
+    //     });
 
-        const data = await res.json();
-        console.log("Racing update result:", data);
-      } catch (err) {
-        console.error("Error updating racing:", err);
-      }
-    }
+    //     const data = await res.json();
+    //     console.log("Racing update result:", data);
+    //   } catch (err) {
+    //     console.error("Error updating racing:", err);
+    //   }
+    // }
 
     function update(dt) {
       if (gameFinished) {
@@ -641,18 +641,20 @@
           gameFinished = true;
 
           document.getElementById('finish-screen').style.display = 'flex';
-          updateRacingStatus();
+          window.parent.postMessage({ type: 'racing_finished' }, '*');
+          
+          // updateRacingStatus();
 
           // Otomatis redirect setelah 2 detik
-          setTimeout(() => {
-            if (roomCode && startIndex) {
-              localStorage.set
-              window.location.href = `/join/${roomCode}/game?startIndex=${startIndex}`;
-            } else {
-              // Fallback if no params
-              window.history.back();
-            }
-          }, 2000);
+          // setTimeout(() => {
+          //   if (roomCode && startIndex) {
+          //     localStorage.set
+          //     window.location.href = `/join/${roomCode}/game?startIndex=${startIndex}`;
+          //   } else {
+          //     // Fallback if no params
+          //     window.history.back();
+          //   }
+          // }, 2000);
         } else {
           currentLapTime += dt;
         }
