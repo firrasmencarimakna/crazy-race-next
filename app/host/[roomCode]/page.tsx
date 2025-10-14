@@ -37,7 +37,7 @@ const carGifMap: Record<string, string> = {
 /**
  * Komponen utama HostRoomPage.
  * Halaman ini menampilkan room host, daftar player real-time via Supabase,
- * QR code untuk join, dan tombol start game dengan countdown.
+ * QR code untuk join, tombol start game dengan countdown, dan fitur kick player.
  * Audio background dikelola dengan persist rendering untuk autoplay konsisten.
  */
 export default function HostRoomPage() {
@@ -65,6 +65,11 @@ export default function HostRoomPage() {
   const [copiedJoin, setCopiedJoin] = useState(false) // Feedback copy join link
   const [loading, setLoading] = useState(true) // Loading state untuk fetch data
   const [isMenuOpen, setIsMenuOpen] = useState(false) // Toggle menu burger
+
+  // State untuk fitur kick player
+  const [kickDialogOpen, setKickDialogOpen] = useState(false) // Dialog konfirmasi kick
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null) // ID player yang dipilih untuk kick
+  const [selectedPlayerName, setSelectedPlayerName] = useState<string>('') // Nama player yang dipilih untuk kick
 
   // Ref untuk audio element
   const audioRef = useRef<HTMLAudioElement>(null)
@@ -413,6 +418,40 @@ export default function HostRoomPage() {
     setGameStarted(true)
   }
 
+  /**
+   * Handler: Kick player dengan konfirmasi.
+   * Hapus player dari Supabase, subscription akan handle UI update.
+   */
+  const handleKickPlayer = async (playerId: string, playerName: string) => {
+    setSelectedPlayerId(playerId)
+    setSelectedPlayerName(playerName)
+    setKickDialogOpen(true)
+  }
+
+  /**
+   * Handler: Konfirmasi kick player.
+   * Eksekusi delete dari tabel players.
+   */
+  const confirmKick = async () => {
+    if (!selectedPlayerId) return
+
+    const { error } = await supabase
+      .from("players")
+      .delete()
+      .eq("id", selectedPlayerId)
+
+    if (error) {
+      console.error("Kick player error:", error)
+      // Optional: Tambahkan toast error di sini jika ada library seperti sonner
+    } else {
+      console.log(`Player ${selectedPlayerName} kicked successfully`)
+    }
+
+    setKickDialogOpen(false)
+    setSelectedPlayerId(null)
+    setSelectedPlayerName('')
+  }
+
   // Render utama: Semua conditional inline untuk persist audio dan background
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
@@ -633,41 +672,56 @@ export default function HostRoomPage() {
                 </h2>
               </div>
 
-            <div className="space-y-4 mb-6 sm:mb-8">
-              {players.length === 0 ? (
-                <div className="text-center py-6 sm:py-8 text-gray-400 pixel-text">
-                  <Users className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-50" />
-                  <p className="text-sm sm:text-base">Waiting for players to join...</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-                  {players.map((player) => (
-                    <motion.div
-                      key={player.id}
-                      className="relative group glow-pink-subtle"
-                      whileHover={{ scale: 1.05 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <div
-                        className="p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border-2 sm:border-3 border-double transition-all duration-300 
+              <div className="space-y-4 mb-6 sm:mb-8">
+                {players.length === 0 ? (
+                  <div className="text-center py-6 sm:py-8 text-gray-400 pixel-text">
+                    <Users className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-50" />
+                    <p className="text-sm sm:text-base">Waiting for players to join...</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+                    {players.map((player) => (
+                      <motion.div
+                        key={player.id}
+                        className="relative group glow-pink-subtle"
+                        whileHover={{ scale: 1.05 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <div
+                          className="p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border-2 sm:border-3 border-double transition-all duration-300 
                    bg-transparent backdrop-blur-sm 
                    border-[#ff6bff]/70 hover:border-[#ff6bff]"
-                      >
-                        {/* Car GIF */}
-                        <div className="relative mb-2 sm:mb-3">
-                          <img
-                            src={carGifMap[player.car] || '/assets/car/car5.webp?v=2'}
-                            alt={`${player.car} car`}
-                            className="h-16 sm:h-20 md:h-24 lg:h-28 w-20 sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce
+                        >
+                          {/* Car GIF */}
+                          <div className="relative mb-2 sm:mb-3">
+                            <img
+                              src={carGifMap[player.car] || '/assets/car/car5.webp?v=2'}
+                              alt={`${player.car} car`}
+                              className="h-16 sm:h-20 md:h-24 lg:h-28 w-20 sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce
                        filter brightness-125 contrast-150"
-                          />
-                        </div>
+                            />
+                          </div>
 
                           {/* Player Nickname */}
                           <div className="text-center">
                             <p className="text-white text-xs leading-tight glow-text line-clamp-2 break-words">
                               {breakOnCaps(player.nickname)}
                             </p>
+                          </div>
+
+                          {/* Kick Button - Muncul saat hover */}
+                          <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleKickPlayer(player.id, player.nickname)
+                              }}
+                              size="sm"
+                              className="bg-[#ff6b00]/80 border-2 border-white hover:bg-[#ff8c00]/80 text-white pixel-button p-1 min-w-0"
+                              aria-label={`Kick ${player.nickname}`}
+                            >
+                              <X size={12} className="text-white" />
+                            </Button>
                           </div>
                         </div>
                       </motion.div>
@@ -679,6 +733,36 @@ export default function HostRoomPage() {
           </div>
         </div>
       )}
+
+      {/* Kick Confirmation Dialog */}
+      <Dialog open={kickDialogOpen} onOpenChange={setKickDialogOpen}>
+        <DialogOverlay className="bg-[#1a0a2a]/80 backdrop-blur-sm fixed inset-0 z-50" />
+        <DialogContent className="backdrop-blur-sm border-2 border-[#ff6bff]/50 rounded-lg max-w-md p-6 bg-[#1a0a2a]/90">
+          <CardHeader className="text-center">
+            <CardTitle className="text-[#ff6bff] pixel-text glow-pink">Kick Player?</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-white text-sm pixel-text text-center">
+              Apakah kamu yakin ingin kick <span className="text-[#00ffff] font-bold">{selectedPlayerName}</span> dari room?
+            </p>
+            <div className="flex justify-center space-x-3">
+              <Button
+                onClick={() => setKickDialogOpen(false)}
+                variant="outline"
+                className="border-[#ff6bff] text-white hover:bg-[#ff6bff]/20 pixel-button"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmKick}
+                className="bg-[#ff6b00] border-2 border-white hover:bg-[#ff8c00] text-black font-bold pixel-button"
+              >
+                Kick
+              </Button>
+            </div>
+          </CardContent>
+        </DialogContent>
+      </Dialog>
 
       {/* Inline Styles: CSS untuk tema pixel-retro */}
       <style jsx>{`
