@@ -766,54 +766,49 @@ export default function HostRoomPage() {
         </div>
       )}
 
-      {/* Kick Confirmation Dialog */}
-      <Dialog open={kickDialogOpen} onOpenChange={setKickDialogOpen}>
-        <DialogOverlay className="bg-[#1a0a2a]/40 backdrop-blur-md fixed inset-0 z-50" />
-        <DialogContent className="backdrop-blur-md border-2 border-[#ff6bff]/60 rounded-xl max-w-sm p-0 bg-[#1a0a2a]/95 shadow-2xl shadow-[#ff6bff]/20">
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="p-6 space-y-4"
+{/* Kick Confirmation Dialog */}
+<Dialog open={kickDialogOpen} onOpenChange={setKickDialogOpen}>
+  <DialogOverlay className="bg-[#1a0a2a]/60 backdrop-blur-md fixed inset-0 z-50" />
+  <DialogContent className=" bg-[#1a0a2a]/15 border-[#ff6bff]">
+    <motion.div
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 20, scale: 0.95 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      className="p-3 space-y-2"
+    >
+      <CardHeader className="text-center space-y-1">
+        {/* Car GIF di atas */}
+        <div className="relative mx-auto">
+          <img
+            src={carGifMap[selectedPlayerCar] || '/assets/car/car5.webp?v=2'}
+            alt={`${selectedPlayerCar} car`}
+            className="h-24 w-74 object-contain animate-neon-bounce filter brightness-110 contrast-140 mx-auto"
+          />
+        </div>
+
+        <CardTitle className="text-lg text-[#ffefff] pixel-text glow-pink mb-4">Kick <span className="text-[#00ffff]">{selectedPlayerName}</span> ?</CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0 space-y-2">
+        <div className="flex justify-center space-x-2">
+          <Button
+            onClick={() => setKickDialogOpen(false)}
+            variant="outline"
+            className="bg-[#000] border text-[#00ffff] border-[#00ffff] hover:bg-gray-900 hover:text-white px-4 py-2 text-sm"
           >
-            <CardHeader className="text-center space-y-3">
-              {/* Car GIF di atas */}
-              <div className="relative mx-auto mb-3">
-                <img
-                  src={carGifMap[selectedPlayerCar] || '/assets/car/car5.webp?v=2'}
-                  alt={`${selectedPlayerCar} car`}
-                  className="h-16 w-20 object-contain animate-neon-bounce filter brightness-110 contrast-140 mx-auto"
-                />
-              </div>
-              <div className="mx-auto w-12 h-12 bg-[#ff6b00]/20 rounded-full flex items-center justify-center">
-                <X className="h-6 w-6 text-[#ff6b00]" />
-              </div>
-              <CardTitle className="text-xl text-[#ffefff] pixel-text glow-pink">Kick Player?</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0 space-y-4">
-              <p className="text-gray-300 text-sm pixel-text text-center leading-relaxed">
-                Yakin ingin mengeluarkan <span className="text-[#00ffff] font-semibold">{selectedPlayerName}</span> dari room ini?
-              </p>
-              <div className="flex justify-center space-x-3 pt-2">
-                <Button
-                  onClick={() => setKickDialogOpen(false)}
-                  variant="outline"
-                  className="border-[#ff6bff]/50 text-gray-300 hover:bg-[#ff6bff]/10 hover:border-[#ff6bff]/70 pixel-button flex-1 max-w-20"
-                >
-                  Batal
-                </Button>
-                <Button
-                  onClick={confirmKick}
-                  className="bg-gradient-to-r from-[#ff6b00] to-[#ff8c00] border border-white/20 hover:from-[#ff8c00] hover:to-[#ffb366] text-white font-bold pixel-button flex-1 max-w-20 shadow-lg shadow-[#ff6b00]/30 hover:shadow-xl"
-                >
-                  Kick
-                </Button>
-              </div>
-            </CardContent>
-          </motion.div>
-        </DialogContent>
-      </Dialog>
+            Cancel
+          </Button>
+          <Button
+            onClick={confirmKick}
+            className="bg-[#000] border text-[#00ffff] border-[#00ffff] hover:bg-gray-900 hover:text-white px-4 py-2 text-sm"
+          >
+            Kick
+          </Button>
+        </div>
+      </CardContent>
+    </motion.div>
+  </DialogContent>
+</Dialog>
 
       {/* Inline Styles: CSS untuk tema pixel-retro */}
       <style jsx>{`
