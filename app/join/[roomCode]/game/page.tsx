@@ -368,27 +368,6 @@ export default function QuizGamePage() {
     router,
   ]);
 
-  // Resume from mini-game
-  useEffect(() => {
-    const resumeGame = async () => {
-      const nextIndex = localStorage.getItem("nextQuestionIndex");
-      if (nextIndex && questions.length > 0) {
-        await supabase
-          .from("players")
-          .update({ racing_finished: true }) // selesai racing
-          .eq("id", playerId);
-
-        const index = parseInt(nextIndex, 10);
-        if (!isNaN(index) && index >= 0 && index < totalQuestions) {
-          setCurrentQuestionIndex(index);
-          localStorage.removeItem("nextQuestionIndex");
-        }
-      }
-    };
-    resumeGame();
-  }, [questions.length, totalQuestions, playerId]);
-
-
   const getOptionStyle = (optionIndex: number) => {
     // mode normal (belum submit)
     if (!showResult) {

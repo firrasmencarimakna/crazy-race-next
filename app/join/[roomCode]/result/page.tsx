@@ -80,11 +80,19 @@ export default function PlayerResultsPage() {
         // Ambil roomId dulu
         const { data: roomData, error: roomError } = await supabase
           .from("game_rooms")
-          .select("id")
+          .select("id, settings")
           .eq("room_code", roomCode)
           .single();
 
         if (roomError || !roomData) throw new Error("Room not found");
+
+        let gameDuration = 300; // default fallback (5 menit)
+        try {
+          const settings = JSON.parse(roomData.settings || "{}");
+          if (settings.duration) gameDuration = settings.duration;
+        } catch {
+          console.warn("⚠️ Failed to parse room settings JSON, using default duration.");
+        }
 
         // Ambil semua pemain yang sudah complete
         const { data: players, error: playersError } = await supabase
@@ -113,7 +121,7 @@ export default function PlayerResultsPage() {
         const result = currentPlayer.result?.[0];
         if (!result) throw new Error("No result for current player");
 
-        const totalSeconds = result.duration || 0;
+        const totalSeconds = Math.min(result.duration || 0, gameDuration);
         const mins = Math.floor(totalSeconds / 60);
         const secs = totalSeconds % 60;
         const totalTime = `${mins}:${secs.toString().padStart(2, "0")}`;
@@ -183,7 +191,7 @@ export default function PlayerResultsPage() {
               )
             }
           )
-          .subscribe() 
+          .subscribe()
       } catch (err: any) {
         console.error("Error setting up realtime:", err);
         setError(err.message);

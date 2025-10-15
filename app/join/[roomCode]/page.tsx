@@ -15,6 +15,7 @@ import { DoorOpen } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogOverlay, DialogTitle } from "@/components/ui/dialog"
 
 import Image from "next/image"
+import { breakOnCaps } from "@/utils/game"
 
 // Background GIFs
 const backgroundGifs = [
@@ -421,8 +422,8 @@ export default function LobbyPage() {
                       {/* Player Info */}
                       <div className="text-center">
                         <div className="flex items-center justify-center space-x-2 mb-1">
-                          <h3 className="text-white pixel-text text-sm leading-tight line-clamp-2">
-                            {player.nickname}
+                          <h3 className="text-white pixel-text text-sm leading-tight line-clamp-2 break-words">
+                            {breakOnCaps(player.nickname)}
                           </h3>
                         </div>
 
