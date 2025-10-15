@@ -10,7 +10,7 @@ import { Slider } from "@/components/ui/slider"
 import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
-import { sortPlayersByProgress, formatTime, calculateRemainingTime } from "@/utils/game"
+import { sortPlayersByProgress, formatTime, calculateRemainingTime, breakOnCaps } from "@/utils/game"
 import LoadingRetro from "@/components/loadingRetro"
 import Image from "next/image"
 
@@ -307,35 +307,30 @@ export default function HostMonitorPage() {
       return;
     }
 
-    // Pisahkan AFK total vs yang sempat jawab sebagian
-    const { afkPlayers, partialPlayers } = inactivePlayers.reduce(
-      (acc, p: Player) => {
-        try {
-          const result = Array.isArray(p.result)
-            ? p.result[0]
-            : JSON.parse(p.result || "null");
+    // 🎯 Cari yang AFK aja (tanpa reduce)
+    const afkPlayers = inactivePlayers.filter((p: Player) => {
+      try {
+        const result = Array.isArray(p.result)
+          ? p.result[0]
+          : JSON.parse(p.result || "null");
 
-          const isAfk =
-            !result ||
-            !result.answers ||
-            result.answers.every((a: number | null) => a === null);
-
-          if (isAfk) acc.afkPlayers.push(p);
-          else acc.partialPlayers.push(p);
-        } catch {
-          acc.afkPlayers.push(p);
-        }
-        return acc;
-      },
-      { afkPlayers: [] as Player[], partialPlayers: [] as Player[] }
-    );
+        return (
+          !result ||
+          !result.answers ||
+          result.answers.every((a: number | null) => a === null)
+        );
+      } catch {
+        // Parsing gagal → anggap AFK
+        return true;
+      }
+    });
 
     if (afkPlayers.length > 0) {
       const defaultResult = {
         score: 0,
         correct: 0,
         accuracy: "0",
-        duration: gameDuration,
+        duration: endTime,
         current_question: 1,
         total_question: totalQuestions,
         answers: new Array(totalQuestions).fill(null),
@@ -353,17 +348,8 @@ export default function HostMonitorPage() {
       console.log(`✅ ${afkPlayers.length} AFK players auto-marked with default result.`);
     }
 
-    if (partialPlayers.length > 0) {
-      await supabase
-        .from("players")
-        .update({ completion: true })
-        .in("id", partialPlayers.map((p) => p.id));
-
-      console.log(`✅ ${partialPlayers.length} partially active players marked as completed.`);
-    }
-
     router.push(`/host/${roomCode}/leaderboard`);
-  };
+  }
 
   if (loading) {
     return <LoadingRetro />;
@@ -447,48 +433,48 @@ export default function HostMonitorPage() {
       </h1>
 
       {/* Menu Dropdown - Muncul saat burger diklik, dari kanan */}
-            {isMenuOpen && (
-              <motion.div
-                initial={{ opacity: 0, x: 300 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 300 }}
-                className="absolute top-20 right-4 z-30 w-64 bg-[#1a0a2a]/20 border border-[#ff6bff]/50 rounded-lg p-3 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm"
-              >
-                <div className="space-y-2">
-                  {/* Integrated Mute + Volume: Single row for button + slider, with label above for simplicity */}
-                  <div className="p-1.5 bg-[#ff6bff]/10 rounded space-y-1"> {/* Unified bg for the whole section; adjusted to /10 for subtle highlight */}
-                    {/* <span className="text-xs text-white pixel-text block">Suara</span> Moved "Suara" label here as section header; changed color to white for better contrast */}
-                    
-                    {/* New flex row: Mute button on left, slider on right; tight spacing */}
-                    <div className="flex items-center space-x-2 bg-[#1a0a2a]/60 border border-[#ff6bff]/30 rounded px-2 py-1"> {/* Shared container for row; reduced px-1 to px-2 for button fit, py-0.5 to py-1 */}
-                      <button
-                        onClick={handleMuteToggle}
-                        className="p-1.5 bg-[#00ffff] border border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded flex-shrink-0" // Added flex-shrink-0 to prevent button compression
-                        aria-label={isMuted ? "Unmute" : "Mute"}
-                      >
-                        {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
-                      </button>
-                      
-                      <div className="flex-1"> {/* Wrapper for slider to take remaining space */}
-                        <Slider
-                          value={[volume]}
-                          onValueChange={handleVolumeChange}
-                          max={100}
-                          min={0}
-                          step={1}
-                          className="w-full"
-                          orientation="horizontal"
-                          aria-label="Volume slider"
-                        />
-                      </div>
-                    </div>
-                    
-                    {/* Volume value below slider for quick glance; optional but keeps info visible without cluttering row */}
-                    <span className="text-xs text-[#ff6bff] pixel-text">Volume: {volume}%</span>
-                  </div>
+      {isMenuOpen && (
+        <motion.div
+          initial={{ opacity: 0, x: 300 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 300 }}
+          className="absolute top-20 right-4 z-30 w-64 bg-[#1a0a2a]/20 border border-[#ff6bff]/50 rounded-lg p-3 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm"
+        >
+          <div className="space-y-2">
+            {/* Integrated Mute + Volume: Single row for button + slider, with label above for simplicity */}
+            <div className="p-1.5 bg-[#ff6bff]/10 rounded space-y-1"> {/* Unified bg for the whole section; adjusted to /10 for subtle highlight */}
+              {/* <span className="text-xs text-white pixel-text block">Suara</span> Moved "Suara" label here as section header; changed color to white for better contrast */}
+
+              {/* New flex row: Mute button on left, slider on right; tight spacing */}
+              <div className="flex items-center space-x-2 bg-[#1a0a2a]/60 border border-[#ff6bff]/30 rounded px-2 py-1"> {/* Shared container for row; reduced px-1 to px-2 for button fit, py-0.5 to py-1 */}
+                <button
+                  onClick={handleMuteToggle}
+                  className="p-1.5 bg-[#00ffff] border border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded flex-shrink-0" // Added flex-shrink-0 to prevent button compression
+                  aria-label={isMuted ? "Unmute" : "Mute"}
+                >
+                  {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                </button>
+
+                <div className="flex-1"> {/* Wrapper for slider to take remaining space */}
+                  <Slider
+                    value={[volume]}
+                    onValueChange={handleVolumeChange}
+                    max={100}
+                    min={0}
+                    step={1}
+                    className="w-full"
+                    orientation="horizontal"
+                    aria-label="Volume slider"
+                  />
                 </div>
-              </motion.div>
-            )}
+              </div>
+
+              {/* Volume value below slider for quick glance; optional but keeps info visible without cluttering row */}
+              <span className="text-xs text-[#ff6bff] pixel-text">Volume: {volume}%</span>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       <div className="relative z-10 max-w-7xl mx-auto p-4 sm:p-6 md:p-10">
         {/* Header dengan Timer dan Controls */}
@@ -592,8 +578,8 @@ export default function HostMonitorPage() {
 
                         {/* Player Info */}
                         <div className="text-center">
-                          <h3 className="text-white pixel-text text-sm leading-tight mb-2">
-                            {player.nickname}
+                          <h3 className="text-white pixel-text text-sm leading-tight mb-2line-clamp-2 break-words">
+                            {breakOnCaps(player.nickname)}
                           </h3>
 
                           {/* Progress Bar */}
