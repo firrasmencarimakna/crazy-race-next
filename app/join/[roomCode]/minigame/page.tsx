@@ -234,34 +234,34 @@ export default function RacingGame() {
     // 🔥 NEW: Show loading/error kalau perlu (opsional, biar UX bagus)
     if (loading) return <LoadingRetro />;
     if (error) return <div className="w-full h-screen flex justify-center items-center text-red-500">Error: {error}</div>;
-    
+
     const getTimeColor = () => {
-    if (totalTimeRemaining <= 30) return "text-red-500 animate-pulse";
-    if (totalTimeRemaining <= 60) return "text-[#ff6bff] glow-pink-subtle";
-    return "text-[#00ffff] glow-cyan";
-  };
+        if (totalTimeRemaining <= 30) return "text-red-500 animate-pulse";
+        if (totalTimeRemaining <= 60) return "text-[#ff6bff] glow-pink-subtle";
+        return "text-[#00ffff] glow-cyan";
+    };
 
     // Existing: Iframe
     return (
-  <div className="w-full h-screen relative flex justify-center items-center overflow-hidden">
-    {totalTimeRemaining > 0 && (
-      <div className={`absolute top-4 left-1/2 -translate-x-1/2 z-9999 bg-black/70 text-white px-4 py-2 rounded-lg text-lg font-bold shadow-lg ${getTimeColor()}`}>
-        {formatTime(totalTimeRemaining)}
-      </div>
-    )}
+        <div className="w-full h-screen relative flex justify-center items-center overflow-hidden">
+            {totalTimeRemaining > 0 && (
+                <div className={`absolute top-4 left-1/2 -translate-x-1/2 z-9999 bg-black/70 text-white px-4 py-2 rounded-lg text-lg font-bold shadow-lg ${getTimeColor()}`}>
+                    {formatTime(totalTimeRemaining)}
+                </div>
+            )}
 
-    <iframe
-      ref={iframeRef}
-      src="/racing-game/v4.final.html"
-      width="100%"
-      height="100%"
-      frameBorder="0"
-      allowFullScreen
-      sandbox="allow-scripts allow-same-origin allow-popups"
-      title="Racing Game"
-      className="z-0 pointer-events-none"
-    />
-  </div>
-);
+            <iframe
+                ref={iframeRef}
+                src="/racing-game/v4.final.html"
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                allowFullScreen
+                sandbox="allow-scripts allow-same-origin allow-popups"
+                title="Racing Game"
+                className="z-0"
+            />
+        </div>
+    );
 
 }
