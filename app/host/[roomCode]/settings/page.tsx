@@ -34,6 +34,7 @@ export default function HostSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
   const audioRef = useRef<HTMLAudioElement>(null)
+  const [selectedDifficulty, setSelectedDifficulty] = useState("Medium");
 
   // Inisialisasi audio: play otomatis dengan volume default
   useEffect(() => {
@@ -149,15 +150,16 @@ export default function HostSettingsPage() {
     return shuffled
   }
 
-  // Handle saving settings and questions
+  // Handle saving settings and questions - UPDATED: Tambah difficulty ke settings
   const handleCreateRoom = async () => {
     if (!quiz || saving) return
     setSaving(true)
 
-    // Prepare settings
+    // Prepare settings - TAMBAHAN: Include selectedDifficulty
     const settings = {
       duration: Number.parseInt(duration),
       questionCount: Math.min(Number.parseInt(questionCount), quiz.questions.length),
+      difficulty: selectedDifficulty, // 🔥 Ini yang baru: Simpan difficulty
     }
 
     // Prepare questions (shuffle if enabled)
@@ -313,72 +315,110 @@ export default function HostSettingsPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <Card className="bg-[#1a0a2a]/60 border-2 sm:border-4 border-[#ff87ff]/50 pixel-card glow-pink-subtle p-6 sm:p-8">
-              <div className="space-y-6 sm:space-y-8">
-                {/* Selected Quiz */}
-                <div className="p-3 sm:p-4 bg-[#0a0a0f] border-2 rounded-lg">
-                  <p className="text-base sm:text-lg text-[#ff87ff] pixel-text font-semibold line-clamp-2">
-                    {quiz.title}
-                  </p>
-                  <p className="text-[#00ffff] pixel-text text-xs sm:text-sm mt-1 line-clamp-2">
-                    {quiz.description}
-                  </p>
-                </div>
-
-                {/* Settings Grid */}
-                <div className="grid grid-cols-1 gap-6">
-                  {/* Duration */}
-                  <div className="space-y-2 sm:space-y-3">
-                    <Label className="text-base sm:text-lg font-semibold flex items-center text-[#00ffff] pixel-text glow-cyan">
-                      {/* <Clock className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> */}
-                      Duration
-                    </Label>
-                    <Select value={duration} onValueChange={setDuration}>
-                      <SelectTrigger className="text-base sm:text-lg p-3 sm:p-5 bg-[#0a0a0f] border-2 text-white pixel-text focus:border-[#00ffff] w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#0a0a0f] border-2 sm:border-4 border-[#6a4c93] text-white pixel-text">
-                        {Array.from({ length: 6 }, (_, i) => (i + 1) * 5).map((min) => (
-                          <SelectItem key={min} value={(min * 60).toString()}>
-                            {min} Minutes
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+          <Card className="bg-[#1a0a2a]/60 border-2 sm:border-4 border-[#ff87ff]/50 pixel-card glow-pink-subtle p-6 sm:p-8">
+            <div className="space-y-6 sm:space-y-8">
+              {/* Selected Quiz - Ditambahkan ikon dan wrapper untuk konsistensi */}
+              <div className="p-3 sm:p-4 bg-[#0a0a0f] border-2 border-[#ff87ff]/30 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 mt-1">
+                    <Hash className="h-5 w-5 text-[#ff87ff]" />
                   </div>
-
-                  {/* Number of Questions */}
-                  <div className="space-y-2 sm:space-y-3">
-                    <Label className="text-base sm:text-lg font-semibold flex items-center text-[#00ffff] pixel-text glow-cyan">
-                      {/* <Hash className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> */}
-                      Questions
-                    </Label>
-                    <Select value={questionCount} onValueChange={setQuestionCount}>
-                      <SelectTrigger className="text-base sm:text-lg p-3 sm:p-5 bg-[#0a0a0f] border-2  text-white pixel-text focus:border-[#00ffff] w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#0a0a0f] border-2 sm:border-4 border-[#6a4c93] text-white pixel-text">
-                        {questionCountOptions.map((count) => (
-                          <SelectItem key={count} value={count.toString()}>
-                            {count === totalQuestions ? `${count} (All)` : count}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-base sm:text-lg text-[#ff87ff] pixel-text font-semibold line-clamp-2">
+                      {quiz.title}
+                    </p>
+                    <p className="text-[#00ffff] pixel-text text-xs sm:text-sm line-clamp-2">
+                      {quiz.description}
+                    </p>
                   </div>
                 </div>
+              </div>
 
-                {/* Continue Button */}
+              {/* Settings Grid - Diubah ke grid 2 kolom di sm+ untuk layout lebih compact */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {/* Duration */}
+                <div className="space-y-2 sm:space-y-3">
+                  <Label className="text-base sm:text-lg font-semibold flex items-center space-x-2 text-[#00ffff] pixel-text glow-cyan">
+                    <Clock className="h-4 w-4" />
+                    <span>Duration</span>
+                  </Label>
+                  <Select value={duration} onValueChange={setDuration}>
+                    <SelectTrigger className="text-base sm:text-lg p-3 sm:p-5 bg-[#0a0a0f] border-2 border-[#00ffff]/30 text-white pixel-text focus:border-[#00ffff] w-full transition-all">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#0a0a0f] border-2 sm:border-4 border-[#6a4c93] text-white pixel-text">
+                      {Array.from({ length: 6 }, (_, i) => (i + 1) * 5).map((min) => (
+                        <SelectItem key={min} value={(min * 60).toString()}>
+                          {min} Minutes
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Number of Questions */}
+                <div className="space-y-2 sm:space-y-3">
+                  <Label className="text-base sm:text-lg font-semibold flex items-center space-x-2 text-[#00ffff] pixel-text glow-cyan">
+                    <Hash className="h-4 w-4" />
+                    <span>Questions</span>
+                  </Label>
+                  <Select value={questionCount} onValueChange={setQuestionCount}>
+                    <SelectTrigger className="text-base sm:text-lg p-3 sm:p-5 bg-[#0a0a0f] border-2 border-[#00ffff]/30 text-white pixel-text focus:border-[#00ffff] w-full transition-all">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#0a0a0f] border-2 sm:border-4 border-[#6a4c93] text-white pixel-text">
+                      {questionCountOptions.map((count) => (
+                        <SelectItem key={count} value={count.toString()}>
+                          {count === totalQuestions ? `${count} (All)` : count}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Difficulty Section - Simplified without car */}
+              <div className="space-y-4 sm:space-y-6">
+                <Label className="text-base sm:text-lg font-semibold flex items-center justify-center space-x-2 text-[#00ffff] pixel-text glow-cyan mb-4">
+                  <Settings className="h-4 w-4" />
+                  <span>CHOOSE DIFFICULTY</span>
+                </Label>
+                
+                {/* Simple Difficulty Buttons */}
+                <div className="flex justify-center space-x-3 sm:space-x-6">
+                  {["Easy", "Medium", "Hard"].map((diff) => (
+                    <Button
+                      key={diff}
+                      onClick={() => setSelectedDifficulty(diff)}
+                      className={`
+                        pixel-button text-sm sm:text-base px-6 sm:px-8 py-3 font-bold 
+                        w-24 sm:w-28 transition-all duration-200 border-2
+                        ${
+                          selectedDifficulty === diff
+                            ? "bg-[#ff6bff] hover:bg-[#ff8aff] glow-pink text-white border-white shadow-lg shadow-[#ff6bff]/50"
+                            : "bg-[#0a0a0f] border-[#00ffff]/40 text-[#00ffff] hover:bg-[#00ffff]/10 hover:border-[#00ffff] hover:shadow-md hover:shadow-[#00ffff]/30"
+                        }
+                      `}
+                    >
+                      {diff}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Continue Button - Ditambahkan subtle glow dan spacing */}
+              <div className="pt-4 border-t border-[#ff87ff]/20">
                 <Button
                   onClick={handleCreateRoom}
                   disabled={saving}
-                  className="w-full text-base sm:text-xl py-4 sm:py-6 bg-[#00ffff]  pixel-button hover:bg-[#33ffff] glow-cyan text-black font-bold disabled:bg-[#6a4c93] disabled:cursor-not-allowed"
+                  className="w-full text-base sm:text-xl py-4 sm:py-6 bg-[#00ffff] pixel-button hover:bg-[#33ffff] glow-cyan text-black font-bold disabled:bg-[#6a4c93] disabled:cursor-not-allowed transition-all shadow-lg shadow-[#00ffff]/30"
                 >
                   <Play className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
                   CONTINUE
                 </Button>
               </div>
-            </Card>
+            </div>
+          </Card>
           </motion.div>
         )}
       </div>

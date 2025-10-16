@@ -518,7 +518,7 @@
     var decel = -maxSpeed/5;
     var offRoadDecel = -maxSpeed/2;
     var offRoadLimit = maxSpeed/4;
-    var totalCars = 20; // No cars for straight version
+    var totalCars = 80; // Total NPC cars for straight version
     var currentLapTime = 0;
     var lastLapTime = null;
     var gameFinished = false; // New flag for finish
@@ -642,7 +642,7 @@
     }
 
     function updateCars(dt, playerSegment, playerW) {
-      var n, car, oldSegment, newSegment;
+      var n, car, oldSegment, newSegment, index;
       for (n = 0; n < cars.length; n++) {
         car = cars[n];
         oldSegment = findSegment(car.z);
@@ -797,7 +797,7 @@
     function resetRoad() {
       segments = [];
       // Straight track: long straight road
-      for(var n = 0 ; n < 500 ; n++) {
+      for(var n = 0 ; n < 1500 ; n++) {
         segments.push({
            index: n,
            p1: { world: { y: 0, z:  n   *segmentLength }, camera: {}, screen: {} },
@@ -808,8 +808,9 @@
            color: Math.floor(n/rumbleLength)%2 ? COLORS.DARK : COLORS.LIGHT
         });
       }
-      segments[findSegment(playerZ).index + 2].color = COLORS.START;
-      segments[findSegment(playerZ).index + 3].color = COLORS.START;
+      // Fix start line: set to segments 0 and 1 instead of based on playerZ (which is null)
+      segments[0].color = COLORS.START;
+      segments[1].color = COLORS.START;
       for(var n = 0 ; n < rumbleLength ; n++)
         segments[segments.length-1-n].color = COLORS.FINISH;
       trackLength = segments.length * segmentLength;
@@ -830,7 +831,18 @@
 
     function resetCars() {
       cars = [];
-      // No cars for v1 straight
+      var n, car, segment, offset, z, sprite, speed;
+      for (n = 0; n < totalCars; n++) {
+        offset = Math.random() * Util.randomChoice([-0.8, 0.8]);
+        z = Math.floor(Math.random() * segments.length) * segmentLength;
+        sprite = Util.randomChoice(SPRITES.CARS);
+        speed = maxSpeed / 4 + Math.random() * maxSpeed / (sprite == SPRITES.SEMI ? 4 : 2);
+        car = { offset: offset, z: z, sprite: sprite, speed: speed };
+        segment = findSegment(car.z);
+        segment.cars = segment.cars || [];  // Inisialisasi array cars jika belum ada
+        segment.cars.push(car);
+        cars.push(car);
+      }
     }
 
     Game.run({

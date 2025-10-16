@@ -11,6 +11,7 @@ export default function RacingGame() {
     const { roomCode } = useParams();
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const [playerId, setPlayerId] = useState<string>("");
+    const [gameSrc, setGameSrc] = useState('/racing-game/v4.final.html');
 
     // 🔥 NEW: State untuk timer & data game (mirip main)
     const [gameStartTime, setGameStartTime] = useState<number | null>(null);
@@ -50,6 +51,23 @@ export default function RacingGame() {
 
             setGameStartTime(startTime);
             setGameDuration(settings.duration);
+
+            // 🔥 NEW: Set src berdasarkan difficulty dari settings
+            if (settings.difficulty) {
+                let src = '/racing-game/v4.final.html'; // Default
+                switch (settings.difficulty.toLowerCase()) {
+                    case 'easy':
+                        src = '/racing-game/v1.straight.html';
+                        break;
+                    case 'medium':
+                        src = '/racing-game/v2.curves.html';
+                        break;
+                    case 'hard':
+                        src = '/racing-game/v4.final.html';
+                        break;
+                }
+                setGameSrc(src);
+            }
 
             // Fetch player result
             const { data: playerData, error: playerError } = await supabase
@@ -250,18 +268,19 @@ export default function RacingGame() {
                 </div>
             )}
 
-            <iframe
-                ref={iframeRef}
-                src="/racing-game/v4.final.html"
-                width="100%"
-                height="100%"
-                frameBorder="0"
-                allowFullScreen
-                sandbox="allow-scripts allow-same-origin allow-popups"
-                title="Racing Game"
-                className="z-0"
-            />
-        </div>
-    );
+
+    <iframe
+      ref={iframeRef}
+      src={gameSrc}
+      width="100%"
+      height="100%"
+      frameBorder="0"
+      allowFullScreen
+      sandbox="allow-scripts allow-same-origin allow-popups"
+      title="Racing Game"
+      className="z-0"
+    />
+  </div>
+);
 
 }

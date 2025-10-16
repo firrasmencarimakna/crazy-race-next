@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
-import { Flag, Volume2, VolumeX, Settings, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight } from "lucide-react"
+import { Flag, Volume2, VolumeX, Settings, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight, Play } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -17,8 +17,8 @@ import LoadingRetroScreen from "@/components/loading-screnn"
 
 /**
  * HomePage Component
- * Halaman utama aplikasi Crazy Race, berisi tombol Host Game, Join Race (dengan tab Tryout),
- * menu burger untuk audio settings dan How to Play modal.
+ * Halaman utama aplikasi Crazy Race, berisi tombol Host Game, Join Race,
+ * menu burger untuk audio settings, How to Play modal, dan Solo Tryout.
  * Mengintegrasikan validasi input dengan modal alert spesifik berdasarkan field kosong.
  */
 export default function HomePage() {
@@ -26,8 +26,6 @@ export default function HomePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
-  // State untuk tab selector (join atau tryout)
-  const [activeTab, setActiveTab] = useState<'join' | 'tryout'>('join')
 
   // State untuk loading dan joining process
   const [joining, setJoining] = useState(false)
@@ -44,6 +42,7 @@ export default function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false) // Toggle menu burger
   const [showHowToPlay, setShowHowToPlay] = useState(false) // Modal How to Play
   const [currentPage, setCurrentPage] = useState(0) // Pagination untuk modal How to Play
+  const [showTryoutInput, setShowTryoutInput] = useState(false) // Toggle tryout input visibility
 
   // State untuk modal alert (spesifik berdasarkan reason)
   const [showAlert, setShowAlert] = useState(false)
@@ -174,7 +173,7 @@ export default function HomePage() {
   }
 
   /**
-   * Handle join race (tab 'join'): Validasi input, insert player ke Supabase, navigasi ke lobby.
+   * Handle join race: Validasi input, insert player ke Supabase, navigasi ke lobby.
    */
   const handleJoin = async () => {
     // Deteksi reason untuk alert spesifik
@@ -200,40 +199,32 @@ export default function HomePage() {
 
     setJoining(true) // Mulai loading
 
-try {
-  // Verify room exists dan status 'waiting'
-  const { data: roomData, error: roomError } = await supabase
-    .from("game_rooms")
-    .select("id, status")
-    .eq("room_code", roomCode)
-    .single()
+    try {
+      // Verify room exists dan status 'waiting'
+      const { data: roomData, error: roomError } = await supabase
+        .from("game_rooms")
+        .select("id, status")
+        .eq("room_code", roomCode)
+        .single()
 
-  if (roomError || !roomData) {
-    console.error("Error: Room not found", roomError)
-    setJoining(false)
-    setAlertReason('roomNotFound')
-    setShowAlert(true)
-    // Play alert audio jika tidak muted
-    if (alertAudioRef.current && !isMuted) {
-      alertAudioRef.current.volume = volume / 100
-      alertAudioRef.current.currentTime = 0 // Reset untuk replay
-      alertAudioRef.current.play().catch((e) => console.log("Audio error:", e))
-    }
-    return
-  }
-
-  if (roomData.status !== "waiting") {
-    console.error("Error: Room is not accepting players")
-    setJoining(false)
-    // Opsional: Bisa tambah alert lain untuk status room (misal 'roomInProgress'), tapi sementara return aja
-    return
-  }
-
-  // ... (sisa kode insert player dan navigasi tetap sama)
+      if (roomError || !roomData) {
+        console.error("Error: Room not found", roomError)
+        setJoining(false)
+        setAlertReason('roomNotFound')
+        setShowAlert(true)
+        // Play alert audio jika tidak muted
+        if (alertAudioRef.current && !isMuted) {
+          alertAudioRef.current.volume = volume / 100
+          alertAudioRef.current.currentTime = 0 // Reset untuk replay
+          alertAudioRef.current.play().catch((e) => console.log("Audio error:", e))
+        }
+        return
+      }
 
       if (roomData.status !== "waiting") {
         console.error("Error: Room is not accepting players")
         setJoining(false)
+        // Opsional: Bisa tambah alert lain untuk status room (misal 'roomInProgress'), tapi sementara return aja
         return
       }
 
@@ -264,7 +255,7 @@ try {
   }
 
   /**
-   * Handle solo tryout (tab 'tryout'): Validasi nickname, simpan ke localStorage, navigasi ke tryout page.
+   * Handle solo tryout: Validasi nickname, simpan ke localStorage, navigasi ke tryout page.
    */
   const handleTryout = () => {
     if (!nickname.trim() || joining) {
@@ -279,6 +270,7 @@ try {
       }
       return
     }
+    setJoining(true)
     // Simpan khusus untuk tryout mode
     localStorage.setItem('tryout_nickname', nickname.trim())
     localStorage.setItem('tryout_mode', 'solo')
@@ -286,8 +278,8 @@ try {
   }
 
   // Preload check: Tampilkan loading jika belum siap
-const { isLoaded, progress } = usePreloaderScreen()
-if (!isLoaded) return <LoadingRetroScreen progress={progress} />
+  const { isLoaded, progress } = usePreloaderScreen()
+  if (!isLoaded) return <LoadingRetroScreen progress={progress} />
 
   // Functions untuk modal How to Play
   const closeHowToPlay = () => {
@@ -312,7 +304,7 @@ if (!isLoaded) return <LoadingRetroScreen progress={progress} />
   }
 
   return (
-   <div className={`min-h-[100dvh] w-full relative overflow-hidden pixel-font ${isLoaded ? 'p-2' : ''}`}>
+    <div className={`min-h-[100dvh] w-full relative overflow-hidden pixel-font ${isLoaded ? 'p-2' : ''}`}>
       {/* Background Music Audio (hidden) */}
       <audio
         ref={audioRef}
@@ -432,12 +424,19 @@ if (!isLoaded) return <LoadingRetroScreen progress={progress} />
             initial={{ opacity: 0, x: 300 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 300 }}
-            className="absolute top-20 right-4 z-30 w-64 bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm scrollbar-themed"
+            className="absolute top-20 right-4 z-30 w-64 bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm scrollbar-themed max-h-[70vh] overflow-y-auto"
           >
             <div className="space-y-4">
               {/* Mute Toggle */}
               <div className="flex items-center justify-between">
-                <span className="text-sm text-white pixel-text">Audio</span>
+                {/* <span className="text-sm text-white pixel-text">Audio</span> */}
+
+              </div>
+
+              {/* Volume Slider */}
+              {/* <div className="space-y-2"> */}
+                {/* <span className="text-xs text-[#ff6bff] pixel-text glow-pink-subtle">Volume</span> */}
+                {/* <div className="bg-[#1a0a2a]/60 border border-[#ff6bff]/50 rounded px-2 py-1 display flex gap-2">
                 <button
                   onClick={handleMuteToggle}
                   className="p-2 bg-[#1a0a2a]/60 border-2 border-[#00ffff]/50 hover:border-[#00ffff] pixel-button hover:bg-[#00ffff]/20 glow-cyan-subtle rounded"
@@ -445,12 +444,6 @@ if (!isLoaded) return <LoadingRetroScreen progress={progress} />
                 >
                   {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
                 </button>
-              </div>
-
-              {/* Volume Slider */}
-              <div className="space-y-2">
-                <span className="text-xs text-[#ff6bff] pixel-text glow-pink-subtle">Volume</span>
-                <div className="bg-[#1a0a2a]/60 border border-[#ff6bff]/50 rounded px-2 py-1">
                   <Slider
                     value={[volume]}
                     onValueChange={handleVolumeChange}
@@ -461,7 +454,7 @@ if (!isLoaded) return <LoadingRetroScreen progress={progress} />
                     orientation="horizontal"
                   />
                 </div>
-              </div>
+              </div> */}
 
               {/* How to Play Button */}
               <button
@@ -478,6 +471,62 @@ if (!isLoaded) return <LoadingRetroScreen progress={progress} />
                 </div>
               </button>
 
+              {/* Solo Tryout Button */}
+              <button
+                onClick={() => setShowTryoutInput(!showTryoutInput)}
+                className="w-full p-2 bg-[#1a0a2a]/60 border-2 border-[#ff6bff]/50 hover:border-[#ff6bff] pixel-button hover:bg-[#ff6bff]/20 glow-pink-subtle rounded text-center"
+                aria-label="Solo Tryout"
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <Play size={16} />
+                  <span className="text-sm text-[#ff6bff] pixel-text glow-pink">Solo Tryout</span>
+                </div>
+              </button>
+
+              {/* Solo Tryout Input (conditional) */}
+              <AnimatePresence>
+                {showTryoutInput && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-2 overflow-hidden"
+                  >
+                    <div className="relative">
+                      <Input
+                        placeholder="Nickname"
+                        value={nickname}
+                        maxLength={26}
+                        onChange={(e) => setNickname(e.target.value)}
+                        className="bg-[#1a0a2a]/50 border-[#ff6bff]/50 text-[#ff6bff] placeholder:text-[#ff6bff]/50 text-center text-xs pixel-text h-8 rounded focus:border-[#ff6bff] focus:ring-[#ff6bff]/30 pr-8"
+                        aria-label="Tryout Nickname"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setNickname(generateNickname())}
+                        className="absolute right-1 top-1/2 transform -translate-y-1/2 text-[#ff6bff] hover:bg-[#ff6bff]/20 hover:border-[#ff6bff] transition-all duration-200 glow-pink-subtle p-1"
+                        aria-label="Generate Nickname"
+                      >
+                        <span className="text-sm">🎲</span>
+                      </button>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        handleTryout()
+                        setIsMenuOpen(false) // Tutup menu setelah start
+                      }}
+                      disabled={joining}
+                      className={`w-full text-xs ${joining 
+                        ? 'opacity-50 cursor-not-allowed' 
+                        : 'bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] hover:to-[#ffb3ff] text-white border-[#ff6bff]/80 hover:border-[#ff8aff]/80 glow-pink cursor-pointer'
+                      } pixel-button`}
+                    >
+                      {joining ? 'STARTING...' : 'TRYOUT'}
+                    </Button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Settings Button (placeholder, bisa di-expand) */}
               <button
                 className="w-full p-2 bg-[#1a0a2a]/60 border-2 border-[#00ffff]/50 hover:border-[#00ffff] pixel-button hover:bg-[#00ffff]/20 glow-cyan-subtle rounded text-center"
@@ -485,7 +534,7 @@ if (!isLoaded) return <LoadingRetroScreen progress={progress} />
               >
                 <div className="flex items-center justify-center gap-2">
                   <Settings size={16} />
-                  <span className="text-sm text-[#00ffff] pixel-text glow-cyan">Settings</span>
+                  <span className="text-sm text-[#00ffff] pixel-text glow-cyan">Languange</span>
                 </div>
               </button>
             </div>
@@ -677,7 +726,7 @@ if (!isLoaded) return <LoadingRetroScreen progress={progress} />
             </Card>
           </motion.div>
           
-          {/* Join Race / Tryout Card */}
+          {/* Join Race Card */}
           <motion.div
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
@@ -686,129 +735,68 @@ if (!isLoaded) return <LoadingRetroScreen progress={progress} />
             className="group max-sm:[grid-area:join]"
           >
             <Card className="bg-[#1a0a2a]/70 border-[#00ffff]/70 hover:border-[#00ffff] transition-all duration-300 h-full shadow-[0_0_15px_rgba(0,255,255,0.3)] pixel-card">
-              {/* Tab Selector */}
-              <CardHeader className="text-center pb-2">
-                <div className="flex justify-center space-x-0 bg-[#1a0a2a]/50 rounded-xl p-1 mb-4">
-                  <button
-                    onClick={() => setActiveTab('join')}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${activeTab === 'join' 
-                      ? 'bg-[#00ffff] text-black shadow-[0_0_10px_rgba(0,255,255,0.5)]' 
-                      : 'text-[#00ffff] hover:bg-[#00ffff]/20'}`}
-                  >
-                    JOIN
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('tryout')}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${activeTab === 'tryout' 
-                      ? 'bg-[#ff6bff] text-black shadow-[0_0_10px_rgba(255,107,255,0.5)]'
-                      : 'text-[#ff6bff] hover:bg-[#ff6bff]/20'}`}
-                  >
-                    TRYOUT
-                  </button>
-                </div>
-
-                {/* Icon dan Title berdasarkan tab */}
+              <CardHeader className="text-center">
+                {/* Icon dan Title */}
                 <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className={`w-16 h-16 border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ${
-                    activeTab === 'join' 
-                      ? 'bg-gradient-to-br from-[#00ffff] to-[#1a0a2a] group-hover:shadow-[0_0_15px_rgba(0,255,255,0.7)]' 
-                      : 'bg-gradient-to-br from-[#ff6bff] to-[#1a0a2a] group-hover:shadow-[0_0_15px_rgba(255,107,255,0.7)]'
-                  }`}
-                  whileHover={{ rotate: activeTab === 'join' ? -5 : 5 }}
+                  className="w-16 h-16 bg-gradient-to-br from-[#00ffff] to-[#1a0a2a] group-hover:shadow-[0_0_15px_rgba(0,255,255,0.7)] border-2 border-white rounded-xl flex items-center justify-center mx-auto mb-4 transition-all duration-300"
+                  whileHover={{ rotate: -5 }}
                 >
                   <Users className="w-8 h-8 text-white" />
                 </motion.div>
-                <CardTitle className={`text-xl font-bold transition-all duration-300 ${
-                  activeTab === 'join' ? 'text-[#00ffff] glow-cyan' : 'text-[#ff6bff] glow-pink'
-                } pixel-text`}>
-                  {activeTab === 'join' ? 'JOIN RACE' : 'SOLO TRYOUT'}
+                <CardTitle className="text-xl font-bold text-[#00ffff] glow-cyan pixel-text">
+                  JOIN RACE
                 </CardTitle>
-                <CardDescription className={`text-sm transition-all duration-300 pixel-text ${
-                  activeTab === 'join' ? 'text-[#00ffff]/80 glow-cyan-subtle' : 'text-[#ff6bff]/80 glow-pink-subtle'
-                }`}>
-                  {activeTab === 'join' 
-                    ? 'Enter a code to join an existing race' 
-                    : 'Start a practice session on your own'
-                  }
+                <CardDescription className="text-sm text-[#00ffff]/80 glow-cyan-subtle pixel-text">
+                  Enter a code to join an existing race
                 </CardDescription>
               </CardHeader>
 
               <CardContent className="space-y-2">
-                {activeTab === 'join' ? (
-                  <>
-                    {/* Room Code Input */}
-                    <Input
-                      placeholder="Room Code"
-                      value={roomCode}
-                      maxLength={6}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()
-                        setRoomCode(value)
-                      }}
-                      className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
-                      aria-label="Room Code"
-                    />
-                    {/* Nickname Input dengan generate button */}
-                    <div className="relative">
-                      <Input
-                        placeholder="Nickname"
-                        value={nickname}
-                        maxLength={26}
-                        onChange={(e) => setNickname(e.target.value)}
-                        className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30 pr-10"
-                        aria-label="Nickname"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setNickname(generateNickname())}
-                        className="absolute right-2 top-1/8 text-[#00ffff] hover:bg-[#00ffff]/20 hover:border-[#00ffff] transition-all duration-200 glow-cyan-subtle"
-                        aria-label="Generate Nickname"
-                      >
-                        <span className="text-lg">🎲</span>
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  /* Tryout Nickname Input (hanya nickname) */
-                  <div className="relative">
-                    <Input
-                      placeholder="Nickname"
-                      value={nickname}
-                      maxLength={26}
-                      onChange={(e) => setNickname(e.target.value)}
-                      className="bg-[#1a0a2a]/50 border-[#ff6bff]/50 text-[#ff6bff] placeholder:text-[#ff6bff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#ff6bff] focus:ring-[#ff6bff]/30 pr-10"
-                      aria-label="Nickname"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setNickname(generateNickname())}
-                      className="absolute right-2 top-1/8 text-[#ff6bff] hover:bg-[#ff6bff]/20 hover:border-[#ff6bff] transition-all duration-200 glow-pink-subtle"
-                      aria-label="Generate Nickname"
-                    >
-                      <span className="text-lg">🎲</span>
-                    </button>
-                  </div>
-                )}
+                {/* Room Code Input */}
+                <Input
+                  placeholder="Room Code"
+                  value={roomCode}
+                  maxLength={6}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()
+                    setRoomCode(value)
+                  }}
+                  className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
+                  aria-label="Room Code"
+                />
+                {/* Nickname Input dengan generate button */}
+                <div className="relative">
+                  <Input
+                    placeholder="Nickname"
+                    value={nickname}
+                    maxLength={26}
+                    onChange={(e) => setNickname(e.target.value)}
+                    className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30 pr-10"
+                    aria-label="Nickname"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setNickname(generateNickname())}
+                    className="absolute right-2 top-1/8 text-[#00ffff] hover:bg-[#00ffff]/20 hover:border-[#00ffff] transition-all duration-200 glow-cyan-subtle"
+                    aria-label="Generate Nickname"
+                  >
+                    <span className="text-lg">🎲</span>
+                  </button>
+                </div>
               </CardContent>
 
-              {/* Action Button (Join atau Tryout) */}
+              {/* Action Button (Join) */}
               <CardFooter>
                 <Button
-                  onClick={activeTab === 'join' ? handleJoin : handleTryout}
+                  onClick={handleJoin}
                   disabled={joining}
                   className={`w-full transition-all duration-300 ease-in-out pixel-button-large retro-button ${
                     joining 
                       ? 'opacity-50 cursor-not-allowed'
-                      : activeTab === 'join' 
-                        ? `bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white border-[#0070f3]/80 hover:border-[#0ea5e9]/80 glow-cyan cursor-pointer`
-                        : `bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] hover:to-[#ffb3ff] text-white border-[#ff6bff]/80 hover:border-[#ff8aff]/80 glow-pink cursor-pointer`
+                      : `bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white border-[#0070f3]/80 hover:border-[#0ea5e9]/80 glow-cyan cursor-pointer`
                   }`}
                 >
-                  {joining ? 'JOINING...' : activeTab === 'join' ? 'JOIN' : 'TRYOUT'}
+                  {joining ? 'JOINING...' : 'JOIN'}
                 </Button>
               </CardFooter>
             </Card>
@@ -817,239 +805,236 @@ if (!isLoaded) return <LoadingRetroScreen progress={progress} />
       </div>
 
       <style jsx>{`
+        .pixel-font {
+          font-family: 'Press Start 2P', cursive, monospace;
+          image-rendering: pixelated;
+        }
 
+        .pixel-text {
+          image-rendering: pixelated;
+          text-shadow: 2px 2px 0px #000;
+        }
 
+        .pixel-text-outline {
+          color: white;
+          text-shadow: 
+            3px 0px 0px #000,
+            -3px 0px 0px #000,
+            0px 3px 0px #000,
+            0px -3px 0px #000,
+            2px 2px 0px #000,
+            -2px -2px 0px #000;
+        }
 
-  .pixel-font {
-    font-family: 'Press Start 2P', cursive, monospace;
-    image-rendering: pixelated;
-  }
+        .pixel-button {
+          image-rendering: pixelated;
+          box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.8);
+          transition: all 0.1s ease;
+        }
 
-  .pixel-text {
-    image-rendering: pixelated;
-    text-shadow: 2px 2px 0px #000;
-  }
+        .pixel-button:hover {
+          transform: translate(2px, 2px);
+          box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.8);
+        }
 
-  .pixel-text-outline {
-    color: white;
-    text-shadow: 
-      3px 0px 0px #000,
-      -3px 0px 0px #000,
-      0px 3px 0px #000,
-      0px -3px 0px #000,
-      2px 2px 0px #000,
-      -2px -2px 0px #000;
-  }
+        .pixel-button-large {
+          image-rendering: pixelated;
+          box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.8);
+          transition: all 0.1s ease;
+        }
 
-  .pixel-button {
-    image-rendering: pixelated;
-    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.8);
-    transition: all 0.1s ease;
-  }
+        .pixel-button-large:hover {
+          transform: translate(3px, 3px);
+          box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.8);
+        }
 
-  .pixel-button:hover {
-    transform: translate(2px, 2px);
-    box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.8);
-  }
+        .retro-button {
+          position: relative;
+          padding: 12px;
+          font-size: 1.1rem;
+          text-transform: uppercase;
+          image-rendering: pixelated;
+          border-radius: 8px;
+          transition: all 0.2s ease;
+          animation: pulse-retro 1.5s ease-in-out infinite;
+          background: #1a0a2a;  /* Tambah ini: Default gelap, hilangkan pink inheritance */
+          border: 2px solid #00ffff;  /* Opsional: Border cyan default biar konsisten */
+        }
 
-  .pixel-button-large {
-    image-rendering: pixelated;
-    box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.8);
-    transition: all 0.1s ease;
-  }
+        .retro-button:hover {
+          transform: scale(1.05);
+          box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 255, 255, 0.6);  /* Ganti pink glow ke cyan (#00ffff) */
+          filter: brightness(1.2);
+        }
 
-  .pixel-button-large:hover {
-    transform: translate(3px, 3px);
-    box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.8);
-  }
+        .pixel-border-large {
+          border: 4px solid #00ffff;
+          position: relative;
+          background: linear-gradient(45deg, #1a0a2a, #2d1b69);
+          padding: 2rem;
+          box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);  /* Ganti pink ke cyan glow */
+        }
 
-  .retro-button {
-    position: relative;
-    padding: 12px;
-    font-size: 1.1rem;
-    text-transform: uppercase;
-    image-rendering: pixelated;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-    animation: pulse-retro 1.5s ease-in-out infinite;
-    background: #1a0a2a;  /* Tambah ini: Default gelap, hilangkan pink inheritance */
-    border: 2px solid #00ffff;  /* Opsional: Border cyan default biar konsisten */
-  }
+        .pixel-border-large::before {
+          content: '';
+          position: absolute;
+          top: -8px;
+          left: -8px;
+          right: -8px;
+          bottom: -8px;
+          border: 2px solid #00ffff;  /* Ganti pink ke cyan biar full cyan theme */
+          z-index: -1;
+        }
 
-  .retro-button:hover {
-    transform: scale(1.05);
-    box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 255, 255, 0.6);  /* Ganti pink glow ke cyan (#00ffff) */
-    filter: brightness(1.2);
-  }
+        .pixel-border-small {
+          border: 2px solid #00ffff;  /* Ganti kuning ke cyan biar match */
+          background: #1a0a2a;
+          box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);  /* Ganti kuning glow ke cyan */
+        }
 
-  .pixel-border-large {
-    border: 4px solid #00ffff;
-    position: relative;
-    background: linear-gradient(45deg, #1a0a2a, #2d1b69);
-    padding: 2rem;
-    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);  /* Ganti pink ke cyan glow */
-  }
+        .pixel-card {
+          box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 255, 255, 0.2);  /* Ganti pink ke cyan */
+          transition: all 0.2s ease;
+        }
 
-  .pixel-border-large::before {
-    content: '';
-    position: absolute;
-    top: -8px;
-    left: -8px;
-    right: -8px;
-    bottom: -8px;
-    border: 2px solid #00ffff;  /* Ganti pink ke cyan biar full cyan theme */
-    z-index: -1;
-  }
+        .pixel-card:hover {
+          box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.9), 0 0 25px rgba(0, 255, 255, 0.4);  /* Cyan lagi */
+        }
 
-  .pixel-border-small {
-    border: 2px solid #00ffff;  /* Ganti kuning ke cyan biar match */
-    background: #1a0a2a;
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);  /* Ganti kuning glow ke cyan */
-  }
+        .book-modal {
+          box-shadow: 
+            0 25px 50px -12px rgba(0, 0, 0, 0.8),
+            0 0 0 1px rgba(0, 255, 255, 0.2),  /* Ganti pink ke cyan */
+            inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+        }
 
-  .pixel-card {
-    box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 255, 255, 0.2);  /* Ganti pink ke cyan */
-    transition: all 0.2s ease;
-  }
+        .book-page {
+          background: linear-gradient(135deg, #2d1b69 0%, #1a0a2a 100%);
+          border-radius: 12px;
+          padding: 2rem;
+          box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5), 0 4px 8px rgba(0, 255, 255, 0.1);  /* Cyan */
+        }
 
-  .pixel-card:hover {
-    box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.9), 0 0 25px rgba(0, 255, 255, 0.4);  /* Cyan lagi */
-  }
+        .glow-pink {
+          animation: glow-pink 1.5s ease-in-out infinite;
+        }
 
-  .book-modal {
-    box-shadow: 
-      0 25px 50px -12px rgba(0, 0, 0, 0.8),
-      0 0 0 1px rgba(0, 255, 255, 0.2),  /* Ganti pink ke cyan */
-      inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-  }
+        .glow-pink-subtle {
+          animation: glow-pink 2s ease-in-out infinite;
+          filter: drop-shadow(0 0 3px rgba(255, 107, 255, 0.5));
+        }
 
-  .book-page {
-    background: linear-gradient(135deg, #2d1b69 0%, #1a0a2a 100%);
-    border-radius: 12px;
-    padding: 2rem;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5), 0 4px 8px rgba(0, 255, 255, 0.1);  /* Cyan */
-  }
+        .glow-cyan {
+          animation: glow-cyan 1.5s ease-in-out infinite;
+        }
 
-  .glow-pink {
-    animation: glow-pink 1.5s ease-in-out infinite;
-  }
+        .glow-cyan-subtle {
+          animation: glow-cyan 2s ease-in-out infinite;
+          filter: drop-shadow(0 0 3px rgba(0, 255, 255, 0.5));
+        }
 
-  .glow-pink-subtle {
-    animation: glow-pink 2s ease-in-out infinite;
-    filter: drop-shadow(0 0 3px rgba(255, 107, 255, 0.5));
-  }
+        @keyframes scanline {
+          0% { background-position: 0 0; }
+          100% { background-position: 0 100%; }
+        }
 
-  .glow-cyan {
-    animation: glow-cyan 1.5s ease-in-out infinite;
-  }
+        @keyframes glow-cyan {
+          0%, 100% { filter: drop-shadow(0 0 5px #00ffff); }
+          50% { filter: drop-shadow(0 0 15px #00ffff); }
+        }
 
-  .glow-cyan-subtle {
-    animation: glow-cyan 2s ease-in-out infinite;
-    filter: drop-shadow(0 0 3px rgba(0, 255, 255, 0.5));
-  }
+        @keyframes glow-pink {
+          0%, 100% { filter: drop-shadow(0 0 5px #ff6bff); }
+          50% { filter: drop-shadow(0 0 15px #ff6bff); }
+        }
 
-  @keyframes scanline {
-    0% { background-position: 0 0; }
-    100% { background-position: 0 100%; }
-  }
+        @keyframes pulse-retro {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.03); }
+        }
 
-  @keyframes glow-cyan {
-    0%, 100% { filter: drop-shadow(0 0 5px #00ffff); }
-    50% { filter: drop-shadow(0 0 15px #00ffff); }
-  }
+        /* Themed Scrollbar */
+        .scrollbar-themed::-webkit-scrollbar {
+          width: 8px;
+        }
 
-  @keyframes glow-pink {
-    0%, 100% { filter: drop-shadow(0 0 5px #ff6bff); }
-    50% { filter: drop-shadow(0 0 15px #ff6bff); }
-  }
+        .scrollbar-themed::-webkit-scrollbar-track {
+          background: linear-gradient(to bottom, #1a0a2a, #2d1b69);
+          border: 1px solid rgba(0, 255, 255, 0.3);  /* Ganti pink ke cyan */
+          border-radius: 4px;
+          box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.5);
+        }
 
-  @keyframes pulse-retro {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.03); }
-  }
+        .scrollbar-themed::-webkit-scrollbar-thumb {
+          background: linear-gradient(to bottom, #00ffff, #ff6bff);  /* Tetep campur cyan-pink biar gradient keren, tapi bisa full cyan kalau mau */
+          border-radius: 4px;
+          border: 2px solid #1a0a2a;
+          box-shadow: 
+            0 0 8px rgba(0, 255, 255, 0.6),  /* Cyan dominant */
+            inset 0 0 4px rgba(255, 255, 255, 0.2);
+          animation: glow-scrollbar 2s ease-in-out infinite alternate;
+        }
 
-  /* Themed Scrollbar */
-  .scrollbar-themed::-webkit-scrollbar {
-    width: 8px;
-  }
+        .scrollbar-themed::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(to bottom, #33ffff, #ff8aff);
+          box-shadow: 
+            0 0 12px rgba(0, 255, 255, 0.8),
+            inset 0 0 4px rgba(255, 255, 255, 0.3);
+        }
 
-  .scrollbar-themed::-webkit-scrollbar-track {
-    background: linear-gradient(to bottom, #1a0a2a, #2d1b69);
-    border: 1px solid rgba(0, 255, 255, 0.3);  /* Ganti pink ke cyan */
-    border-radius: 4px;
-    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.5);
-  }
+        @keyframes glow-scrollbar {
+          0% { 
+            box-shadow: 
+              0 0 8px rgba(0, 255, 255, 0.6),  /* Cyan */
+              inset 0 0 4px rgba(255, 255, 255, 0.2);
+          }
+          100% { 
+            box-shadow: 
+              0 0 12px rgba(0, 255, 255, 0.6),
+              inset 0 0 4px rgba(255, 255, 255, 0.4);
+          }
+        }
 
-  .scrollbar-themed::-webkit-scrollbar-thumb {
-    background: linear-gradient(to bottom, #00ffff, #ff6bff);  /* Tetep campur cyan-pink biar gradient keren, tapi bisa full cyan kalau mau */
-    border-radius: 4px;
-    border: 2px solid #1a0a2a;
-    box-shadow: 
-      0 0 8px rgba(0, 255, 255, 0.6),  /* Cyan dominant */
-      inset 0 0 4px rgba(255, 255, 255, 0.2);
-    animation: glow-scrollbar 2s ease-in-out infinite alternate;
-  }
+        /* Firefox scrollbar styling */
+        .scrollbar-themed {
+          scrollbar-width: thin;
+          scrollbar-color: #00ffff #1a0a2a;  /* Cyan */
+        }
 
-  .scrollbar-themed::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(to bottom, #33ffff, #ff8aff);
-    box-shadow: 
-      0 0 12px rgba(0, 255, 255, 0.8),
-      inset 0 0 4px rgba(255, 255, 255, 0.3);
-  }
+        .line-clamp-3 {
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
 
-  @keyframes glow-scrollbar {
-    0% { 
-      box-shadow: 
-        0 0 8px rgba(0, 255, 255, 0.6),  /* Cyan */
-        inset 0 0 4px rgba(255, 255, 255, 0.2);
-    }
-    100% { 
-      box-shadow: 
-        0 0 12px rgba(0, 255, 255, 0.6),
-        inset 0 0 4px rgba(255, 255, 255, 0.4);
-    }
-  }
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+          .pixel-border-large {
+            padding: 1rem;
+          }
+          
+          .pixel-button-large {
+            padding: 1rem 1.5rem;
+            font-size: 0.9rem;
+          }
 
-  /* Firefox scrollbar styling */
-  .scrollbar-themed {
-    scrollbar-width: thin;
-    scrollbar-color: #00ffff #1a0a2a;  /* Cyan */
-  }
+          .retro-button {
+            padding: 10px;
+            font-size: 0.9rem;
+          }
 
-  .line-clamp-3 {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
+          /* Kontrol mobile lebih besar */
+          .pixel-button {
+            min-width: 52px;
+            min-height: 52px;
+          }
 
-  /* Responsive adjustments */
-  @media (max-width: 768px) {
-    .pixel-border-large {
-      padding: 1rem;
-    }
-    
-    .pixel-button-large {
-      padding: 1rem 1.5rem;
-      font-size: 0.9rem;
-    }
-
-    .retro-button {
-      padding: 10px;
-      font-size: 0.9rem;
-    }
-
-    /* Kontrol mobile lebih besar */
-    .pixel-button {
-      min-width: 52px;
-      min-height: 52px;
-    }
-
-    .book-modal {
-      max-w-full max-h-[95vh];
-    }
-  }
-`}</style>
+          .book-modal {
+            max-w-full max-h-[95vh];
+          }
+        }
+      `}</style>
     </div>
   )
 }

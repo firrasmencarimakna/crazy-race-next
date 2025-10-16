@@ -824,8 +824,8 @@ export default function HostRoomPage() {
           image-rendering: pixelated;
           box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.8);
           transition: all 0.1s ease;
-        }
-        .pixel-button:hover:not(:disabled) {
+          }
+          .pixel-button:hover:not(:disabled) {
           transform: translate(2px, 2px);
           box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.8);
         }
