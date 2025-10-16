@@ -6,6 +6,13 @@ import { supabase } from '@/lib/supabase'; // Sesuaikan path-mu
 import LoadingRetro from '@/components/loadingRetro';
 import { formatTime } from '@/utils/game';
 
+/**
+ * Renders the mini racing game view for a joinable room, managing player state, game timer, and navigation to results.
+ *
+ * Handles loading player and room data, synchronizing progress with Supabase, listening for iframe messages and room status updates, and redirecting when the race or time finishes.
+ *
+ * @returns The RacingGame React element that displays the iframe-based racing game and its timer/error states.
+ */
 export default function RacingGame() {
     const router = useRouter();
     const { roomCode } = useParams();
