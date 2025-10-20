@@ -73,7 +73,7 @@ export default function LoginPage() {
     supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,  // Sesuaikan callback URL
+        redirectTo: `${window.location.origin}/`,  // Sesuaikan callback URL
       },
     }).catch((err: any) => {
       setIsLoading(false)
