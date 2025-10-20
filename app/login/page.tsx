@@ -102,7 +102,7 @@ export default function LoginPage() {
       {/* Logo & Title - Responsive untuk mobile */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 sm:px-6">
 
-          <h1 className="absolute top-5 right-20 hidden md:block display-flex">
+          {/* <h1 className="absolute top-5 right-20 hidden md:block display-flex">
             <Image
               src="/gameforsmartlogo.webp"
               alt="Gameforsmart Logo"
@@ -110,9 +110,9 @@ export default function LoginPage() {
               height={64}
             />
           
-          </h1>
+          </h1> */}
 
-          <h1 className="absolute top-6 left-20 text-4xl text-[#00ffff] pixel-text glow-cyan hidden md:block">
+          <h1 className="absolute py-10 mx-auto top-6 text-4xl text-[#00ffff] pixel-text glow-cyan">
             Crazy Race
           </h1>
 

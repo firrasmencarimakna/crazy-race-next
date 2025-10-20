@@ -500,25 +500,22 @@ export default function HomePage() {
                 {/* Avatar */}
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center overflow-hidden">
                   {user?.user_metadata?.avatar_url ? (
-    <img
-      src={user.user_metadata.avatar_url}
-      alt="Profile"
-      className="w-full h-full object-cover"
-    />
-  ) : (
-    <span className="text-xl font-bold text-white pixel-text">
-      {user?.user_metadata?.full_name?.charAt(0)?.toUpperCase() || 
-       user?.email?.charAt(0)?.toUpperCase() || 'U'}
-    </span>
-  )}
+                    <img
+                      src={user.user_metadata.avatar_url}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-xl font-bold text-white pixel-text">
+                      {user?.user_metadata?.full_name?.charAt(0)?.toUpperCase() ||
+                        user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                    </span>
+                  )}
                 </div>
                 {/* Name & Email */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-[#00ffff] pixel-text truncate">
+                  <p className="text-xs font-bold text-[#00ffff] pixel-text ">
                     {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
-                  </p>
-                  <p className="text-xs text-gray-300 pixel-text truncate">
-                    {user?.email || 'No email'}
                   </p>
                 </div>
               </div>
