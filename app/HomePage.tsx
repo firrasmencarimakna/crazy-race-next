@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
-import { Flag, Volume2, VolumeX, Settings, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight, Play } from "lucide-react"
+import { Flag, Volume2, VolumeX, Settings, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight, Play, LogOut } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -277,6 +277,15 @@ export default function HomePage() {
     router.push('/tryout')
   }
 
+  /**
+   * Handle logout: Sign out from Supabase and refresh.
+   */
+  const handleLogout = async () => {
+    setIsMenuOpen(false)
+    await supabase.auth.signOut()
+    router.refresh()
+  }
+
   // Preload check: Tampilkan loading jika belum siap
   const { isLoaded, progress } = usePreloaderScreen()
   if (!isLoaded) return <LoadingRetroScreen progress={progress} />
@@ -466,7 +475,7 @@ export default function HomePage() {
                 aria-label="How to Play"
               >
                 <div className="flex items-center justify-center gap-2">
-                  <BookOpen size={16} />
+                  {/* <BookOpen size={16} /> */}
                   <span className="text-sm text-[#00ffff] pixel-text glow-cyan">How to Play</span>
                 </div>
               </button>
@@ -478,7 +487,7 @@ export default function HomePage() {
                 aria-label="Solo Tryout"
               >
                 <div className="flex items-center justify-center gap-2">
-                  <Play size={16} />
+                  {/* <Play size={16} /> */}
                   <span className="text-sm text-[#ff6bff] pixel-text glow-pink">Solo Tryout</span>
                 </div>
               </button>
@@ -533,8 +542,20 @@ export default function HomePage() {
                 aria-label="Settings"
               >
                 <div className="flex items-center justify-center gap-2">
-                  <Settings size={16} />
-                  <span className="text-sm text-[#00ffff] pixel-text glow-cyan">Languange</span>
+                  {/* <Settings size={16} /> */}
+                  <span className="text-sm text-[#00ffff] pixel-text glow-cyan">Language</span>
+                </div>
+              </button>
+
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                className="w-full p-2 bg-[#1a0a2a]/60 border-2 border-[#ff6bff]/50 hover:border-[#ff6bff] pixel-button hover:bg-[#ff6bff]/20 glow-pink-subtle rounded text-center"
+                aria-label="Logout"
+              >
+                <div className="flex items-center justify-center gap-2">
+                  {/* <LogOut size={16} /> */}
+                  <span className="text-sm text-[#ff0000] pixel-text glow-pink">Logout</span>
                 </div>
               </button>
             </div>
