@@ -14,6 +14,7 @@ import Image from "next/image"
 import { usePreloaderScreen } from "@/components/preloader-screen"
 import LoadingRetro from "@/components/loadingRetro"
 import LoadingRetroScreen from "@/components/loading-screnn"
+import { useAuth } from "@/contexts/authContext"
 
 /**
  * HomePage Component
@@ -26,6 +27,11 @@ export default function HomePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
+  
+  const { user } = useAuth()
+  if(!user) {
+    router.replace('/auth/login')
+  }
 
   // State untuk loading dan joining process
   const [joining, setJoining] = useState(false)

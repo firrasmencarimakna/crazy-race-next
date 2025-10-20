@@ -9,6 +9,7 @@ import { ArrowRight, Mail, Lock } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { supabase } from "@/lib/supabase"
+import { FcGoogle } from "react-icons/fc";
 
 // Background GIFs - Sesuai tema retro neon, optimized for mobile (smaller files if possible)
 const backgroundGifs = [
@@ -56,7 +57,7 @@ export default function LoginPage() {
 
       if (data.user) {
         // Redirect ke dashboard atau home setelah login
-        router.push("/dashboard")  // Sesuaikan route
+        router.push("/")  // Sesuaikan route
       }
     } catch (err: any) {
       setError(err.message || "Terjadi kesalahan, coba lagi!")
@@ -123,7 +124,7 @@ export default function LoginPage() {
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="w-full max-w-sm sm:max-w-md"
+          className="w-full max-w-sm sm:max-w-lg"
         >
           <Card className="bg-[#1a0a2a]/70 backdrop-blur-md border-2 border-[#ff6bff]/60 pixel-card p-4 sm:p-6 md:p-8 shadow-2xl">
             <CardHeader className="space-y-3 sm:space-y-2">
@@ -149,9 +150,9 @@ export default function LoginPage() {
                 onClick={handleGoogleLogin}
                 disabled={isLoading}
                 variant="outline"
-                className="w-full border-[#ff6bff]/60 text-[#ff6bff] hover:bg-[#ff6bff]/20 hover:border-[#ff8aff] pixel-button flex items-center justify-center gap-2 h-12 sm:h-10 text-sm sm:text-base transition-all duration-200"
+                className="w-full border-[#ff6bff]/60 text-[#ff6bff] hover:text-[#ff6bff] hover:bg-[#ff6bff]/20 hover:border-[#ff8aff] pixel-button flex items-center justify-center gap-2 h-12 sm:h-10 text-xs sm:text-base transition-all duration-200 cursor-pointer "
               >
-        
+                <FcGoogle size={50} />
                 Continue with Google
               </Button>
 
@@ -162,7 +163,7 @@ export default function LoginPage() {
                 </div>
                 <div className="relative flex justify-center text-xs uppercase tracking-wider">
                   <span className="bg-[#1a0a2a]/80 px-3 py-1 text-[#ff6bff]/90 rounded-full">
-                    Or continue with
+                    Or
                   </span>
                 </div>
               </div>
@@ -171,7 +172,7 @@ export default function LoginPage() {
                 <div className="space-y-1">
                   <Input
                     type="email"
-                    placeholder="Input email..."
+                    placeholder="Email..."
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="bg-[#0a0a0f]/70 border-[#ff6bff]/60 text-white placeholder-[#ff6bff]/60 pixel-input focus:border-[#00ffff] focus:ring-[#00ffff]/30 h-12 sm:h-10 text-sm transition-all duration-200 shadow-inner"
@@ -182,7 +183,7 @@ export default function LoginPage() {
                 <div className="space-y-1">
                   <Input
                     type="password" 
-                    placeholder="Input password..."
+                    placeholder="Password..."
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="bg-[#0a0a0f]/70 border-[#ff6bff]/60 text-white placeholder-[#ff6bff]/60 pixel-input focus:border-[#00ffff] focus:ring-[#00ffff]/30 h-12 sm:h-10 text-sm transition-all duration-200 shadow-inner"
@@ -193,7 +194,7 @@ export default function LoginPage() {
                 <Button
                   type="submit"
                   disabled={isLoading || !email.trim() || !password.trim()}
-                  className="w-full bg-gradient-to-r from-[#00ffff] via-[#00ffff]/80 to-[#ff6bff] hover:from-[#33ffff] hover:to-[#ff8aff] text-black font-bold pixel-button-large glow-cyan text-base sm:text-lg py-3.5 sm:py-4 h-12 sm:h-auto transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                  className="w-full bg-gradient-to-r from-[#00ffff] via-[#00ffff]/80 to-[#ff6bff] hover:from-[#33ffff] hover:to-[#ff8aff] text-black font-bold pixel-button-large glow-cyan text-base sm:text-lg py-3.5 sm:py-4 h-12 sm:h-auto transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-lg hover:shadow-xl"
                 >
                   {isLoading ? (
                     <span className="flex items-center justify-center">
@@ -202,7 +203,6 @@ export default function LoginPage() {
                     </span>
                   ) : (
                     <>
-                
                       Sign In
                     </>
                   )}
