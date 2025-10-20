@@ -24,7 +24,7 @@ function LogoutDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (op
     setLoading(true);
     try {
       await supabase.auth.signOut();
-      router.replace('/auth/login'); // Atau '/' kalau mau
+      router.replace('/login'); // Atau '/' kalau mau
       onOpenChange(false);
     } catch (err) {
       console.error('Logout error:', err);
@@ -160,7 +160,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.replace(`/auth/login`)
+      router.replace(`/login`)
     }
   }, [authLoading, user, router])
 
