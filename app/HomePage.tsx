@@ -16,6 +16,40 @@ import LoadingRetro from "@/components/loadingRetro"
 import LoadingRetroScreen from "@/components/loading-screnn"
 import { useAuth } from "@/contexts/authContext"
 
+function LogoutDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  const handleLogout = async () => {
+    setLoading(true);
+    try {
+      await supabase.auth.signOut();
+      router.replace('/auth/login'); // Atau '/' kalau mau
+      onOpenChange(false);
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ display: open ? 'flex' : 'none' }}>
+      <div className="bg-black/80 backdrop-blur-sm w-full h-full absolute" onClick={() => onOpenChange(false)} />
+      <div className="relative bg-[#1a0a2a]/80 border border-cyan-400/30 p-6 rounded-lg text-white max-w-lg mx-auto">
+        <h2 className="text-xl font-bold text-[#00ffff] mb-4 pixel-text">Log Out</h2>
+        <p className="text-gray-300 mb-6 pixel-text">Are you sure you want to log out?</p>
+        <div className="flex gap-4 justify-end">
+          <Button onClick={() => onOpenChange(false)} variant="outline">Cancel</Button>
+          <Button onClick={handleLogout} disabled={loading} className="bg-red-500">
+            {loading ? 'Loading...' : 'Logout'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * HomePage Component
  * Halaman utama aplikasi Crazy Race, berisi tombol Host Game, Join Race,
@@ -29,12 +63,6 @@ export default function HomePage() {
   const pathname = usePathname()
 
   const { user, loading: authLoading } = useAuth()
-
-  if (!authLoading && !user) {
-    const codeFromParams = searchParams.get('code') || ''
-    router.replace(`/auth/login?code=${codeFromParams}`)
-    return null
-  }
 
   // State untuk loading dan joining process
   const [joining, setJoining] = useState(false)
@@ -56,6 +84,7 @@ export default function HomePage() {
   // State untuk modal alert (spesifik berdasarkan reason)
   const [showAlert, setShowAlert] = useState(false)
   const [alertReason, setAlertReason] = useState<'roomCode' | 'nickname' | 'both' | 'general' | 'roomNotFound' | ''>('')
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   // Refs untuk audio elements
   const audioRef = useRef<HTMLAudioElement>(null) // Background music
@@ -129,6 +158,13 @@ export default function HomePage() {
 
   const totalPages = steps.length
 
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace(`/auth/login`)
+    }
+  }, [authLoading, user, router])
+
+
   // useEffect: Clear localStorage on mount (reset session data)
   useEffect(() => {
     localStorage.removeItem("nickname")
@@ -151,9 +187,13 @@ export default function HomePage() {
   // useEffect: Auto-fill roomCode dari URL query param (?code=ABC123)
   useEffect(() => {
     const code = searchParams.get("code")
+    const codeLocal = localStorage.getItem("roomCode")
     if (code) {
+      localStorage.setItem("roomCode", code.toUpperCase())
       setRoomCode(code.toUpperCase())
       router.replace(pathname, undefined) // Clear query param dari URL
+    } else if (codeLocal) {
+      setRoomCode(codeLocal)
     }
   }, [searchParams, pathname, router])
 
@@ -198,6 +238,7 @@ export default function HomePage() {
    */
   const handleJoin = async () => {
     // Deteksi reason untuk alert spesifik
+    localStorage.removeItem("roomCode")
     let reason: '' | 'roomCode' | 'nickname' | 'both' | 'general' = ''
     if (roomCode.length !== 6) {
       reason = 'roomCode'
@@ -298,14 +339,10 @@ export default function HomePage() {
     router.push('/tryout')
   }
 
-  /**
-   * Handle logout: Sign out from Supabase and refresh.
-   */
-  const handleLogout = async () => {
-    setIsMenuOpen(false)
-    await supabase.auth.signOut()
-    router.refresh()
-  }
+  const handleLogout = () => {
+    setIsMenuOpen(false);
+    setShowLogoutDialog(true); // Buka dialog konfirmasi
+  };
 
   // Preload check: Tampilkan loading jika belum siap
   const { isLoaded, progress } = usePreloaderScreen()
@@ -457,6 +494,31 @@ export default function HomePage() {
             className="absolute top-20 right-4 z-30 w-64 bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm scrollbar-themed max-h-[70vh] overflow-y-auto"
           >
             <div className="space-y-4">
+              <div className="flex items-center gap-3 p-3 bg-[#1a0a2a]/80 border border-[#00ffff]/30 rounded-lg">
+                {/* Avatar */}
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center overflow-hidden">
+                  {user?.user_metadata?.avatar_url ? (
+                    <img
+                      src={user.user_metadata.avatar_url}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-xl font-bold text-white pixel-text">
+                      {user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                    </span>
+                  )}
+                </div>
+                {/* Name & Email */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-[#00ffff] pixel-text truncate">
+                    {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
+                  </p>
+                  <p className="text-xs text-gray-300 pixel-text truncate">
+                    {user?.email || 'No email'}
+                  </p>
+                </div>
+              </div>
               {/* Mute Toggle */}
               <div className="flex items-center justify-between">
                 {/* <span className="text-sm text-white pixel-text">Audio</span> */}
@@ -833,8 +895,8 @@ export default function HomePage() {
                   onClick={handleJoin}
                   disabled={joining}
                   className={`w-full transition-all duration-300 ease-in-out pixel-button-large retro-button ${joining
-                      ? 'opacity-50 cursor-not-allowed'
-                      : `bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white border-[#0070f3]/80 hover:border-[#0ea5e9]/80 glow-cyan cursor-pointer`
+                    ? 'opacity-50 cursor-not-allowed'
+                    : `bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white border-[#0070f3]/80 hover:border-[#0ea5e9]/80 glow-cyan cursor-pointer`
                     }`}
                 >
                   {joining ? 'JOINING...' : 'JOIN'}
@@ -844,6 +906,8 @@ export default function HomePage() {
           </motion.div>
         </div>
       </div>
+
+      <LogoutDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog} />
 
       <style jsx>{`
         .pixel-font {
