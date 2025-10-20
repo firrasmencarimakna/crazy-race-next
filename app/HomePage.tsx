@@ -27,10 +27,13 @@ export default function HomePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
-  
-  const { user } = useAuth()
-  if(!user) {
-    router.replace('/auth/login')
+
+  const { user, loading: authLoading } = useAuth()
+
+  if (!authLoading && !user) {
+    const codeFromParams = searchParams.get('code') || ''
+    router.replace(`/auth/login?code=${codeFromParams}`)
+    return null
   }
 
   // State untuk loading dan joining process
@@ -52,7 +55,7 @@ export default function HomePage() {
 
   // State untuk modal alert (spesifik berdasarkan reason)
   const [showAlert, setShowAlert] = useState(false)
-  const [alertReason, setAlertReason] = useState<'roomCode' | 'nickname' | 'both' | 'general' | 'roomNotFound' |''>('')
+  const [alertReason, setAlertReason] = useState<'roomCode' | 'nickname' | 'both' | 'general' | 'roomNotFound' | ''>('')
 
   // Refs untuk audio elements
   const audioRef = useRef<HTMLAudioElement>(null) // Background music
@@ -131,7 +134,19 @@ export default function HomePage() {
     localStorage.removeItem("nickname")
     localStorage.removeItem("playerId")
     localStorage.removeItem("nextQuestionIndex")
-  }, [])
+
+    if (user?.email) {
+      const usernameFromEmail = user.email.split('@')[0] // e.g., "muhammadhuda537" dari "muhammadhuda537@gmail.com"
+      setNickname(usernameFromEmail)
+      // Optional: Simpan ke localStorage biar persist kalau perlu
+      localStorage.setItem("nickname", usernameFromEmail)
+    } else {
+      // Fallback ke random kalau gak ada email (rare)
+      const randomNick = generateNickname()
+      setNickname(randomNick)
+      localStorage.setItem("nickname", randomNick)
+    }
+  }, [user])
 
   // useEffect: Auto-fill roomCode dari URL query param (?code=ABC123)
   useEffect(() => {
@@ -314,7 +329,7 @@ export default function HomePage() {
     }
   }
 
-  const goToPage = (pageIndex: number) => { 
+  const goToPage = (pageIndex: number) => {
     setCurrentPage(pageIndex)
   }
 
@@ -340,7 +355,7 @@ export default function HomePage() {
       />
 
       <h1 className="absolute top-6 md:top-4 left-4 w-42 md:w-50 lg:w-100">
-        <Image src="/gameforsmartlogo.webp" alt="Gameforsmart Logo" width="256" height="64" priority/>
+        <Image src="/gameforsmartlogo.webp" alt="Gameforsmart Logo" width="256" height="64" priority />
       </h1>
 
       {/* Alert Audio (hidden, untuk efek suara) */}
@@ -366,7 +381,7 @@ export default function HomePage() {
               className="absolute inset-0 bg-black/80 backdrop-blur-sm"
               onClick={(e) => e.stopPropagation()} // Prevent close on modal click
             />
-            
+
             {/* Modal Content */}
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -385,20 +400,20 @@ export default function HomePage() {
                   className="mx-auto rounded-lg"
                 />
               </div>
-              
+
               {/* Dynamic Title berdasarkan reason */}
               <CardTitle className="text-xl font-bold text-[#ff6bff] mb-2 pixel-text glow-pink">
-                {alertReason === 'roomCode' ? 'Oops! Your Room Code!' :  
-                 alertReason === 'nickname' ? 'Oops! Empty name!' : 
-                 alertReason === 'both' ? 'Oops! Input Incomplete!' : 
-                 alertReason === 'roomNotFound' ? 'Oops Room not found!' : 'Oops Belum Siap Balapan'}
+                {alertReason === 'roomCode' ? 'Oops! Your Room Code!' :
+                  alertReason === 'nickname' ? 'Oops! Empty name!' :
+                    alertReason === 'both' ? 'Oops! Input Incomplete!' :
+                      alertReason === 'roomNotFound' ? 'Oops Room not found!' : 'Oops Belum Siap Balapan'}
               </CardTitle>
-              
+
               {/* Dynamic Description */}
               <CardDescription className="text-[#00ffff]/80 mb-6 pixel-text glow-cyan-subtle">
                 {getAlertMessage(alertReason)}
               </CardDescription>
-              
+
               {/* Close Button */}
               <Button
                 onClick={closeAlert}
@@ -406,7 +421,7 @@ export default function HomePage() {
               >
                 Okay!
               </Button>
-              
+
               {/* Close Icon (top-right) */}
               <button
                 onClick={closeAlert}
@@ -450,8 +465,8 @@ export default function HomePage() {
 
               {/* Volume Slider */}
               {/* <div className="space-y-2"> */}
-                {/* <span className="text-xs text-[#ff6bff] pixel-text glow-pink-subtle">Volume</span> */}
-                {/* <div className="bg-[#1a0a2a]/60 border border-[#ff6bff]/50 rounded px-2 py-1 display flex gap-2">
+              {/* <span className="text-xs text-[#ff6bff] pixel-text glow-pink-subtle">Volume</span> */}
+              {/* <div className="bg-[#1a0a2a]/60 border border-[#ff6bff]/50 rounded px-2 py-1 display flex gap-2">
                 <button
                   onClick={handleMuteToggle}
                   className="p-2 bg-[#1a0a2a]/60 border-2 border-[#00ffff]/50 hover:border-[#00ffff] pixel-button hover:bg-[#00ffff]/20 glow-cyan-subtle rounded"
@@ -531,10 +546,10 @@ export default function HomePage() {
                         setIsMenuOpen(false) // Tutup menu setelah start
                       }}
                       disabled={joining}
-                      className={`w-full text-xs ${joining 
-                        ? 'opacity-50 cursor-not-allowed' 
+                      className={`w-full text-xs ${joining
+                        ? 'opacity-50 cursor-not-allowed'
                         : 'bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] hover:to-[#ffb3ff] text-white border-[#ff6bff]/80 hover:border-[#ff8aff]/80 glow-pink cursor-pointer'
-                      } pixel-button`}
+                        } pixel-button`}
                     >
                       {joining ? 'STARTING...' : 'TRYOUT'}
                     </Button>
@@ -752,7 +767,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
           </motion.div>
-          
+
           {/* Join Race Card */}
           <motion.div
             initial={{ opacity: 0, x: 50 }}
@@ -817,11 +832,10 @@ export default function HomePage() {
                 <Button
                   onClick={handleJoin}
                   disabled={joining}
-                  className={`w-full transition-all duration-300 ease-in-out pixel-button-large retro-button ${
-                    joining 
+                  className={`w-full transition-all duration-300 ease-in-out pixel-button-large retro-button ${joining
                       ? 'opacity-50 cursor-not-allowed'
                       : `bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white border-[#0070f3]/80 hover:border-[#0ea5e9]/80 glow-cyan cursor-pointer`
-                  }`}
+                    }`}
                 >
                   {joining ? 'JOINING...' : 'JOIN'}
                 </Button>
