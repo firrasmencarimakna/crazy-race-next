@@ -101,26 +101,20 @@ export default function LoginPage() {
 
       {/* Logo & Title - Responsive untuk mobile */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 sm:px-6">
-        <motion.div
-          initial={{ opacity: 0, y: -50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="text-center mb-6 sm:mb-8 w-full max-w-xs sm:max-w-sm"
-        >
-          <Image
-            src="/gameforsmartlogo.webp"
-            alt="Game for Smart Logo"
-            width={200}
-            height={50}
-            className="mx-auto mb-4 w-48 sm:w-64 h-auto filter drop-shadow-lg"
-            priority
-          />
 
+          <h1 className="absolute top-5 right-20 hidden md:block display-flex">
+            <Image
+              src="/gameforsmartlogo.webp"
+              alt="Gameforsmart Logo"
+              width={256}
+              height={64}
+            />
+          
+          </h1>
 
-       <h1 className=" text-4xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">
-        Crazy Race
-      </h1>
-        </motion.div>
+          <h1 className="absolute top-6 left-20 text-4xl text-[#00ffff] pixel-text glow-cyan hidden md:block">
+            Crazy Race
+          </h1>
 
         {/* Login Card - Lebih compact dan touch-friendly pada mobile */}
         <motion.div
