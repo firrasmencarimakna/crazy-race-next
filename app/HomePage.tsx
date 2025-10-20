@@ -591,7 +591,7 @@ export default function HomePage() {
                       <Input
                         placeholder="Nickname"
                         value={nickname}
-                        maxLength={26}
+                        maxLength={15}
                         onChange={(e) => setNickname(e.target.value)}
                         className="bg-[#1a0a2a]/50 border-[#ff6bff]/50 text-[#ff6bff] placeholder:text-[#ff6bff]/50 text-center text-xs pixel-text h-8 rounded focus:border-[#ff6bff] focus:ring-[#ff6bff]/30 pr-8"
                         aria-label="Tryout Nickname"
@@ -876,7 +876,7 @@ export default function HomePage() {
                   <Input
                     placeholder="Nickname"
                     value={nickname}
-                    maxLength={26}
+                    maxLength={15}
                     onChange={(e) => setNickname(e.target.value)}
                     className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30 pr-10"
                     aria-label="Nickname"
