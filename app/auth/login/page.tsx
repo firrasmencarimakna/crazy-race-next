@@ -13,12 +13,12 @@ import { FcGoogle } from "react-icons/fc";
 
 // Background GIFs - Sesuai tema retro neon, optimized for mobile (smaller files if possible)
 const backgroundGifs = [
-  "/assets/background/host/1.webp",
-  "/assets/background/host/2.webp",
-  "/assets/background/host/3.webp",
+  // "/assets/background/host/1.webp",
+  // "/assets/background/host/2.webp",
+  // "/assets/background/host/3.webp",
+  // "/assets/background/host/4.webp",
+  // "/assets/background/host/5.webp",
   "/assets/background/host/4.webp",
-  "/assets/background/host/5.webp",
-  "/assets/background/host/7.webp",
 ]
 
 export default function LoginPage() {

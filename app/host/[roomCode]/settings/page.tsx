@@ -9,15 +9,13 @@ import { Slider } from "@/components/ui/slider"
 import { ArrowLeft, Clock, Hash, Play, Volume2, VolumeX, Menu, X, Settings } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion" // HAPUS: AnimatePresence, karena nggak ada transisi lagi
 import { supabase } from "@/lib/supabase"
 import LoadingRetro from "@/components/loadingRetro"
 import Image from "next/image"
 
-// List of background GIFs (same as QuestionListPage for consistency)
-const backgroundGifs = [
-  "/assets/background/host/7.webp",
-]
+// HAPUS: backgroundGifs array, ganti jadi string statis untuk simplicity
+const backgroundGif = "/assets/background/host/7.webp" // Satu GIF aja
 
 export default function HostSettingsPage() {
   const router = useRouter()
@@ -29,8 +27,7 @@ export default function HostSettingsPage() {
   const [loading, setLoading] = useState(true)
   const [isMuted, setIsMuted] = useState(false)
   const [volume, setVolume] = useState(50) // 0-100, default 50%
-  const [currentBgIndex, setCurrentBgIndex] = useState(0)
-  const [isTransitioning, setIsTransitioning] = useState(false)
+  // HAPUS: currentBgIndex dan isTransitioning, nggak dibutuhin lagi
   const [saving, setSaving] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
   const audioRef = useRef<HTMLAudioElement>(null)
@@ -126,19 +123,7 @@ export default function HostSettingsPage() {
     }
   }, [roomCode])
 
-  // Background image cycling
-  useEffect(() => {
-    const bgInterval = setInterval(() => {
-      setIsTransitioning(true)
-      setTimeout(() => {
-        setCurrentBgIndex((prev) => (prev + 1) % backgroundGifs.length)
-        setTimeout(() => {
-          setIsTransitioning(false)
-        }, 500)
-      }, 500)
-    }, 5000)
-    return () => clearInterval(bgInterval)
-  }, [])
+  // HAPUS: Seluruh useEffect untuk background cycling, nggak dibutuhin lagi
 
   // Shuffle array function
   function shuffleArray(array: any[]) {
@@ -186,18 +171,14 @@ export default function HostSettingsPage() {
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
 
-      {/* Background Image with Smooth Transition */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentBgIndex}
-          className="absolute inset-0 w-full h-full bg-cover bg-center"
-          style={{ backgroundImage: `url(${backgroundGifs[currentBgIndex]})` }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.5 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 1, ease: "easeInOut" }}
-        />
-      </AnimatePresence>
+      {/* HAPUS: AnimatePresence, ganti jadi motion.div sederhana untuk fade-in awal */}
+      <motion.div
+        className="absolute inset-0 w-full h-full bg-cover bg-center"
+        style={{ backgroundImage: `url(${backgroundGif})` }} // Statis, pakai backgroundGif
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.5 }}
+        transition={{ duration: 1, ease: "easeInOut" }}
+      />
 
       {/* Back Button - Fixed Top Left */}
       <motion.button
@@ -221,8 +202,6 @@ export default function HostSettingsPage() {
       
       </h1>
 
-
-
       <h1 className="absolute top-6 left-20 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">
         Crazy Race
       </h1>
@@ -236,7 +215,7 @@ export default function HostSettingsPage() {
         className="absolute top-4 right-4 z-40 p-3 bg-[#ff6bff]/20 border-2 border-[#ff6bff]/50 pixel-button hover:bg-[#ff8aff]/40 glow-pink rounded-lg shadow-lg shadow-[#ff6bff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
         aria-label="Toggle menu"
       >
-        {isMenuOpen ? <X size={20} /> : <Volume2 size={20} />}
+        {isMenuOpen ? <X size={20} /> : <Volume2 size={20} />} {/* HAPUS: Volume2, ganti Menu untuk burger icon yang pas */}
       </motion.button>
 
       {/* Menu Dropdown - Muncul saat burger diklik, dari kanan */}
