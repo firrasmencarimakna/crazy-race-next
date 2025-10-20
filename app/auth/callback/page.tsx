@@ -21,21 +21,18 @@ export default function AuthCallbackPage() {
 
       if (error) {
         console.error('Error getting session:', error);
-        // Optional: Redirect ke login dengan error message
-        router.push('/login?error=auth_failed');
+        router.push('/auth/login?error=auth_failed');
         return;
       }
 
       if (data.session) {
         console.log('Auth successful, session created');
-        // Update user profile atau fetch data kalau perlu
-        // Misal: await fetchUserProfile(data.session.user.id);
         
-        // Redirect ke dashboard/game lobby
-        router.push('/'); // Sesuaikan route-mu
+        // 🔥 FIXED: Baca next URL dari params (dari Google login)
+        const nextUrl = searchParams.get('next') || '/'
+        router.push(decodeURIComponent(nextUrl)) // Redirect ke home dengan ?code kalau ada
       } else {
-        // No session, back to login
-        router.push('/login?error=no_session');
+        router.push('/auth/login?error=no_session');
       }
     };
 
@@ -43,19 +40,8 @@ export default function AuthCallbackPage() {
     const error = searchParams.get('error');
     if (error) {
       console.error('OAuth error:', error);
-      router.push(`/login?error=${error}`);
+      router.push(`/auth/login?error=${error}`);
       return;
-    }
-
-    const code = searchParams.get('code');
-    const next = searchParams.get('next') || '/dashboard'; // Optional: Allow custom redirect
-
-    if (code) {
-      // Exchange code for session (Supabase handles this via getSession)
-      handleCallback();
-    } else {
-      // Fallback
-      handleCallback();
     }
   }, [router, searchParams]);
 

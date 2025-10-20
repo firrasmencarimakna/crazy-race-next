@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowRight, Mail, Lock } from "lucide-react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { supabase } from "@/lib/supabase"
 import { FcGoogle } from "react-icons/fc";
@@ -23,13 +23,11 @@ const backgroundGifs = [
 
 export default function LoginPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-  const roomCodeFromParams = searchParams.get('code') || ''
 
   // Cycling background setiap 5 detik, dengan smoother transition untuk mobile
   useEffect(() => {
@@ -59,8 +57,7 @@ export default function LoginPage() {
 
       if (data.user) {
         // Redirect ke dashboard atau home setelah login
-        const redirectUrl = roomCodeFromParams ? `/?code=${roomCodeFromParams}` : '/'
-        router.push(redirectUrl)
+        router.push("/")  // Sesuaikan route
       }
     } catch (err: any) {
       setError(err.message || "Terjadi kesalahan, coba lagi!")
@@ -73,11 +70,10 @@ export default function LoginPage() {
     setIsLoading(true)
     setError("")
 
-    const nextUrl = roomCodeFromParams ? `/?code=${roomCodeFromParams}` : '/'
     supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextUrl)}`,  // Sesuaikan callback URL
+        redirectTo: `${window.location.origin}/auth/callback`,  // Sesuaikan callback URL
       },
     }).catch((err: any) => {
       setIsLoading(false)
