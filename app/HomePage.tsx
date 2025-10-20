@@ -30,6 +30,12 @@ export default function HomePage() {
 
   const { user, loading: authLoading } = useAuth()
 
+  if (!authLoading && !user) {
+    const codeFromParams = searchParams.get('code') || ''
+    router.replace(`/auth/login?code=${codeFromParams}`)
+    return null
+  }
+
   // State untuk loading dan joining process
   const [joining, setJoining] = useState(false)
 
@@ -128,7 +134,19 @@ export default function HomePage() {
     localStorage.removeItem("nickname")
     localStorage.removeItem("playerId")
     localStorage.removeItem("nextQuestionIndex")
-  }, [])
+
+    if (user?.email) {
+      const usernameFromEmail = user.email.split('@')[0] // e.g., "muhammadhuda537" dari "muhammadhuda537@gmail.com"
+      setNickname(usernameFromEmail)
+      // Optional: Simpan ke localStorage biar persist kalau perlu
+      localStorage.setItem("nickname", usernameFromEmail)
+    } else {
+      // Fallback ke random kalau gak ada email (rare)
+      const randomNick = generateNickname()
+      setNickname(randomNick)
+      localStorage.setItem("nickname", randomNick)
+    }
+  }, [user])
 
   // useEffect: Auto-fill roomCode dari URL query param (?code=ABC123)
   useEffect(() => {
@@ -304,14 +322,6 @@ export default function HomePage() {
 
   const goToPage = (pageIndex: number) => {
     setCurrentPage(pageIndex)
-  }
-
-  if (authLoading) {
-    return <LoadingRetroScreen /> // Atau spinner loading-mu, biar tunggu session load
-  }
-
-  if (!user) {
-    router.replace('/auth/login')
   }
 
   return (
