@@ -171,16 +171,18 @@ export default function HomePage() {
     localStorage.removeItem("playerId")
     localStorage.removeItem("nextQuestionIndex")
 
-    if (user?.email) {
-      const usernameFromEmail = user.email.split('@')[0] // e.g., "muhammadhuda537" dari "muhammadhuda537@gmail.com"
-      setNickname(usernameFromEmail)
-      // Optional: Simpan ke localStorage biar persist kalau perlu
-      localStorage.setItem("nickname", usernameFromEmail)
+    if (user?.user_metadata?.full_name) {
+      setNickname(user.user_metadata.full_name); // Use full name (e.g., "Muhammad Huda")
+      localStorage.setItem("nickname", user.user_metadata.full_name);
+    } else if (user?.email) {
+      const usernameFromEmail = user.email.split('@')[0]; // Fallback to email username
+      setNickname(usernameFromEmail);
+      localStorage.setItem("nickname", usernameFromEmail);
     } else {
-      // Fallback ke random kalau gak ada email (rare)
-      const randomNick = generateNickname()
-      setNickname(randomNick)
-      localStorage.setItem("nickname", randomNick)
+      // Final fallback to random
+      const randomNick = generateNickname();
+      setNickname(randomNick);
+      localStorage.setItem("nickname", randomNick);
     }
   }, [user])
 
@@ -391,9 +393,9 @@ export default function HomePage() {
         style={{ objectPosition: 'center' }}
       />
 
-      <h1 className="absolute top-6 md:top-4 left-4 w-42 md:w-50 lg:w-100">
+      {/* <h1 className="absolute top-6 md:top-4 left-4 w-42 md:w-50 lg:w-100">
         <Image src="/gameforsmartlogo.webp" alt="Gameforsmart Logo" width="256" height="64" priority />
-      </h1>
+      </h1> */}
 
       {/* Alert Audio (hidden, untuk efek suara) */}
       {/* <audio
@@ -498,16 +500,17 @@ export default function HomePage() {
                 {/* Avatar */}
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center overflow-hidden">
                   {user?.user_metadata?.avatar_url ? (
-                    <img
-                      src={user.user_metadata.avatar_url}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-xl font-bold text-white pixel-text">
-                      {user?.email?.charAt(0)?.toUpperCase() || 'U'}
-                    </span>
-                  )}
+    <img
+      src={user.user_metadata.avatar_url}
+      alt="Profile"
+      className="w-full h-full object-cover"
+    />
+  ) : (
+    <span className="text-xl font-bold text-white pixel-text">
+      {user?.user_metadata?.full_name?.charAt(0)?.toUpperCase() || 
+       user?.email?.charAt(0)?.toUpperCase() || 'U'}
+    </span>
+  )}
                 </div>
                 {/* Name & Email */}
                 <div className="flex-1 min-w-0">
