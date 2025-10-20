@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase'; // Sesuaikan path-mu ke Supabase client
-import { Loader2 } from 'lucide-react'; // Icons dari lucide-react
 import LoadingRetro from '@/components/loadingRetro';
 
 // Custom pixel font & glow utilities (sama kayak di login page)
@@ -42,6 +41,14 @@ export default function AuthCallbackPage() {
       console.error('OAuth error:', error);
       router.push(`/auth/login?error=${error}`);
       return;
+    }
+
+    const code = searchParams.get('code');
+
+    if (code) {
+      handleCallback();
+    } else {
+      handleCallback();
     }
   }, [router, searchParams]);
 
