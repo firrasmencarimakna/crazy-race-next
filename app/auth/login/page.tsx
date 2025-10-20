@@ -117,6 +117,9 @@ export default function LoginPage() {
           />
 
 
+       <h1 className=" text-4xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">
+        Crazy Race
+      </h1>
         </motion.div>
 
         {/* Login Card - Lebih compact dan touch-friendly pada mobile */}

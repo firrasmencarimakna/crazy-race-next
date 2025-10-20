@@ -211,14 +211,17 @@ export default function HostSettingsPage() {
         <ArrowLeft size={20} className="text-white" />
       </motion.button>
 
-      <h1 className="absolute top-5 right-20 hidden md:block">
+      <h1 className="absolute top-5 right-20 hidden md:block display-flex">
         <Image
           src="/gameforsmartlogo.webp"
           alt="Gameforsmart Logo"
           width={256}
           height={64}
         />
+      
       </h1>
+
+
 
       <h1 className="absolute top-6 left-20 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">
         Crazy Race
