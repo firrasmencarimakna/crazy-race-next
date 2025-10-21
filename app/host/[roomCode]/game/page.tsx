@@ -17,7 +17,6 @@ import Image from "next/image"
 // Background GIFs
 const backgroundGifs = [
   "/assets/background/host/9.webp",
-  // "/assets/background/host/9.webp",
 ]
 
 // Mapping warna mobil ke file GIF mobil

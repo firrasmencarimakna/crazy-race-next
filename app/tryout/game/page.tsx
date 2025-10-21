@@ -13,10 +13,9 @@ import { Button } from "react-day-picker"
 // Background GIFs
 const backgroundGifs = [
   "/assets/background/host/1.webp",
-  "/assets/background/host/2.webp",
   "/assets/background/host/3.webp",
   "/assets/background/host/4.webp",
-  "/assets/background/host/5.webp",
+  "/assets/background/1.webp",
   "/assets/background/host/7.webp",
 ]
 

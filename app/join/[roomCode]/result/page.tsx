@@ -26,7 +26,6 @@ import Image from "next/image"
 // Background GIFs
 const backgroundGifs = [
   "/assets/background/host/4.webp",
-  // Add more GIFs if available
 ]
 
 // Car GIF mappings

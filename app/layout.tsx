@@ -24,6 +24,7 @@ export default function RootLayout({
         <link rel="preload" as="image" href="/gameforsmartlogo.webp" type="image/webp" fetchPriority="high" />
         <link rel="preload" as="image" href="/assets/background/1.webp" type="image/webp" fetchPriority="high" />
         <link rel="preload" as="image" href="/assets/background/host/10.webp" type="image/webp" fetchPriority="high" />
+        <link rel="preload" as="image" href="/racing-game/images/sprites.png" type="image/png" fetchPriority="high" />
       </head>
       <body>
         <AuthProvider>
