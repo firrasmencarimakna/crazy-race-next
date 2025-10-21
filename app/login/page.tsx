@@ -73,7 +73,7 @@ export default function LoginPage() {
     supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/`,  // Sesuaikan callback URL
+        redirectTo: `${window.location.origin}`,  // Sesuaikan callback URL
       },
     }).catch((err: any) => {
       setIsLoading(false)
@@ -102,7 +102,7 @@ export default function LoginPage() {
       {/* Logo & Title - Responsive untuk mobile */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 sm:px-6">
 
-          {/* <h1 className="absolute top-5 right-20 hidden md:block display-flex">
+        {/* <h1 className="absolute top-5 right-20 hidden md:block display-flex">
             <Image
               src="/gameforsmartlogo.webp"
               alt="Gameforsmart Logo"
@@ -112,9 +112,9 @@ export default function LoginPage() {
           
           </h1> */}
 
-          <h1 className="absolute py-10 mx-auto top-6 text-4xl text-[#00ffff] pixel-text glow-cyan">
-            Crazy Race
-          </h1>
+        <h1 className="absolute py-10 mx-auto top-6 text-4xl text-[#00ffff] pixel-text glow-cyan">
+          Crazy Race
+        </h1>
 
         {/* Login Card - Lebih compact dan touch-friendly pada mobile */}
         <motion.div
@@ -126,7 +126,7 @@ export default function LoginPage() {
           <Card className="bg-[#1a0a2a]/70 backdrop-blur-md border-2 border-[#ff6bff]/60 pixel-card p-4 sm:p-6 md:p-8 shadow-2xl">
             <CardHeader className="space-y-3 sm:space-y-2">
               <CardTitle className="text-xl sm:text-2xl font-bold text-[#00ffff] pixel-text glow-cyan text-center leading-tight">
-                Login  
+                Login
               </CardTitle>
             </CardHeader>
 
@@ -179,7 +179,7 @@ export default function LoginPage() {
 
                 <div className="space-y-1">
                   <Input
-                    type="password" 
+                    type="password"
                     placeholder="Password..."
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}

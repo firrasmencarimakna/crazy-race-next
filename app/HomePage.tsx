@@ -62,7 +62,7 @@ export default function HomePage() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
 
-  const { user, loading: authLoading } = useAuth()
+  const { user } = useAuth()
 
   // State untuk loading dan joining process
   const [joining, setJoining] = useState(false)
@@ -158,12 +158,6 @@ export default function HomePage() {
 
   const totalPages = steps.length
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace(`/login`)
-    }
-  }, [authLoading, user, router])
-
 
   // useEffect: Clear localStorage on mount (reset session data)
   useEffect(() => {
@@ -188,16 +182,25 @@ export default function HomePage() {
 
   // useEffect: Auto-fill roomCode dari URL query param (?code=ABC123)
   useEffect(() => {
-    const code = searchParams.get("code")
-    const codeLocal = localStorage.getItem("roomCode")
-    if (code) {
-      localStorage.setItem("roomCode", code.toUpperCase())
-      setRoomCode(code.toUpperCase())
-      router.replace(pathname, undefined) // Clear query param dari URL
-    } else if (codeLocal) {
-      setRoomCode(codeLocal)
-    }
-  }, [searchParams, pathname, router])
+  const code = searchParams.get("code")
+  const codeLocal = localStorage.getItem("roomCode")
+
+  if (code) {
+    localStorage.setItem("roomCode", code.toUpperCase())
+    setRoomCode(code.toUpperCase())
+    router.replace(pathname, undefined) // Hapus query param
+  } else if (codeLocal) {
+    setRoomCode(codeLocal)
+  }
+
+  // 🧹 Tambahan penting: hapus hash fragment (misal #access_token=xxx)
+  if (typeof window !== "undefined" && window.location.hash) {
+    const url = new URL(window.location.href)
+    url.hash = ""
+    window.history.replaceState({}, document.title, url.toString())
+  }
+}, [searchParams, pathname, router])
+
 
   // useEffect: Inisialisasi background audio (autoplay dengan volume default)
   useEffect(() => {

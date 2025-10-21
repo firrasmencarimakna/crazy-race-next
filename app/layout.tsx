@@ -4,6 +4,7 @@ import { GeistMono } from 'geist/font/mono'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/contexts/authContext'
 import './globals.css'
+import AuthGate from '@/components/authGate'
 
 export const metadata: Metadata = {
   title: 'Crazy Race',
@@ -26,7 +27,9 @@ export default function RootLayout({
       </head>
       <body>
         <AuthProvider>
+          <AuthGate>
           {children}
+          </AuthGate>
         </AuthProvider>
         <Analytics />
       </body>
