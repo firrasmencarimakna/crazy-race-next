@@ -14,10 +14,8 @@ import { sortPlayersByProgress, formatTime, calculateRemainingTime, breakOnCaps 
 import LoadingRetro from "@/components/loadingRetro"
 import Image from "next/image"
 
-// Background GIFs
-const backgroundGifs = [
-  "/assets/background/host/9.webp",
-]
+// Background statis (hapus cycling)
+const backgroundImage = "/assets/background/host/9.webp"
 
 // Mapping warna mobil ke file GIF mobil
 const carGifMap: Record<string, string> = {
@@ -55,7 +53,6 @@ export default function HostMonitorPage() {
   const [gameTimeRemaining, setGameTimeRemaining] = useState(0)
   const [gameDuration, setGameDuration] = useState(300)
   const [gameStartTime, setGameStartTime] = useState<number | null>(null)
-  const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [isMuted, setIsMuted] = useState(false)
   const [volume, setVolume] = useState(50) // 0-100, default 50%
@@ -266,14 +263,6 @@ export default function HostMonitorPage() {
     return sortPlayersByProgress(players);
   }, [players]);
 
-  // Background image cycling
-  useEffect(() => {
-    const bgInterval = setInterval(() => {
-      setCurrentBgIndex((prev) => (prev + 1) % backgroundGifs.length)
-    }, 9000)
-    return () => clearInterval(bgInterval)
-  }, [])
-
   const endGame = async () => {
     const endTime = new Date().toISOString();
 
@@ -350,11 +339,13 @@ export default function HostMonitorPage() {
     router.push(`/host/${roomCode}/leaderboard`);
   }
 
+  // Early returns untuk loading dan finished state (fix duplikasi)
   if (loading) {
     return <LoadingRetro />;
   }
   if (room?.status === 'finished') {
-    router.push(`/host/${roomCode}/leaderboard`)
+    router.push(`/host/${roomCode}/leaderboard`);
+    return null; // Hindari render kosong
   }
 
   const getRankIcon = (rank: number) => {
@@ -372,16 +363,6 @@ export default function HostMonitorPage() {
     return "text-[#00ffff] glow-cyan";
   };
 
-  if (loading) {
-    return (
-      <LoadingRetro />
-    );
-  }
-
-  if (room?.status === 'finished') {
-    router.push(`/host/${roomCode}/leaderboard`)
-  }
-
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
       <audio
@@ -392,19 +373,11 @@ export default function HostMonitorPage() {
         className="hidden"
       />
 
-
-      {/* Background */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentBgIndex}
-          className="absolute inset-0 w-full h-full bg-cover bg-center"
-          style={{ backgroundImage: `url(${backgroundGifs[currentBgIndex]})` }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 1, ease: "easeInOut" }}
-        />
-      </AnimatePresence>
+      {/* Background statis (hapus AnimatePresence & cycling) */}
+      <div
+        className="absolute inset-0 w-full h-full bg-cover bg-center"
+        style={{ backgroundImage: `url(${backgroundImage})` }}
+      />
 
       {/* Burger Menu Button - Fixed Top Right */}
       <motion.button
@@ -613,7 +586,6 @@ export default function HostMonitorPage() {
       </div>
 
       {/* Audio Element untuk Background Music */}
-
 
       <style jsx>{`
         .pixel-font {
