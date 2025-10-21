@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
-import { Flag, Volume2, VolumeX, Settings, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight, Play, LogOut } from "lucide-react"
+import { Flag, Volume2, VolumeX, Settings, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight, Play, LogOut, Globe } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -86,6 +86,10 @@ export default function HomePage() {
   const [alertReason, setAlertReason] = useState<'roomCode' | 'nickname' | 'both' | 'general' | 'roomNotFound' | ''>('')
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
+  // State untuk language selection
+  const [currentLanguage, setCurrentLanguage] = useState('en')
+  const [showLanguageMenu, setShowLanguageMenu] = useState(false)
+
   // Refs untuk audio elements
   const audioRef = useRef<HTMLAudioElement>(null) // Background music
   const alertAudioRef = useRef<HTMLAudioElement>(null) // Alert sound (gas.mp3)
@@ -93,6 +97,14 @@ export default function HomePage() {
   // Arrays untuk generate random nickname
   const adjectives = ["Crazy", "Fast", "Speedy", "Turbo", "Neon", "Pixel", "Racing", "Wild", "Epic", "Flash"]
   const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", "Gear", "Track", "Lap"]
+
+  // Languages options
+  const languages = [
+    { code: 'en', name: 'English', flag: '🇺🇸' },
+    { code: 'id', name: 'Bahasa Indonesia', flag: '🇮🇩' },
+    { code: 'es', name: 'Español', flag: '🇪🇸' },
+    { code: 'fr', name: 'Français', flag: '🇫🇷' },
+  ]
 
   /**
    * Generate random nickname menggunakan adjectives + nouns.
@@ -178,6 +190,10 @@ export default function HomePage() {
       setNickname(randomNick);
       localStorage.setItem("nickname", randomNick);
     }
+
+    // Load current language from localStorage
+    const savedLanguage = localStorage.getItem('language') || 'en'
+    setCurrentLanguage(savedLanguage)
   }, [user])
 
   // useEffect: Auto-fill roomCode dari URL query param (?code=ABC123)
@@ -242,6 +258,17 @@ export default function HomePage() {
     if (isMuted && value[0] > 0) {
       setIsMuted(false) // Auto unmute jika volume dinaikkan dari 0
     }
+  }
+
+  /**
+   * Handle language selection.
+   */
+  const handleLanguageSelect = (code: string, name: string) => {
+    setCurrentLanguage(code)
+    localStorage.setItem('language', code)
+    setShowLanguageMenu(false)
+    // Di sini bisa tambah logic untuk switch i18n, misal update texts berdasarkan code
+    console.log(`Language changed to: ${name} (${code})`)
   }
 
   /**
@@ -628,16 +655,47 @@ export default function HomePage() {
                 )}
               </AnimatePresence>
 
-              {/* Settings Button (placeholder, bisa di-expand) */}
+              {/* Language Selector Button */}
               <button
+                onClick={() => setShowLanguageMenu(!showLanguageMenu)}
                 className="w-full p-2 bg-[#1a0a2a]/60 border-2 border-[#00ffff]/50 hover:border-[#00ffff] pixel-button hover:bg-[#00ffff]/20 glow-cyan-subtle rounded text-center"
-                aria-label="Settings"
+                aria-label="Language"
               >
                 <div className="flex items-center justify-center gap-2">
-                  {/* <Settings size={16} /> */}
+                  <Globe size={16} />
                   <span className="text-sm text-[#00ffff] pixel-text glow-cyan">Language</span>
                 </div>
               </button>
+
+              {/* Language Menu Dropdown */}
+              <AnimatePresence>
+                {showLanguageMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden space-y-2"
+                  >
+                    {languages.map((lang) => (
+                      <motion.button
+                        key={lang.code}
+                        onClick={() => handleLanguageSelect(lang.code, lang.name)}
+                        whileHover={{ scale: 1.02, x: 2 }}
+                        className={`w-full flex items-center gap-3 p-3 bg-[#1a0a2a]/80 border border-[#00ffff]/30 rounded-lg transition-all duration-200 hover:bg-[#00ffff]/20 hover:border-[#00ffff] ${currentLanguage === lang.code ? 'border-[#00ffff] bg-[#00ffff]/10' : ''}`}
+                      >
+                        <span className="text-lg">{lang.flag}</span>
+                        <div className="flex-1 text-left">
+                          <p className="text-sm font-medium text-white pixel-text">{lang.name}</p>
+                          <p className="text-xs text-[#00ffff]/70 pixel-text">{lang.code.toUpperCase()}</p>
+                        </div>
+                        {currentLanguage === lang.code && (
+                          <div className="w-2 h-2 bg-[#00ffff] rounded-full glow-cyan-subtle" />
+                        )}
+                      </motion.button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Logout Button */}
               <button
