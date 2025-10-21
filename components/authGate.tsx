@@ -3,6 +3,7 @@
 import { useAuth } from "@/contexts/authContext"
 import { useRouter, usePathname } from "next/navigation"
 import { useEffect } from "react"
+import LoadingRetro from "./loadingRetro"
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -25,7 +26,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [loading, user, pathname, router])
 
-  if (loading) return <div>Loading...</div>
+  if (loading) return <LoadingRetro />
 
   return <>{children}</>
 }
