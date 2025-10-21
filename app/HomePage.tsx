@@ -441,7 +441,7 @@ export default function HomePage() {
               {/* Alert Car GIF */}
               <div className="mb-4">
                 <Image
-                  src="/assets/car/car3.webp?v=2"
+                  src="/assets/car/car3_v2.webp"
                   alt="Car alert animation"
                   width={200}
                   height={150}

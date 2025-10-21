@@ -27,11 +27,11 @@ const backgroundGifs = [
 ]
 
 const carGifMap: Record<string, string> = {
-  purple: "/assets/car/car1.webp?v=2",
-  white: "/assets/car/car2.webp?v=2",
-  black: "/assets/car/car3.webp?v=2",
-  aqua: "/assets/car/car4.webp?v=2",
-  blue: "/assets/car/car5.webp?v=2",
+  purple: "/assets/car/car1_v2.webp",
+  white: "/assets/car/car2_v2.webp",
+  black: "/assets/car/car3_v2.webp",
+  aqua: "/assets/car/car4_v2.webp",
+  blue: "/assets/car/car5_v2.webp",
 }
 
 const availableCars = [
@@ -412,7 +412,7 @@ export default function LobbyPage() {
                       {/* Car GIF - Enhanced visuals */}
                       <div className="relative mb-3">
                         <img
-                          src={carGifMap[player.car] || '/assets/car/car5.webp?v=2'}
+                          src={carGifMap[player.car] || '/assets/car/car5_v2.webp'}
                           alt={`${player.car} car`}
                           className="h-28 w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
                         />

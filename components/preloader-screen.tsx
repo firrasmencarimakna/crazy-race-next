@@ -8,16 +8,15 @@ export function usePreloaderScreen() {
 
     useEffect(() => {
         const globalAssets = [
-            "/assets/car/car1.webp?v=2",
-            "/assets/car/car2.webp?v=2",
-            "/assets/car/car3.webp?v=2",
-            "/assets/car/car4.webp?v=2",
-            "/assets/car/car5.webp?v=2",
+            "/assets/car/car1_v2.webp",
+            "/assets/car/car2_v2.webp",
+            "/assets/car/car3_v2.webp",
+            "/assets/car/car4_v2.webp",
+            "/assets/car/car5_v2.webp",
         ]
         const assetsImages = [
-            "/assets/background/2.webp",
-            "/assets/background/4.webp",
-            "/assets/background/6.webp",
+            "/assets/background/2_v2.webp",
+            "/assets/background/4_v2.webp",
             "/assets/background/host/1.webp",
             "/assets/background/host/3.webp",
             "/assets/background/host/4.webp",

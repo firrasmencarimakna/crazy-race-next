@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { supabase } from "@/lib/supabase"
 import { FcGoogle } from "react-icons/fc";
+import { useAuth } from "@/contexts/authContext"
 
 // Background GIFs - Sesuai tema retro neon, optimized for mobile (smaller files if possible)
 const backgroundGifs = [
@@ -18,11 +19,18 @@ const backgroundGifs = [
 
 export default function LoginPage() {
   const router = useRouter()
+  const { user, loading } = useAuth()
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+
+  useEffect(() => {
+    if (user && !loading) {
+      router.replace('/')
+    }
+  }, [user, loading, router])
 
   // Cycling background setiap 5 detik, dengan smoother transition untuk mobile
   useEffect(() => {

@@ -21,18 +21,18 @@ import Image from "next/image"
  * Konstanta untuk background GIFs, digunakan untuk cycling background.
  * Konsisten dengan halaman lain untuk tema visual.
  */
-const backgroundGifs = ["/assets/background/4.webp"]
+const backgroundGifs = ["/assets/background/4_v2.webp"]
 
 /**
  * Mapping GIF mobil berdasarkan warna mobil player.
  * Digunakan untuk menampilkan animasi mobil di daftar player.
  */
 const carGifMap: Record<string, string> = {
-  purple: "/assets/car/car1.webp?v=2",
-  white: "/assets/car/car2.webp?v=2",
-  black: "/assets/car/car3.webp?v=2",
-  aqua: "/assets/car/car4.webp?v=2",
-  blue: "/assets/car/car5.webp?v=2",
+  purple: "/assets/car/car1_v2.webp",
+  white: "/assets/car/car2_v2.webp",
+  black: "/assets/car/car3_v2.webp",
+  aqua: "/assets/car/car4_v2.webp",
+  blue: "/assets/car/car5_v2.webp",
 }
 
 /**
@@ -727,7 +727,7 @@ export default function HostRoomPage() {
                           {/* Car GIF */}
                           <div className="relative mb-2 sm:mb-3">
                             <img
-                              src={carGifMap[player.car] || '/assets/car/car5.webp?v=2'}
+                              src={carGifMap[player.car] || '/assets/car/car5_v2.webp'}
                               alt={`${player.car} car`}
                               className="h-16 sm:h-20 md:h-24 lg:h-28 w-20 sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce
                        filter brightness-125 contrast-150"
@@ -781,7 +781,7 @@ export default function HostRoomPage() {
         {/* Car GIF di atas */}
         <div className="relative mx-auto">
           <img
-            src={carGifMap[selectedPlayerCar] || '/assets/car/car5.webp?v=2'}
+            src={carGifMap[selectedPlayerCar] || '/assets/car/car5_v2.webp'}
             alt={`${selectedPlayerCar} car`}
             className="h-24 w-74 object-contain animate-neon-bounce filter brightness-110 contrast-140 mx-auto"
           />

@@ -22,11 +22,11 @@ const backgroundGifs = [
 
 // Mapping warna mobil ke file GIF mobil
 const carGifMap: Record<string, string> = {
-  purple: "/assets/car/car1.webp?v=2",
-  white: "/assets/car/car2.webp?v=2",
-  black: "/assets/car/car3.webp?v=2",
-  aqua: "/assets/car/car4.webp?v=2",
-  blue: "/assets/car/car5.webp?v=2",
+  purple: "/assets/car/car1_v2.webp",
+  white: "/assets/car/car2_v2.webp",
+  black: "/assets/car/car3_v2.webp",
+  aqua: "/assets/car/car4_v2.webp",
+  blue: "/assets/car/car5_v2.webp",
 }
 
 type FinalScore = {

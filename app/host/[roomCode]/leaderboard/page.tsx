@@ -31,11 +31,11 @@ const backgroundGifs = [
 ]
 
 const carGifMap: Record<string, string> = {
-  purple: "/assets/car/car1.webp?v=2",
-  white: "/assets/car/car2.webp?v=2",
-  black: "/assets/car/car3.webp?v=2",
-  aqua: "/assets/car/car4.webp?v=2",
-  blue: "/assets/car/car5.webp?v=2",
+  purple: "/assets/car/car1_v2.webp",
+  white: "/assets/car/car2_v2.webp",
+  black: "/assets/car/car3_v2.webp",
+  aqua: "/assets/car/car4_v2.webp",
+  blue: "/assets/car/car5_v2.webp",
 }
 
 export default function HostLeaderboardPage() {
@@ -300,7 +300,7 @@ export default function HostLeaderboardPage() {
               <Card className="p-4 sm:p-5 text-center pixel-card border-gray-300/50 bg-[#1a0a2a]/70 animate-pulse-silver min-h-[160px] flex-1 flex flex-col justify-center"> {/* 🔥 NEW: min-h & flex biar fill height */}
                 <div className={`text-2xl sm:text-3xl font-bold mb-1 sm:mb-2 ${getRankColor(2)} pixel-text`}>#2</div>
                 <img
-                  src={carGifMap[topThree[1].car] || '/assets/car/car5.webp?v=2'}
+                  src={carGifMap[topThree[1].car] || '/assets/car/car5_v2.webp'}
                   alt={`${carGifMap[topThree[1].car]} car`}
                   className="h-12 sm:h-16 sm:sm:h-20 md:h-24 lg:h-28 w-16 sm:w-20 sm:sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150" // 🔥 FIXED: Responsive img sizes
                 />
@@ -321,7 +321,7 @@ export default function HostLeaderboardPage() {
               <Card className="p-5 sm:p-6 text-center pixel-card border-yellow-400/70 bg-[#1a0a2a]/80 animate-pulse-gold min-h-[200px] flex-1 flex flex-col justify-center"> {/* 🔥 NEW: min-h & flex */}
                 <div className={`text-4xl sm:text-5xl font-bold mb-2 sm:mb-3 ${getRankColor(1)} pixel-text`}>#1</div>
                 <img
-                  src={carGifMap[topThree[0].car] || '/assets/car/car5.webp?v=2'}
+                  src={carGifMap[topThree[0].car] || '/assets/car/car5_v2.webp'}
                   alt={`${topThree[0].car} car`}
                   className="h-12 sm:h-16 sm:sm:h-20 md:h-24 lg:h-28 w-16 sm:w-20 sm:sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
                 />
@@ -342,7 +342,7 @@ export default function HostLeaderboardPage() {
               <Card className="p-4 sm:p-5 text-center pixel-card border-amber-600/50 bg-[#1a0a2a]/70 animate-pulse-bronze min-h-[140px] flex-1 flex flex-col justify-center"> {/* 🔥 NEW: min-h & flex */}
                 <div className={`text-2xl sm:text-3xl font-bold mb-1 sm:mb-2 ${getRankColor(3)} pixel-text`}>#3</div>
                 <img
-                  src={carGifMap[topThree[2].car] || '/assets/car/car5.webp?v=2'}
+                  src={carGifMap[topThree[2].car] || '/assets/car/car5_v2.webp'}
                   alt={`${carGifMap[topThree[2].car]} car`}
                   className="h-12 sm:h-16 sm:sm:h-20 md:h-24 lg:h-28 w-16 sm:w-20 sm:sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
                 />

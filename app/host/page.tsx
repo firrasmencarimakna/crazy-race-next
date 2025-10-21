@@ -16,7 +16,7 @@ import Image from "next/image"
 
 // List of background GIFs in filename order
 const backgroundGifs = [
-  "/assets/background/2.webp",
+  "/assets/background/2_v2.webp",
 ]
 
 export default function QuestionListPage() {
