@@ -10,18 +10,19 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
 
-  const publicRoutes = ["/login", "/register", "/about"]
+  const publicRoutes = ["/login"]
 
   useEffect(() => {
     if (loading) return
 
     const isPublic = publicRoutes.includes(pathname)
 
-    // pakai native API untuk cek kode OAuth
-    const url = typeof window !== "undefined" ? new URL(window.location.href) : null
-    const hasOAuthCode = url?.searchParams.has("code")
+    // deteksi apakah sedang callback Supabase
+    const isOAuthCallback =
+      typeof window !== "undefined" && window.location.hash.includes("access_token")
 
-    if (!isPublic && !user && !hasOAuthCode) {
+    // kalau belum login, langsung arahkan ke login
+    if (!isPublic && !user && !isOAuthCallback) {
       router.replace("/login")
     }
   }, [loading, user, pathname, router])

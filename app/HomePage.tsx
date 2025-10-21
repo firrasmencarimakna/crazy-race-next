@@ -62,7 +62,7 @@ export default function HomePage() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
 
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
 
   // State untuk loading dan joining process
   const [joining, setJoining] = useState(false)
@@ -182,25 +182,31 @@ export default function HomePage() {
 
   // useEffect: Auto-fill roomCode dari URL query param (?code=ABC123)
   useEffect(() => {
-  const code = searchParams.get("code")
-  const codeLocal = localStorage.getItem("roomCode")
+    if (authLoading) return
 
-  if (code) {
-    localStorage.setItem("roomCode", code.toUpperCase())
-    setRoomCode(code.toUpperCase())
-    router.replace(pathname, undefined) // Hapus query param
-  } else if (codeLocal) {
-    setRoomCode(codeLocal)
-  }
+    const code = searchParams.get("code")
+    const codeLocal = localStorage.getItem("roomCode")
 
-  // 🧹 Tambahan penting: hapus hash fragment (misal #access_token=xxx)
-  if (typeof window !== "undefined" && window.location.hash) {
-    const url = new URL(window.location.href)
-    url.hash = ""
-    window.history.replaceState({}, document.title, url.toString())
-  }
-}, [searchParams, pathname, router])
+    if (code) {
+      // Simpan code di localStorage
+      localStorage.setItem("roomCode", code.toUpperCase())
+      setRoomCode(code.toUpperCase())
+    } else if (codeLocal) {
+      setRoomCode(codeLocal)
+    }
 
+    // 🧠 Hanya hapus query jika user SUDAH login
+    if (user) {
+      router.replace(pathname, undefined)
+    }
+
+    // 🧹 Hapus fragment access_token (Supabase)
+    if (typeof window !== "undefined" && window.location.hash) {
+      const url = new URL(window.location.href)
+      url.hash = ""
+      window.history.replaceState({}, document.title, url.toString())
+    }
+  }, [authLoading, user, searchParams, pathname, router])
 
   // useEffect: Inisialisasi background audio (autoplay dengan volume default)
   useEffect(() => {
