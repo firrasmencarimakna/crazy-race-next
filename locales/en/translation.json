@@ -1,0 +1,87 @@
+{
+  "logoutDialog": {
+    "title": "Log Out",
+    "message": "Are you sure you want to log out?",
+    "cancel": "Cancel",
+    "logout": "Logout",
+    "loading": "Loading..."
+  },
+  "hostGame": {
+    "title": "HOST GAME",
+    "description": "Create your own race and challenge others",
+    "button": "Create Room"
+  },
+  "joinRace": {
+    "title": "JOIN RACE",
+    "description": "Enter a code to join an existing race",
+    "roomCodePlaceholder": "Room Code",
+    "nicknamePlaceholder": "Nickname",
+    "joinButton": "JOIN",
+    "joining": "JOINING..."
+  },
+  "alert": {
+    "roomCode": {
+      "title": "Oops! Your Room Code!",
+      "message": "The room code must be 6 letters."
+    },
+    "nickname": {
+      "title": "Oops! Empty name!",
+      "message": "The name cannot be blank, okay!"
+    },
+    "both": {
+      "title": "Oops! Input Incomplete!",
+      "message": "Fill in the Room Code (6 letters) and Nickname first, OK!"
+    },
+    "roomNotFound": {
+      "title": "Oops Room not found!",
+      "message": "Your room code is wrong"
+    },
+    "general": {
+      "title": "Oops Belum Siap Balapan",
+      "message": "Fill in the Room Code (6 letters) and Nickname first, OK!"
+    },
+    "closeButton": "Okay!"
+  },
+  "menu": {
+    "howToPlay": "How to Play",
+    "soloTryout": "Solo Tryout",
+    "tryoutButton": "TRYOUT",
+    "starting": "STARTING...",
+    "language": "Language",
+    "logout": "Logout"
+  },
+  "howToPlay": {
+    "title": "Crazy Race Guide",
+    "description": "Flip through the pages to learn how to race and win!",
+    "prev": "Prev",
+    "next": "Next",
+    "gotIt": "Got It!",
+    "steps": [
+      {
+        "title": "Host a Game",
+        "content": "Click 'HOST GAME' to create a room and get a unique code. Share it with your friends to start the challenge!"
+      },
+      {
+        "title": "Join the Race",
+        "content": "Enter the room code and your nickname in 'JOIN RACE'. Hit JOIN to hop into the action and pick your car color."
+      },
+      {
+        "title": "Answer Questions",
+        "content": "When the race kicks off, trivia questions pop up. Nail the answers right to zoom your car forward on the track."
+      },
+      {
+        "title": "Race to Win",
+        "content": "Speed to the finish line! The first player to answer the most questions correctly claims victory and bragging rights."
+      },
+      {
+        "title": "Pro Tip",
+        "content": "Pick a killer nickname and strategize: go for lightning-fast answers or laser-focused accuracy? Your call!"
+      }
+    ]
+  },
+  "mainTitle": {
+    "title1": "CRAZY",
+    "title2": "RACE",
+    "subtitle": "ANSWER • RACE • WIN"
+  }
+}
