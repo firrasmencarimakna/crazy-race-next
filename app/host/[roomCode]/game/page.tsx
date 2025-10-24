@@ -13,6 +13,7 @@ import { supabase } from "@/lib/supabase"
 import { sortPlayersByProgress, formatTime, calculateRemainingTime, breakOnCaps } from "@/utils/game"
 import LoadingRetro from "@/components/loadingRetro"
 import Image from "next/image"
+import { generateXID } from "@/lib/id-generator"
 
 // Background statis (hapus cycling)
 const backgroundImage = "/assets/background/host/9.webp"
@@ -43,190 +44,225 @@ type Player = {
 };
 
 export default function HostMonitorPage() {
-  const params = useParams()
-  const router = useRouter()
-  const roomCode = params.roomCode as string
-  const [players, setPlayers] = useState<any[]>([]);
-  const [room, setRoom] = useState<any>(null);
-  const [roomId, setRoomId] = useState<string>("");
-  const [totalQuestions, setTotalQuestions] = useState(0)
-  const [gameTimeRemaining, setGameTimeRemaining] = useState(0)
-  const [gameDuration, setGameDuration] = useState(300)
-  const [gameStartTime, setGameStartTime] = useState<number | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [isMuted, setIsMuted] = useState(false)
-  const [volume, setVolume] = useState(50) // 0-100, default 50%
-  const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
-  const audioRef = useRef<HTMLAudioElement>(null)
+  const params = useParams();
+  const router = useRouter();
+  const roomCode = params.roomCode as string;
+  const [players, setPlayers] = useState<[]>([]);
+  const [session, setSession] = useState<any>(null);
+  const [totalQuestions, setTotalQuestions] = useState(0);
+  const [gameTimeRemaining, setGameTimeRemaining] = useState(0);
+  const [gameDuration, setGameDuration] = useState(300);
+  const [gameStartTime, setGameStartTime] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
+  const [volume, setVolume] = useState(50);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [hasInteracted, setHasInteracted] = useState(false);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch initial game data (updated)
+  // Calculate remaining time
+  const calculateRemainingTime = (startTimestamp: string, duration: number): number => {
+    const start = new Date(startTimestamp).getTime();
+    const now = Date.now();
+    const elapsed = (now - start) / 1000;
+    return Math.max(0, Math.floor(duration - elapsed));
+  };
+
+  // Fetch initial
   useEffect(() => {
     const fetchInitial = async () => {
       setLoading(true);
 
-      // Ambil data room lengkap
-      const { data: room, error: roomError } = await supabase
-        .from("game_rooms")
-        .select("id, settings, questions, start, status, end")
-        .eq("room_code", roomCode)
+      const { data: sessionData, error: sessionError } = await supabase
+        .from("game_sessions")
+        .select("id, status, started_at, total_time_minutes, participants, responses, current_questions")
+        .eq("game_pin", roomCode)
         .single();
 
-      if (roomError || !room) {
-        console.error("Error fetching room:", roomError);
+      if (sessionError || !sessionData) {
+        console.error("Error fetching session:", sessionError);
         setLoading(false);
         return;
       }
 
-      setRoom(room);
-      setRoomId(room.id);
+      setSession(sessionData);
 
-      // Hitung total questions dan duration
-      const questions = room.questions || [];
-      setTotalQuestions(questions.length);
+      // Parse questions untuk total
+      let parsedQuestions = [];
+      try {
+        parsedQuestions = typeof sessionData.current_questions === 'string' ? JSON.parse(sessionData.current_questions) : sessionData.current_questions || [];
+      } catch (e) {
+        console.error("Error parsing questions:", e);
+      }
+      setTotalQuestions(parsedQuestions.length);
 
-      const settings = typeof room.settings === 'string' ? JSON.parse(room.settings) : room.settings;
-      const duration = settings?.duration || 300;
+      // Duration
+      const duration = sessionData.total_time_minutes * 60;
       setGameDuration(duration);
 
-      // Set game start time jika playing
-      if (room.status === 'playing' && room.start) {
-        setGameStartTime(new Date(room.start).getTime());
-        // Initial remaining calc (tapi timer akan sync ulang)
-        const remaining = calculateRemainingTime(room.start, duration);
+      // Start time
+      if (sessionData.status === 'active' && sessionData.started_at) {
+        setGameStartTime(new Date(sessionData.started_at).getTime());
+        const remaining = calculateRemainingTime(sessionData.started_at, duration);
         setGameTimeRemaining(remaining);
-      } else if (room.status === 'finished') {
+      } else if (sessionData.status === 'finished') {
         setGameTimeRemaining(0);
         setGameStartTime(null);
       }
 
-      // Ambil players (sama)
-      const { data: playersData, error: playersError } = await supabase
-        .from("players")
-        .select("id, nickname, result, completion, car, joined_at")
-        .eq("room_id", room.id);
-
-      if (!playersError && playersData) {
-        setPlayers(playersData);
+      // Parse players
+      let parsedParticipants = [];
+      let parsedResponses = [];
+      try {
+        parsedParticipants = typeof sessionData.participants === 'string' ? JSON.parse(sessionData.participants) : sessionData.participants || [];
+        parsedResponses = typeof sessionData.responses === 'string' ? JSON.parse(sessionData.responses) : sessionData.responses || [];
+      } catch (e) {
+        console.error("Error parsing participants/responses:", e);
       }
 
+      const parsedPlayers = parsedParticipants.map((p: any) => {
+        const response = parsedResponses.find((r: any) => r.participant === p.id);
+        return {
+          id: p.id,
+          nickname: p.nickname,
+          car: p.car || 'blue',
+          currentQuestion: response?.current_question || 0,
+          totalQuestion: response?.total_question || parsedQuestions.length,
+          score: response?.score || 0,
+          racing: response?.racing || false,
+          duration: response?.duration || 0,
+          accuracy: response?.accuracy || '0.00',
+          isComplete: (response?.current_question || 0) === (response?.total_question || parsedQuestions.length),
+          joinedAt: p.created_at || new Date().toISOString(),
+        };
+      });
+
+      setPlayers(parsedPlayers);
       setLoading(false);
     };
 
-    fetchInitial();
+    if (roomCode) fetchInitial();
   }, [roomCode]);
 
-  // Subscribe to real-time updates (updated: handle start time update)
+  // Realtime sub
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomCode) return;
 
     const subscription = supabase
-      .channel(`host-monitor-${roomId}`)
+      .channel(`host-monitor-${roomCode}`)
       .on(
         "postgres_changes",
         {
           event: "UPDATE",
           schema: "public",
-          table: "players",
-          filter: `room_id=eq.${roomId}`
+          table: "game_sessions",
+          filter: `game_pin=eq.${roomCode}`,
         },
         (payload) => {
-          setPlayers((prev) => {
-            const updatedPlayers = prev.map((p) => (p.id === payload.new.id ? payload.new : p));
-            // Check if all players completed
-            const allCompleted = updatedPlayers.every(p => p.completion === true);
-            if (allCompleted && room?.status === 'playing') {
-              console.log('All players completed, ending game');
-              endGame();
-            }
-            return updatedPlayers;
-          });
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "game_rooms",
-          filter: `id=eq.${roomId}`,
-        },
-        (payload) => {
-          const newRoom = payload.new;
-          setRoom(newRoom);
+          const newSession = payload.new;
+          console.log('Session update:', newSession.status);
+          setSession(newSession);
 
-          // Update timer jika status berubah
-          if (newRoom.status === 'finished') {
+          // Re-parse players
+          let parsedParticipants = [];
+          let parsedResponses = [];
+          let parsedQuestions = [];
+          try {
+            parsedParticipants = typeof newSession.participants === 'string' ? JSON.parse(newSession.participants) : newSession.participants || [];
+            parsedResponses = typeof newSession.responses === 'string' ? JSON.parse(newSession.responses) : newSession.responses || [];
+            parsedQuestions = typeof newSession.current_questions === 'string' ? JSON.parse(newSession.current_questions) : newSession.current_questions || [];
+          } catch (e) {
+            console.error("Error parsing realtime:", e);
+            return;
+          }
+
+          const parsedPlayers = parsedParticipants.map((p: any) => {
+            const response = parsedResponses.find((r: any) => r.participant === p.id);
+            return {
+              id: p.id,
+              nickname: p.nickname,
+              car: p.car || 'blue',
+              currentQuestion: response?.current_question || 0,
+              totalQuestion: response?.total_question || parsedQuestions.length,
+              score: response?.score || 0,
+              racing: response?.racing || false,
+              duration: response?.duration || 0,
+              accuracy: response?.accuracy || '0.00',
+              isComplete: (response?.current_question || 0) === (response?.total_question || parsedQuestions.length),
+              joinedAt: p.created_at || new Date().toISOString(),
+            };
+          });
+
+          setPlayers(parsedPlayers);
+
+          // Update timer
+          if (newSession.status === 'finished') {
             setGameTimeRemaining(0);
             setGameStartTime(null);
-          } else if (newRoom.status === 'playing' && newRoom.start) {
-            setGameStartTime(new Date(newRoom.start).getTime());
+          } else if (newSession.status === 'active' && newSession.started_at) {
+            setGameStartTime(new Date(newSession.started_at).getTime());
+          }
+
+          // Check all complete
+          const allCompleted = parsedPlayers.every((p: any) => p.isComplete);
+          if (allCompleted && newSession.status === 'active') {
+            console.log('All players completed, ending game');
+            endGame();
           }
         }
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(subscription);
-    };
-  }, [roomId, room?.status]); // Tambah dep room?.status untuk check allCompleted
+    (async () => {
+    await supabase.removeChannel(subscription);
+  })();
+  }, [roomCode]);
 
-  // Timer effect untuk game time (updated: wall-time based)
+  // Timer effect
   useEffect(() => {
-    if (!gameStartTime || room?.status !== 'playing') {
-      return; // Gak jalan kalau gak playing
+    if (!gameStartTime || session?.status !== 'active') {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+      return;
     }
-
-    console.log('Starting wall-time timer for host monitor');
 
     const updateGameTime = () => {
       const now = Date.now();
       const elapsed = Math.floor((now - gameStartTime) / 1000);
       const remaining = Math.max(0, gameDuration - elapsed);
-
-      console.log('Host monitor remaining:', remaining); // Optional log buat debug
       setGameTimeRemaining(remaining);
 
       if (remaining <= 0) {
-        console.log('Host monitor time up, ending game');
-        clearInterval(gameTimer);
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
         endGame();
       }
     };
 
-    // Initial update
     updateGameTime();
+    timerIntervalRef.current = setInterval(updateGameTime, 1000);
 
-    // Interval setiap detik
-    const gameTimer = setInterval(updateGameTime, 1000);
-
-    // Cleanup
     return () => {
-      console.log('Cleaning up host monitor timer');
-      clearInterval(gameTimer);
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [gameStartTime, gameDuration, room?.status]); // Depend pada start time & status, gak pada remaining
+  }, [gameStartTime, gameDuration, session?.status]);
 
-  // Inisialisasi audio: play otomatis dengan volume default
+  // Audio (sama)
   useEffect(() => {
     const enableAudioOnInteraction = () => {
       if (!hasInteracted && audioRef.current) {
         setHasInteracted(true);
-        const initialVolume = volume / 100;
-        audioRef.current.volume = isMuted ? 0 : initialVolume;
-        audioRef.current.play().then(() => {
-          console.log("Audio started after user interaction!");
-        }).catch((e) => {
-          console.log("Still blocked:", e);
-        });
-        // Hapus listener setelah sukses
+        audioRef.current.volume = isMuted ? 0 : (volume / 100);
+        audioRef.current.play().then(() => console.log("Audio started!")).catch((e) => console.log("Blocked:", e));
         document.removeEventListener('click', enableAudioOnInteraction);
         document.removeEventListener('scroll', enableAudioOnInteraction);
         document.removeEventListener('keydown', enableAudioOnInteraction);
       }
     };
 
-    // Tambah listener global
     document.addEventListener('click', enableAudioOnInteraction);
     document.addEventListener('scroll', enableAudioOnInteraction);
     document.addEventListener('keydown', enableAudioOnInteraction);
@@ -236,116 +272,130 @@ export default function HostMonitorPage() {
       document.removeEventListener('scroll', enableAudioOnInteraction);
       document.removeEventListener('keydown', enableAudioOnInteraction);
     };
-  }, [hasInteracted, isMuted, volume]); // Dependensi untuk update volume jika berubah
+  }, [hasInteracted, isMuted, volume]);
 
-  // Update audio volume berdasarkan state volume dan isMuted
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : (volume / 100)
-    }
-  }, [volume, isMuted])
+    if (audioRef.current) audioRef.current.volume = isMuted ? 0 : (volume / 100);
+  }, [volume, isMuted]);
 
-  // Handle toggle mute/unmute
-  const handleMuteToggle = () => {
-    setIsMuted(!isMuted)
-  }
-
-  // Handle volume change
+  const handleMuteToggle = () => setIsMuted(!isMuted);
   const handleVolumeChange = (value: number[]) => {
-    setVolume(value[0])
-    if (isMuted && value[0] > 0) {
-      setIsMuted(false) // Auto unmute jika volume dinaikkan
-    }
-  }
+    setVolume(value[0]);
+    if (isMuted && value[0] > 0) setIsMuted(false);
+  };
 
-  // Sort players by progress dengan animasi
+  // Sort players
   const sortedPlayers = useMemo(() => {
-    return sortPlayersByProgress(players);
+    return [...players].sort((a, b) => {
+      if (a.isComplete !== b.isComplete) return b.isComplete - a.isComplete;
+      if (a.racing !== b.racing) return b.racing - a.racing;
+      if (a.currentQuestion !== b.currentQuestion) return b.currentQuestion - a.currentQuestion;
+      return new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime();
+    });
   }, [players]);
 
+  // End game (updated: handle AFK in responses)
   const endGame = async () => {
     const endTime = new Date().toISOString();
 
-    // Update room ke finished
-    const { error: roomError } = await supabase
-      .from("game_rooms")
-      .update({
-        status: "finished",
-        end: endTime
-      })
-      .eq("id", roomId);
+    const { error: sessionError } = await supabase
+      .from("game_sessions")
+      .update({ status: "finished", ended_at: endTime })
+      .eq("game_pin", roomCode);
 
-    setLoading(true)
+    setLoading(true);
 
-    if (roomError) {
-      console.error("Error ending game:", roomError);
+    if (sessionError) {
+      console.error("Error ending game:", sessionError);
       return;
     }
 
     await new Promise((resolve) => setTimeout(resolve, 5000));
 
-    const { data: inactivePlayers } = await supabase
-      .from("players")
-      .select("id, result, completion")
-      .eq("room_id", roomId)
-      .eq("completion", false);
+    // Fetch latest
+    const { data: latestSession } = await supabase
+      .from("game_sessions")
+      .select("responses, current_questions, participants")
+      .eq("game_pin", roomCode)
+      .single();
 
-    if (!inactivePlayers || inactivePlayers.length === 0) {
-      router.push(`/host/${roomCode}/leaderboard`);
+    if (!latestSession) return;
+
+    let parsedResponses = [];
+    let parsedQuestions = [];
+    let parsedParticipants = [];
+    try {
+      parsedResponses = typeof latestSession.responses === 'string' ? JSON.parse(latestSession.responses) : latestSession.responses || [];
+      parsedQuestions = typeof latestSession.current_questions === 'string' ? JSON.parse(latestSession.current_questions) : latestSession.current_questions || [];
+      parsedParticipants = typeof latestSession.participants === 'string' ? JSON.parse(latestSession.participants) : latestSession.participants || [];
+    } catch (e) {
+      console.error("Error parsing for AFK:", e);
       return;
     }
 
-    // 🎯 Cari yang AFK aja (tanpa reduce)
-    const afkPlayers = inactivePlayers.filter((p: Player) => {
-      try {
-        const result = Array.isArray(p.result)
-          ? p.result[0]
-          : JSON.parse(p.result || "null");
+    const totalQ = parsedQuestions.length;
 
-        return (
-          !result ||
-          !result.answers ||
-          result.answers.every((a: number | null) => a === null)
-        );
-      } catch {
-        // Parsing gagal → anggap AFK
-        return true;
-      }
+    // Deteksi AFK
+    const afkParticipants = parsedParticipants.filter((p: any) => {
+      const response = parsedResponses.find((r: any) => r.participant === p.id);
+      if (!response) return true;
+      const isIncomplete = response.current_question < totalQ || 
+                          response.answers.length < totalQ ||
+                          response.answers.every((a: any) => a.answer_id === null);
+      return isIncomplete;
     });
 
-    if (afkPlayers.length > 0) {
-      const defaultResult = {
+    if (afkParticipants.length > 0) {
+      const defaultTemplate = {
+        id: generateXID(),
         score: 0,
+        racing: false,
+        answers: new Array(totalQ).fill(0).map(() => ({
+          id: generateXID(),
+          answer_id: null,
+          question_id: null,
+          is_correct: false,
+          points_earned: 0,
+          created_at: endTime
+        })),
         correct: 0,
-        accuracy: "0",
-        duration: endTime,
-        current_question: 1,
-        total_question: totalQuestions,
-        answers: new Array(totalQuestions).fill(null),
-        is_host_end: true,
+        accuracy: "0.00",
+        duration: 0,
+        total_question: totalQ,
+        current_question: totalQ,
       };
 
-      await supabase
-        .from("players")
-        .update({
-          result: [defaultResult],
-          completion: true,
-        })
-        .in("id", afkPlayers.map((p) => p.id));
+      afkParticipants.forEach((p: any) => {
+        const afkResult = { ...defaultTemplate, participant: p.id }; // Match participant
+        const afkIndex = parsedResponses.findIndex((r: any) => r.participant === p.id);
+        if (afkIndex !== -1) {
+          parsedResponses[afkIndex] = afkResult;
+        } else {
+          parsedResponses.push(afkResult);
+        }
+      });
 
-      console.log(`✅ ${afkPlayers.length} AFK players auto-marked with default result.`);
+      // Deep clone & update
+      const deepResponses = JSON.parse(JSON.stringify(parsedResponses));
+      const { error: afkError } = await supabase
+        .from("game_sessions")
+        .update({ responses: deepResponses })
+        .eq("game_pin", roomCode);
+
+      if (afkError) {
+        console.error("Error updating AFK:", afkError);
+      } else {
+        console.log(`✅ ${afkParticipants.length} AFK players marked.`);
+      }
     }
 
     router.push(`/host/${roomCode}/leaderboard`);
-  }
+  };
 
-  // Early returns untuk loading dan finished state (fix duplikasi)
-  if (loading) {
-    return <LoadingRetro />;
-  }
-  if (room?.status === 'finished') {
+  if (loading) return <LoadingRetro />;
+  if (session?.status === 'finished') {
     router.push(`/host/${roomCode}/leaderboard`);
-    return null; // Hindari render kosong
+    return null;
   }
 
   const getRankIcon = (rank: number) => {
@@ -499,11 +549,10 @@ export default function HostMonitorPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               <AnimatePresence>
                 {sortedPlayers.map((player, index) => {
-                  const result = player.result?.[0] || {};
-                  const progress = result.current_question || 0;
-                  const correctAnswers = result.correct || 0;
-                  const isCompleted = player.completion;
-                  const currentlyAnswering = progress > 0 && !isCompleted && progress < totalQuestions;
+                  const progress = player.currentQuestion; // Ganti dari result.current_questions
+  const correctAnswers = player.score; // Ganti dari result.correct (atau tambah player.correct kalau perlu)
+  const isCompleted = player.isComplete; // Ganti dari player.completion
+  const currentlyAnswering = progress > 0 && !isCompleted && progress < totalQuestions; // Sama logic, pakai parsed fields
 
                   return (
                     <motion.div
@@ -531,8 +580,7 @@ export default function HostMonitorPage() {
                       >
                         {/* Rank Badge */}
                         <div className="flex items-center">
-                          <div className="flex items-center justify-between space-x-2 w-full">
-                            {getRankIcon(index)}
+                          <div className="flex items-center justify-end space-x-2 w-full">
                             <Badge>
                               {progress}/{totalQuestions}
                             </Badge>

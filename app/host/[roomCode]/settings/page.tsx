@@ -21,17 +21,18 @@ export default function HostSettingsPage() {
   const router = useRouter()
   const params = useParams()
   const roomCode = params.roomCode as string
+
   const [duration, setDuration] = useState("300") // Default: 5 minutes (300 seconds)
   const [questionCount, setQuestionCount] = useState("10") // Default: 10 questions
-  const [quiz, setQuiz] = useState<any>(null)
+  const [quiz, setQuiz] = useState<any>(null); // Full quiz untuk questions
+  const [quizDetail, setQuizDetail] = useState<any>(null); // Parsed dari game_sessions.quiz_detail
   const [loading, setLoading] = useState(true)
   const [isMuted, setIsMuted] = useState(false)
   const [volume, setVolume] = useState(50) // 0-100, default 50%
-  // HAPUS: currentBgIndex dan isTransitioning, nggak dibutuhin lagi
   const [saving, setSaving] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
   const audioRef = useRef<HTMLAudioElement>(null)
-  const [selectedDifficulty, setSelectedDifficulty] = useState("Medium");
+  const [selectedDifficulty, setSelectedDifficulty] = useState("normal");
 
   // Inisialisasi audio: play otomatis dengan volume default
   useEffect(() => {
@@ -65,15 +66,13 @@ export default function HostSettingsPage() {
   }
 
   // Generate dynamic question count options
-  const totalQuestions = quiz?.questions?.length || 0
+  const totalQuestions = quiz?.questions?.length || 0;
   const questionCountOptions = totalQuestions > 0
-    ? Array.from(
-      { length: Math.floor(totalQuestions / 5) + 1 },
-      (_, i) => (i + 1) * 5
-    ).filter((count) => count <= totalQuestions)
-    : [5, 10, 15, 20, 25] // Fallback options if quiz not loaded
+    ? Array.from({ length: Math.floor(totalQuestions / 5) + 1 }, (_, i) => (i + 1) * 5)
+        .filter((count) => count <= totalQuestions)
+    : [5, 10, 15, 20, 25];
   if (totalQuestions > 0 && !questionCountOptions.includes(totalQuestions)) {
-    questionCountOptions.push(totalQuestions) // Add "All" option
+    questionCountOptions.push(totalQuestions);
   }
 
   // Set default question count to 10 or closest valid option
@@ -81,49 +80,68 @@ export default function HostSettingsPage() {
     if (totalQuestions > 0) {
       const closest = questionCountOptions.reduce((prev, curr) =>
         Math.abs(curr - 10) < Math.abs(prev - 10) ? curr : prev
-      )
-      setQuestionCount(closest.toString())
+      );
+      setQuestionCount(closest.toString());
     }
-  }, [totalQuestions])
+  }, [totalQuestions]);
 
-  // Fetch quiz details from Supabase
+  // UPDATE: Fetch - dari game_sessions by game_pin, parse quiz_detail, fetch full quiz untuk questions
   useEffect(() => {
-    const fetchQuizDetails = async () => {
-      setLoading(true)
-      // Step 1: Get game room by room_code to find quiz_id
-      const { data: roomData, error: roomError } = await supabase
-        .from("game_rooms")
-        .select("quiz_id")
-        .eq("room_code", roomCode)
-        .single()
+    const fetchSessionDetails = async () => {
+      setLoading(true);
+      // Step 1: Get game_sessions by game_pin untuk quiz_id & quiz_detail
+      const { data: sessionData, error: sessionError } = await supabase
+        .from("game_sessions")
+        .select("quiz_id, quiz_detail, total_time_minutes, question_limit, difficulty") // Select existing settings
+        .eq("game_pin", roomCode)
+        .single();
 
-      if (roomError || !roomData) {
-        console.error("Error fetching game room:", roomError)
-        setLoading(false)
-        return
+      if (sessionError || !sessionData) {
+        console.error("Error fetching game session:", sessionError);
+        setLoading(false);
+        return;
       }
 
-      // Step 2: Get quiz details using quiz_id
+      // Set existing settings (kalau ada)
+      if (sessionData.total_time_minutes) {
+        setDuration((sessionData.total_time_minutes * 60).toString()); // Minutes → seconds
+      }
+      if (sessionData.question_limit) {
+        setQuestionCount(sessionData.question_limit.toString());
+      }
+      if (sessionData.difficulty) {
+        setSelectedDifficulty(sessionData.difficulty);
+      }
+
+      // Parse quiz_detail JSON
+      try {
+        const parsedDetail = typeof sessionData.quiz_detail === 'string' 
+          ? JSON.parse(sessionData.quiz_detail) 
+          : sessionData.quiz_detail;
+        setQuizDetail(parsedDetail);
+      } catch (e) {
+        console.error("Error parsing quiz_detail:", e);
+      }
+
+      // Step 2: Fetch full quiz untuk questions (pakai quiz_id)
       const { data: quizData, error: quizError } = await supabase
         .from("quizzes")
         .select("*")
-        .eq("id", roomData.quiz_id)
-        .single()
+        .eq("id", sessionData.quiz_id)
+        .single();
 
       if (quizError) {
-        console.error("Error fetching quiz:", quizError)
+        console.error("Error fetching quiz:", quizError);
       } else {
-        setQuiz(quizData)
+        setQuiz(quizData);
       }
-      setLoading(false)
-    }
+      setLoading(false);
+    };
 
     if (roomCode) {
-      fetchQuizDetails()
+      fetchSessionDetails();
     }
-  }, [roomCode])
-
-  // HAPUS: Seluruh useEffect untuk background cycling, nggak dibutuhin lagi
+  }, [roomCode]);
 
   // Shuffle array function
   function shuffleArray(array: any[]) {
@@ -135,38 +153,40 @@ export default function HostSettingsPage() {
     return shuffled
   }
 
-  // Handle saving settings and questions - UPDATED: Tambah difficulty ke settings
   const handleCreateRoom = async () => {
-    if (!quiz || saving) return
-    setSaving(true)
+    if (!quiz || saving) return;
+    setSaving(true);
 
-    // Prepare settings - TAMBAHAN: Include selectedDifficulty
     const settings = {
-      duration: Number.parseInt(duration),
-      questionCount: Math.min(Number.parseInt(questionCount), quiz.questions.length),
-      difficulty: selectedDifficulty, // 🔥 Ini yang baru: Simpan difficulty
-    }
+      total_time_minutes: Math.floor(parseInt(duration) / 60), // Seconds → minutes
+      question_limit: parseInt(questionCount),
+      difficulty: selectedDifficulty,
+      game_end_mode: "manual", // Hardcode dari contoh, atau tambah state
+      current_questions: [] as any[], 
+    };
 
-    // Prepare questions (shuffle if enabled)
-    const questions = shuffleArray(quiz.questions).slice(0, settings.questionCount)
+    // Prepare questions: Shuffle & slice
+    const shuffledQuestions = shuffleArray(quiz.questions).slice(0, settings.question_limit);
+    settings.current_questions = shuffledQuestions; // Isi array questions
 
-    // Update game_rooms with settings and questions
+    // Update game_sessions
     const { error } = await supabase
-      .from("game_rooms")
-      .update({
-        settings,
-        questions,
-      })
-      .eq("room_code", roomCode)
+      .from("game_sessions")
+      .update(settings)
+      .eq("game_pin", roomCode);
 
     if (error) {
-      console.error("Error updating room settings and questions:", error)
-      setSaving(false)
-      return
+      console.error("Error updating session settings:", error);
+      setSaving(false);
+      return;
     }
 
-    router.push(`/host/${roomCode}`)
-  }
+    // Simpan pin untuk next page (host lobby)
+    localStorage.setItem("hostroomCode", roomCode);
+
+    router.push(`/host/${roomCode}`); // Path sama, adjust kalau perlu
+    setSaving(false);
+  };
 
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
@@ -282,7 +302,7 @@ export default function HostSettingsPage() {
         {/* Loading State */}
         {loading ? (
           <LoadingRetro />
-        ) : !quiz ? (
+        ) : !quizDetail ? (
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -306,11 +326,11 @@ export default function HostSettingsPage() {
                     <Hash className="h-5 w-5 text-[#ff87ff]" />
                   </div>
                   <div className="flex-1 space-y-1">
-                    <p className="text-base sm:text-lg text-[#ff87ff] pixel-text font-semibold line-clamp-2">
-                      {quiz.title}
+                    <p className="text-base sm:text-lg text-[#ff87ff] pixel-text font-semibold">
+                      {quizDetail.title || quiz?.title || 'Unknown Quiz'}
                     </p>
-                    <p className="text-[#00ffff] pixel-text text-xs sm:text-sm line-clamp-2">
-                      {quiz.description}
+                    <p className="text-[#00ffff] pixel-text text-xs sm:text-sm overflow-y-auto max-h-[60px]">
+                      {quizDetail.description || quiz?.description || 'No description available'}
                     </p>
                   </div>
                 </div>
@@ -368,13 +388,13 @@ export default function HostSettingsPage() {
                 
                 {/* Simple Difficulty Buttons */}
                 <div className="flex justify-center space-x-3 sm:space-x-6">
-                  {["Easy", "Medium", "Hard"].map((diff) => (
+                  {["easy", "normal", "hard"].map((diff) => (
                     <Button
                       key={diff}
                       onClick={() => setSelectedDifficulty(diff)}
                       className={`
                         pixel-button text-sm sm:text-base px-6 sm:px-8 py-3 font-bold 
-                        w-24 sm:w-28 transition-all duration-200 border-2
+                        w-24 sm:w-28 transition-all duration-200 border-2 capitalize
                         ${
                           selectedDifficulty === diff
                             ? "bg-[#ff6bff] hover:bg-[#ff8aff] glow-pink text-white border-white shadow-lg shadow-[#ff6bff]/50"
@@ -393,7 +413,7 @@ export default function HostSettingsPage() {
                 <Button
                   onClick={handleCreateRoom}
                   disabled={saving}
-                  className="w-full text-base sm:text-xl py-4 sm:py-6 bg-[#00ffff] pixel-button hover:bg-[#33ffff] glow-cyan text-black font-bold disabled:bg-[#6a4c93] disabled:cursor-not-allowed transition-all shadow-lg shadow-[#00ffff]/30"
+                  className="w-full text-base sm:text-xl py-4 sm:py-6 bg-[#00ffff] pixel-button hover:bg-[#33ffff] glow-cyan text-black font-bold disabled:bg-[#6a4c93] disabled:cursor-not-allowed cursor-pointer transition-all shadow-lg shadow-[#00ffff]/30"
                 >
                   <Play className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
                   CONTINUE

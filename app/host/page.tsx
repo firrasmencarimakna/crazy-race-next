@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
@@ -13,6 +13,9 @@ import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import LoadingRetro from "@/components/loadingRetro"
 import Image from "next/image"
+import { useAuth } from "@/contexts/authContext"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+
 
 // List of background GIFs in filename order
 const backgroundGifs = [
@@ -21,6 +24,7 @@ const backgroundGifs = [
 
 export default function QuestionListPage() {
   const router = useRouter()
+  const { user } = useAuth();
   const [isMuted, setIsMuted] = useState(false)
   const [volume, setVolume] = useState(50) // 0-100, default 50%
   const [searchQuery, setSearchQuery] = useState("")
@@ -33,8 +37,59 @@ export default function QuestionListPage() {
   const [creating, setCreating] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
   const audioRef = useRef<HTMLAudioElement>(null)
+  const [profile, setProfile] = useState<any>(null);
+  const [favorites, setFavorites] = useState<string[]>([]);
 
   const itemsPerPage = 9;
+  useEffect(() => {
+    
+        console.log("============== hanya untuk debug =================")
+        
+  }, [])
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user?.id) return;
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('id, favorite_quiz') // Tambah 'id' untuk creator_id di fetchQuizzes
+        .eq('auth_user_id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+      } else {
+        setProfile(profileData);
+        console.log("tersambung dengan supabase gameforsmart.com")
+        if (profileData?.favorite_quiz) {
+          try {
+            let parsed;
+            if (typeof profileData.favorite_quiz === 'string') {
+              // Kalau masih string (jarang, tapi aman)
+              parsed = JSON.parse(profileData.favorite_quiz);
+            } else {
+              // Supabase auto-parse: udah object
+              parsed = profileData.favorite_quiz;
+            }
+            setFavorites(parsed.favorites || []); // Ambil array IDs
+            console.log('Parsed favorites:', parsed.favorites); // Debug: Cek di console
+          } catch (e) {
+            console.error('Error parsing favorites:', e);
+            setFavorites([]);
+          }
+        } else {
+          setFavorites([]);
+        }
+      }
+    };
+
+    if (user) {
+      fetchProfile();
+    } else {
+      setFavorites([]);
+      setProfile(null);
+    }
+  }, [user]);
 
   // Inisialisasi audio: play otomatis dengan volume default
   useEffect(() => {
@@ -67,40 +122,59 @@ export default function QuestionListPage() {
     }
   }
 
-  // Fetch quizzes from Supabase
   useEffect(() => {
     const fetchQuizzes = async () => {
-      setLoading(true)
-      const { data, error } = await supabase
+      setLoading(true);
+      let query = supabase
         .from("quizzes")
-        .select("*")
-        .order("created_at", { ascending: false })
+        .select("id, title, description, category, questions, is_public, created_at, updated_at")
+        .order("created_at", { ascending: false });
+
+      // FIX: Tambah OR filter - public ATAU milik user (untuk favorites)
+      if (profile?.id) {
+        query = query.or(`is_public.eq.true,creator_id.eq.${profile.id}`);
+      } else {
+        query = query.eq("is_public", true);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
-        console.error("Error fetching quizzes:", error)
+        console.error("Error fetching quizzes:", error);
       } else {
-        setQuizzes(data || [])
+        setQuizzes(data || []);
+        console.log('Fetched quizzes:', data?.length); // Debug
       }
-      setLoading(false)
-    }
+      setLoading(false);
+    };
 
-    fetchQuizzes()
-  }, [])
+    fetchQuizzes();
+  }, [profile?.id]);
 
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1)
   }, [searchQuery, selectedCategory])
 
-  // Compute unique categories
-  const categories = ["All", ...new Set(quizzes.map(q => q.category).filter(Boolean))]
+  // UPDATE: Compute categories - tambah "Favorites" sebagai opsi
+  const categories = [
+    "All",
+    ...new Set(quizzes.map(q => q.category).filter(Boolean)),
+    "Favorites" // Tambah opsi Favorites
+  ];
 
-  // Filter quizzes
   const filteredQuestions = quizzes.filter((q) => {
-    const matchesSearch = q.title.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = selectedCategory === "All" || q.category === selectedCategory
-    return matchesSearch && matchesCategory
-  })
+    const matchesSearch = q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      q.description.toLowerCase().includes(searchQuery.toLowerCase());
+    let matchesCategory = selectedCategory === "All" || q.category === selectedCategory;
+
+    if (selectedCategory === "Favorites") {
+      matchesCategory = favorites.includes(q.id);
+      console.log(`Favorites check for ${q.title}: ${q.id} in favorites?`, favorites.includes(q.id)); // Debug per quiz
+    }
+
+    return matchesSearch && matchesCategory;
+  });
 
   // Pagination
   const totalPages = Math.ceil(filteredQuestions.length / itemsPerPage)
@@ -109,33 +183,53 @@ export default function QuestionListPage() {
     currentPage * itemsPerPage
   )
 
-  function generateRoomCode(length = 6) {
+  // UPDATE: generateRoomCode - rename ke generateGamePin (sama logic)
+  function generateGamePin(length = 6) {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
   }
 
+  // UPDATE: handleSelectQuiz - migrasi ke game_sessions, pakai host_id dari profile
   async function handleSelectQuiz(quizId: string, router: any) {
-    if (creating) return;          // anti-double-click
+    if (creating) return;
     setCreating(true);
 
-    const roomCode = generateRoomCode();
+    const gamePin = generateGamePin();
+
+    // Defaults untuk game_sessions baru (adjust sesuai kebutuhan)
+    const newSession = {
+      quiz_id: quizId,
+      host_id: profile?.id || user?.id, // Prioritas profile.id, fallback user.id
+      game_pin: gamePin,
+      status: "waiting",
+      total_time_minutes: 5, // Default dari contoh
+      question_limit: 10, // Default
+      difficulty: null,
+      game_end_mode: "manual", // Default
+      allow_join_after_start: false, // Default
+      participants: [], // Mulai kosong
+      responses: [], // Kosong
+      current_questions: [], // Akan diisi di settings atau game start
+      application: "crazyrace"
+    };
 
     const { data, error } = await supabase
-      .from("game_rooms")
-      .insert({
-        room_code: roomCode,
-        quiz_id: quizId,
-        settings: {} // tetap bisa isi default JSON
-      })
-      .select("room_code")
+      .from("game_sessions")
+      .insert(newSession)
+      .select("game_pin")
       .single();
 
     if (error) {
-      console.error("Error creating room:", error);
-      setCreating(false)
+      console.error("Error creating session:", error);
+      setCreating(false);
       return;
     }
-    router.push(`/host/${data.room_code}/settings`);
+
+    // Simpan pin untuk host session
+    localStorage.setItem("hostGamePin", gamePin);
+
+    router.push(`/host/${data.game_pin}/settings`); // Path sama, adjust kalau perlu
+    setCreating(false);
   }
 
   // Background image cycling with smooth transition
@@ -218,7 +312,6 @@ export default function QuestionListPage() {
       </motion.button>
 
       {/* Menu Dropdown - Muncul saat burger diklik, dari kanan */}
-      {/* Menu Dropdown - Muncul saat burger diklik, dari kanan */}
       {isMenuOpen && (
         <motion.div
           initial={{ opacity: 0, x: 300 }}
@@ -230,7 +323,7 @@ export default function QuestionListPage() {
             {/* Integrated Mute + Volume: Single row for button + slider, with label above for simplicity */}
             <div className="p-1.5 bg-[#ff6bff]/10 rounded space-y-1"> {/* Unified bg for the whole section; adjusted to /10 for subtle highlight */}
               {/* <span className="text-xs text-white pixel-text block">Suara</span> Moved "Suara" label here as section header; changed color to white for better contrast */}
-              
+
               {/* New flex row: Mute button on left, slider on right; tight spacing */}
               <div className="flex items-center space-x-2 bg-[#1a0a2a]/60 border border-[#ff6bff]/30 rounded px-2 py-1"> {/* Shared container for row; reduced px-1 to px-2 for button fit, py-0.5 to py-1 */}
                 <button
@@ -240,7 +333,7 @@ export default function QuestionListPage() {
                 >
                   {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
                 </button>
-                
+
                 <div className="flex-1"> {/* Wrapper for slider to take remaining space */}
                   <Slider
                     value={[volume]}
@@ -254,7 +347,7 @@ export default function QuestionListPage() {
                   />
                 </div>
               </div>
-              
+
               {/* Volume value below slider for quick glance; optional but keeps info visible without cluttering row */}
               <span className="text-xs text-[#ff6bff] pixel-text">Volume: {volume}%</span>
             </div>
@@ -262,7 +355,7 @@ export default function QuestionListPage() {
         </motion.div>
       )}
 
-      
+
       {(loading || creating) && (
         <LoadingRetro />
       )}
@@ -305,7 +398,7 @@ export default function QuestionListPage() {
               </SelectTrigger>
               <SelectContent className="bg-[#1a0a2a] border-4 border-[#ff6bff]/50 text-white">
                 {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat} className="pixel-text">
+                  <SelectItem key={cat} value={cat} className="pixel-text capitalize">
                     {cat}
                   </SelectItem>
                 ))}
@@ -315,16 +408,7 @@ export default function QuestionListPage() {
         </motion.div>
 
         {/* Questions Grid */}
-        {loading ? (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="text-center text-white pixel-text glow-cyan-subtle"
-          >
-            INITIALIZING...
-          </motion.p>
-        ) : paginatedQuestions.length > 0 ? (
+        {paginatedQuestions.length > 0 ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {paginatedQuestions.map((quiz, index) => (
@@ -337,21 +421,36 @@ export default function QuestionListPage() {
                   transition={{ duration: 0.3, delay: index * 0.1 }}
                 >
                   <Card
-                    className="bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 hover:border-[#ff6bff] pixel-card glow-pink-subtle cursor-pointer h-full"
+                    className="bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 hover:border-[#ff6bff] pixel-card glow-pink-subtle cursor-pointer h-full justify-end gap-3"
                     onClick={() => handleQuizSelect(quiz.id)}
                   >
-                    <CardHeader>
-                      <CardTitle className="text-lg text-[#00ffff] pixel-text glow-cyan">{quiz.title}</CardTitle>
+                    <TooltipProvider>
+                      <Tooltip delayDuration={500}>
+                        <TooltipTrigger asChild>
+                          <div>
+                            <CardHeader>
+                              <CardTitle className="text-base text-[#00ffff] pixel-text glow-cyan md:line-clamp-3 ">
+                                {quiz.title}
+                              </CardTitle>
+                            </CardHeader>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="top"
+                          className="text-xs bg-black/80 text-cyan-300 max-w-xs border border-cyan-500/50"
+                        >
+                          {quiz.title}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <CardFooter className="flex justify-between items-center">
                       {quiz.category && (
-                        <div className="text-xs text-[#ff6bff] mt-1 pixel-text glow-pink-subtle">{quiz.category}</div>
+                        <div className="text-xs text-[#ff6bff] pixel-text glow-pink-subtle capitalize">{quiz.category}</div>
                       )}
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-200 mb-4 line-clamp-3 pixel-text">{quiz.description}</p>
                       <div className="flex items-center gap-2 text-[#ff6bff] text-sm pixel-text glow-pink-subtle">
                         <HelpCircle className="h-4 w-4" /> {quiz.questions?.length ?? 0}
                       </div>
-                    </CardContent>
+                    </CardFooter>
                   </Card>
                 </motion.div>
               ))}
@@ -395,7 +494,7 @@ export default function QuestionListPage() {
             transition={{ duration: 0.5 }}
             className="text-center text-gray-400 pixel-text glow-pink-subtle"
           >
-            NO ARCHIVES FOUND
+            NO QUIZZES FOUND
           </motion.p>
         )}
       </div>

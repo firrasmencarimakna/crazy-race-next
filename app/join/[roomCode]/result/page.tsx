@@ -10,7 +10,7 @@
 
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -25,7 +25,7 @@ import Image from "next/image"
 
 // Background GIFs
 const backgroundGifs = [
-  "/assets/background/host/4.webp",
+  "/assets/background/host/10.webp",
 ]
 
 // Car GIF mappings
@@ -47,95 +47,112 @@ type PlayerStats = {
   totalTime: string
   rank: number
   totalPlayers: number
-  playerId: string
+  participantId: string
 }
 
 export default function PlayerResultsPage() {
   const params = useParams()
   const router = useRouter()
   const roomCode = params.roomCode as string
-  const [playerId, setPlayerId] = useState<string>("")
-  useEffect(() => {
-    const pid = localStorage.getItem("playerId") || ""
-    if (!pid) router.replace(`/`)
-    else setPlayerId(pid)
-  }, [router])
+  const [participantId, setParticipantId] = useState<string>(""); // Ganti dari playerId
 
   const [loading, setLoading] = useState(true)
   const [currentPlayerStats, setCurrentPlayerStats] = useState<PlayerStats | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
+  const hasBootstrapped = useRef(false);
 
   useEffect(() => {
-    if (!roomCode || !playerId) return;
-    let channel: any;
-    let playersCache: Record<string, { score: number; duration: number }> = {};
+    const pid = localStorage.getItem("participantId") || ""; // Ganti dari playerId
+    if (!pid) {
+      router.replace(`/`);
+      return;
+    }
+    setParticipantId(pid);
+  }, [router]);
+
+  useEffect(() => {
+    if (!roomCode || !participantId || hasBootstrapped.current) return;
+    hasBootstrapped.current = true;
+
+    let channel: any = null;
+    let responsesCache: Record<string, { score: number; duration: number }> = {}; // Cache from responses
 
     const setupInitialData = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Ambil roomId dulu
-        const { data: roomData, error: roomError } = await supabase
-          .from("game_rooms")
-          .select("id, settings")
-          .eq("room_code", roomCode)
+        // Fetch game_sessions
+        const { data: sessionData, error: sessionError } = await supabase
+          .from("game_sessions")
+          .select("id, total_time_minutes, participants, responses")
+          .eq("game_pin", roomCode)
           .single();
 
-        if (roomError || !roomData) throw new Error("Room not found");
-
-        let gameDuration = 300; // default fallback (5 menit)
-        try {
-          const settings = JSON.parse(roomData.settings || "{}");
-          if (settings.duration) gameDuration = settings.duration;
-        } catch {
-          console.warn("⚠️ Failed to parse room settings JSON, using default duration.");
+        if (sessionError || !sessionData) {
+          throw new Error(`Session not found: ${sessionError?.message || 'No data'}`);
         }
 
-        // Ambil semua pemain yang sudah complete
-        const { data: players, error: playersError } = await supabase
-          .from("players")
-          .select("id, nickname, car, result, completion")
-          .eq("room_id", roomData.id)
-          .eq("completion", true);
+        const gameDuration = sessionData.total_time_minutes * 60; // Convert to seconds
 
-        if (playersError) throw playersError;
-        if (!players || players.length === 0)
+        // Parse participants & responses
+        let parsedParticipants = [];
+        let parsedResponses = [];
+        try {
+          parsedParticipants = typeof sessionData.participants === 'string' ? JSON.parse(sessionData.participants) : sessionData.participants || [];
+          parsedResponses = typeof sessionData.responses === 'string' ? JSON.parse(sessionData.responses) : sessionData.responses || [];
+        } catch (e: any) {
+          throw new Error(`Parse error: ${e.message}`);
+        }
+
+        if (parsedResponses.length === 0) {
+          throw new Error("No responses found");
+        }
+
+        // Filter complete responses (current_question === total_question)
+        const completeResponses = parsedResponses.filter((r: any) => r.current_question === r.total_question && r.total_question > 0);
+
+        if (completeResponses.length === 0) {
           throw new Error("No completed players");
+        }
 
-        // Isi cache awal
-        players.forEach((p) => {
-          const res = p.result?.[0];
-          if (!res) return;
-          playersCache[p.id] = {
-            score: res.score || 0,
-            duration: res.duration || Infinity,
+        // Isi cache awal dari complete responses
+        completeResponses.forEach((r: any) => {
+          if (!r.participant) return;
+          responsesCache[r.participant] = {
+            score: r.score || 0,
+            duration: r.duration || Infinity,
           };
         });
 
-        // Ambil player saat ini
-        const currentPlayer = players.find((p) => p.id === playerId);
-        if (!currentPlayer) throw new Error("Player not found");
-        const result = currentPlayer.result?.[0];
-        if (!result) throw new Error("No result for current player");
+        // Ambil current player response
+        const myResponse = parsedResponses.find((r: any) => r.participant === participantId);
+        if (!myResponse) {
+          throw new Error("Player response not found");
+        }
 
+        const result = myResponse; // Direct dari response
         const totalSeconds = Math.min(result.duration || 0, gameDuration);
         const mins = Math.floor(totalSeconds / 60);
         const secs = totalSeconds % 60;
         const totalTime = `${mins}:${secs.toString().padStart(2, "0")}`;
 
+        // Cari nickname & car dari participants
+        const currentParticipant = parsedParticipants.find((p: any) => p.id === participantId);
+        if (!currentParticipant) {
+          throw new Error("Player participant not found");
+        }
+
         // Hitung rank awal
-        const sorted = Object.entries(playersCache)
-          .sort(
-            ([, a], [, b]) => b.score - a.score || a.duration - b.duration
-          )
-          .map(([id]) => id);
-        const rank = sorted.findIndex((id) => id === playerId) + 1;
+        const sorted = Object.entries(responsesCache)
+          .sort(([ , a], [ , b]) => b.score - a.score || a.duration - b.duration)
+          .map(([pid]) => pid);
+        const rank = sorted.findIndex((pid) => pid === participantId) + 1;
 
         setCurrentPlayerStats({
-          nickname: currentPlayer.nickname,
-          car: currentPlayer.car || "blue",
+          nickname: currentParticipant.nickname,
+          car: currentParticipant.car || "blue",
           finalScore: result.score || 0,
           correctAnswers: result.correct || 0,
           totalQuestions: result.total_question || 0,
@@ -143,58 +160,69 @@ export default function PlayerResultsPage() {
           totalTime,
           rank,
           totalPlayers: sorted.length,
-          playerId,
+          participantId,
         });
 
+        // Realtime subscription
         channel = supabase
-          .channel(`realtime-rank-${roomData.id}`)
+          .channel(`realtime-rank-${roomCode}`)
           .on(
             "postgres_changes",
             {
               event: "UPDATE",
               schema: "public",
-              table: "players",
-              filter: `room_id=eq.${roomData.id}`,
+              table: "game_sessions",
+              filter: `game_pin=eq.${roomCode}`,
             },
             (payload) => {
-              const p = payload.new
-              const result = p.result?.[0]
-              if (!result) return
+              const newSession = payload.new;
+              if (!newSession.responses) return;
 
-              // 🚫 Skip pemain yang belum selesai
-              if (!p.completion) return
-
-              // Update cache
-              playersCache[p.id] = {
-                score: result.score || 0,
-                duration: result.duration || Infinity,
+              let newParsedResponses = [];
+              try {
+                newParsedResponses = typeof newSession.responses === 'string' ? JSON.parse(newSession.responses) : newSession.responses || [];
+              } catch (e) {
+                console.error("Parse realtime responses error:", e);
+                return;
               }
 
-              // Recalculate rank hanya untuk yang sudah completion
-              const sorted = Object.entries(playersCache)
-                .sort(
-                  ([, a], [, b]) => b.score - a.score || a.duration - b.duration
-                )
-                .map(([id]) => id)
+              const newCompleteResponses = newParsedResponses.filter((r: any) => r.current_question === r.total_question && r.total_question > 0);
 
-              const newRank = sorted.findIndex((id) => id === playerId) + 1
+              // Update cache
+              newCompleteResponses.forEach((r: any) => {
+                if (!r.participant) return;
+                responsesCache[r.participant] = {
+                  score: r.score || 0,
+                  duration: r.duration || Infinity,
+                };
+              });
+
+              // Recalculate rank
+              const sorted = Object.entries(responsesCache)
+                .sort(([ , a], [ , b]) => b.score - a.score || a.duration - b.duration)
+                .map(([pid]) => pid);
+              const newRank = sorted.findIndex((pid) => pid === participantId) + 1;
 
               setCurrentPlayerStats((prev) =>
-                prev
-                  ? {
-                    ...prev,
-                    rank: newRank,
-                    totalPlayers: sorted.length,
-                  }
-                  : prev
-              )
+                prev ? {
+                  ...prev,
+                  rank: newRank,
+                  totalPlayers: sorted.length,
+                } : prev
+              );
             }
           )
-          .subscribe()
+          .subscribe((status) => {
+            if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+              console.warn('Realtime sub dropped, retrying...');
+              setTimeout(setupInitialData, 3000);
+            }
+          });
+
+        setLoading(false);
       } catch (err: any) {
         console.error("Error setting up realtime:", err);
         setError(err.message);
-      } finally {
         setLoading(false);
       }
     };
@@ -202,9 +230,10 @@ export default function PlayerResultsPage() {
     setupInitialData();
 
     return () => {
+      hasBootstrapped.current = false;
       if (channel) supabase.removeChannel(channel);
     };
-  }, [roomCode, playerId]);
+  }, [roomCode, participantId]);
 
 
   // Background cycling
@@ -214,32 +243,6 @@ export default function PlayerResultsPage() {
     }, 5000)
     return () => clearInterval(bgInterval)
   }, [])
-
-  const getRankColor = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return "text-yellow-500 glow-yellow"
-      case 2:
-        return "text-gray-400 glow-silver"
-      case 3:
-        return "text-amber-600 glow-bronze"
-      default:
-        return "text-[#00ffff] glow-cyan"
-    }
-  }
-
-  const getRankIcon = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return <Crown className="h-8 w-8 text-yellow-500 glow-yellow animate-neon-bounce" />
-      case 2:
-        return <Award className="h-8 w-8 text-gray-400 glow-silver animate-neon-bounce" />
-      case 3:
-        return <Award className="h-8 w-8 text-amber-600 glow-bronze animate-neon-bounce" />
-      default:
-        return <Star className="h-8 w-8 text-[#00ffff] glow-cyan animate-neon-bounce" />
-    }
-  }
 
   if (loading || error || !currentPlayerStats) {
     return (
@@ -294,16 +297,9 @@ export default function PlayerResultsPage() {
 
         {/* Main Result Card */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          <Card className="bg-[#1a0a2a]/60 border-[#ff6bff]/50 pixel-card p-7 md:p-10 mb-4 text-center animate-neon-pulse-pink">
-            <div className="mb-4">
-              <div className={`text-3xl md:text-4xl font-bold mb-1 ${getRankColor(rank)} pixel-text`}>
-                #{rank}
-              </div>
-            </div>
+          <Card className="bg-[#1a0a2a]/60 border-[#ff6bff]/40 backdrop-blur-xs pixel-card p-7 md:p-10 mb-4 text-center animate-neon-pulse-pink">
             <div className="flex flex-col items-center justify-center space-x-2">
               <img
                 src={carGifMap[car] || '/assets/car/car5_v2.webp'}
@@ -318,27 +314,25 @@ export default function PlayerResultsPage() {
         {/* Detailed Stats */}
         <motion.div
           className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.4 }}
         >
-          <Card className="p-5 text-center bg-[#1a0a2a]/50 border-[#00ffff]/70 bg-[#00ffff]/10 pixel-card">
+          <Card className="p-5 text-center bg-[#1a0a2a]/10 border-[#00ffff]/70 backdrop-blur-xs pixel-card">
             <div className="text-xl font-bold text-[#00ffff] mb-1 pixel-text glow-cyan">
               {correctAnswers}/{totalQuestions}
             </div>
             <div className="text-xs text-[#ff6bff] pixel-text">Correct</div>
           </Card>
-          <Card className="p-5 text-center bg-[#1a0a2a]/50 border-[#00ffff]/70 bg-[#00ffff]/10 pixel-card">
+          <Card className="p-5 text-center bg-[#1a0a2a]/10 border-[#00ffff]/70 backdrop-blur-xs pixel-card">
             <div className="text-xl font-bold text-[#00ffff] mb-1 pixel-text glow-cyan">
               {finalScore}
             </div>
             <div className="text-xs text-[#ff6bff] pixel-text">Score</div>
           </Card>
-          <Card className="p-5 text-center bg-[#1a0a2a]/50 border-[#00ffff]/70 bg-[#00ffff]/10 pixel-card">
+          <Card className="p-5 text-center bg-[#1a0a2a]/10 border-[#00ffff]/70 backdrop-blur-xs pixel-card">
             <div className="text-xl font-bold text-[#00ffff] mb-1 pixel-text glow-cyan">{totalTime}</div>
             <div className="text-xs text-[#ff6bff] pixel-text">Time</div>
           </Card>
-          <Card className="p-5 text-center bg-[#1a0a2a]/50 border-[#00ffff]/70 bg-[#00ffff]/10 pixel-card">
+          <Card className="p-5 text-center bg-[#1a0a2a]/10 border-[#00ffff]/70 backdrop-blur-xs pixel-card">
             <div className="text-xl font-bold text-[#00ffff] mb-1 pixel-text glow-cyan">{accuracy}%</div>
             <div className="text-xs text-[#ff6bff] pixel-text">Accuracy</div>
           </Card>

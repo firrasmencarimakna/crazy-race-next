@@ -15,6 +15,7 @@ import { usePreloaderScreen } from "@/components/preloader-screen"
 import LoadingRetro from "@/components/loadingRetro"
 import LoadingRetroScreen from "@/components/loading-screnn"
 import { useAuth } from "@/contexts/authContext"
+import { generateXID } from "@/lib/id-generator"
 
 function LogoutDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const router = useRouter();
@@ -75,6 +76,9 @@ export default function HomePage() {
   const [roomCode, setRoomCode] = useState("")
   const [nickname, setNickname] = useState("")
 
+  const [profile, setProfile] = useState<any>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+
   // State untuk UI modals dan menu
   const [isMenuOpen, setIsMenuOpen] = useState(false) // Toggle menu burger
   const [showHowToPlay, setShowHowToPlay] = useState(false) // Modal How to Play
@@ -83,7 +87,7 @@ export default function HomePage() {
 
   // State untuk modal alert (spesifik berdasarkan reason)
   const [showAlert, setShowAlert] = useState(false)
-  const [alertReason, setAlertReason] = useState<'roomCode' | 'nickname' | 'both' | 'general' | 'roomNotFound' | ''>('')
+  const [alertReason, setAlertReason] = useState<'roomCode' | 'nickname' | 'both' | 'general' | 'duplicate' | 'roomNotFound' | ''>('')
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   // Refs untuk audio elements
@@ -158,27 +162,71 @@ export default function HomePage() {
 
   const totalPages = steps.length
 
-
-  // useEffect: Clear localStorage on mount (reset session data)
+  // TAMBAH: Fetch profile setelah auth ready
   useEffect(() => {
-    localStorage.removeItem("nickname")
-    localStorage.removeItem("playerId")
-    localStorage.removeItem("nextQuestionIndex")
+    const fetchProfile = async () => {
+      if (!user?.id || profileLoading) return;
+      setProfileLoading(true);
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('auth_user_id', user.id)
+        .single();
 
-    if (user?.user_metadata?.full_name) {
-      setNickname(user.user_metadata.full_name); // Use full name (e.g., "Muhammad Huda")
-      localStorage.setItem("nickname", user.user_metadata.full_name);
-    } else if (user?.email) {
-      const usernameFromEmail = user.email.split('@')[0]; // Fallback to email username
-      setNickname(usernameFromEmail);
-      localStorage.setItem("nickname", usernameFromEmail);
+      if (error) {
+        console.error('Error fetching profile:', error);
+      } else {
+        setProfile(profileData);
+        console.log("============== hanya untuk debug =================")
+        console.log("Tersambung dengan supabase gameforsmart.com")
+      console.log("fullname:", profileData.fullname)
+      console.log("profile", profileData)
+      }
+      setProfileLoading(false);
+    };
+
+    if (user) {
+      fetchProfile();
     } else {
-      // Final fallback to random
-      const randomNick = generateNickname();
-      setNickname(randomNick);
-      localStorage.setItem("nickname", randomNick);
+      setProfile(null);
+      setProfileLoading(false);
     }
-  }, [user])
+  }, [user]);
+
+  // UPDATE: useEffect untuk set nickname (dari profile, bukan user_metadata)
+  useEffect(() => {
+    localStorage.removeItem("nickname");
+    localStorage.removeItem("playerId"); // Ganti ke participantId kalau perlu
+    localStorage.removeItem("nextQuestionIndex");
+
+    let defaultNick = generateNickname(); // Fallback random
+
+    if (profile?.fullname) {
+      defaultNick = profile.fullname;
+    } else if (profile?.username) {
+      defaultNick = profile.username;
+    } else if (user?.email) {
+      defaultNick = user.email.split('@')[0];
+    }
+
+    setNickname(defaultNick);
+    localStorage.setItem("nickname", defaultNick);
+  }, [user, profile]); // Tambah profile dependency
+
+  // OJO DI ILANGI BREE
+  // TAMBAH: Check kalau udah join, redirect ke lobby
+// useEffect(() => {
+//   if (authLoading || profileLoading) return;
+
+//   const participantId = localStorage.getItem('participantId');
+//   const gamePin = localStorage.getItem('game_pin');
+
+//   if (participantId && gamePin) {
+//     console.log('User already joined, redirecting to lobby');
+//     router.push(`/join/${gamePin}`);
+//     return;
+//   }
+// }, [authLoading, profileLoading, router]);
 
   // useEffect: Auto-fill roomCode dari URL query param (?code=ABC123)
   useEffect(() => {
@@ -227,24 +275,6 @@ export default function HomePage() {
   }, [volume, isMuted])
 
   /**
-   * Toggle mute/unmute audio.
-   */
-  const handleMuteToggle = () => {
-    setIsMuted(!isMuted)
-  }
-
-  /**
-   * Handle perubahan volume slider.
-   * @param {number[]} value - Array dari slider value [currentValue]
-   */
-  const handleVolumeChange = (value: number[]) => {
-    setVolume(value[0])
-    if (isMuted && value[0] > 0) {
-      setIsMuted(false) // Auto unmute jika volume dinaikkan dari 0
-    }
-  }
-
-  /**
    * Handle join race: Validasi input, insert player ke Supabase, navigasi ke lobby.
    */
   const handleJoin = async () => {
@@ -273,18 +303,18 @@ export default function HomePage() {
     setJoining(true) // Mulai loading
 
     try {
-      // Verify room exists dan status 'waiting'
-      const { data: roomData, error: roomError } = await supabase
-        .from("game_rooms")
-        .select("id, status")
-        .eq("room_code", roomCode)
-        .single()
+      // VERIFY: Ganti ke game_sessions, eq(game_pin), select tambah participants
+      const { data: sessionData, error: sessionError } = await supabase
+        .from("game_sessions")
+        .select("id, status, participants")
+        .eq("game_pin", roomCode)
+        .single();
 
-      if (roomError || !roomData) {
-        console.error("Error: Room not found", roomError)
-        setJoining(false)
-        setAlertReason('roomNotFound')
-        setShowAlert(true)
+      if (sessionError || !sessionData) {
+        console.error("Error: Session not found", sessionError);
+        setJoining(false);
+        setAlertReason('roomNotFound');
+        setShowAlert(true);
         // Play alert audio jika tidak muted
         if (alertAudioRef.current && !isMuted) {
           alertAudioRef.current.volume = volume / 100
@@ -294,33 +324,59 @@ export default function HomePage() {
         return
       }
 
-      if (roomData.status !== "waiting") {
-        console.error("Error: Room is not accepting players")
-        setJoining(false)
-        // Opsional: Bisa tambah alert lain untuk status room (misal 'roomInProgress'), tapi sementara return aja
-        return
+      if (sessionData.status !== "waiting") {
+        console.error("Error: Session is not accepting players");
+        setJoining(false);
+        return;
       }
 
-      // Insert player ke tabel players
-      const { error: playerError } = await supabase
-        .from("players")
-        .insert({
-          room_id: roomData.id,
-          nickname: nickname.trim(), // Trim whitespace
-          car: ["purple", "white", "black", "aqua", "blue"][Math.floor(Math.random() * 5)]
-        })
-
-      if (playerError) {
-        console.error("Error joining room:", playerError)
-        setJoining(false)
-        return
+      // CHECK: Optional - cek kalau nickname udah ada di participants (hindari duplicate)
+      const existingParticipant = sessionData.participants?.find(
+        (p: any) => p.nickname.toLowerCase() === nickname.trim().toLowerCase()
+      );
+      if (existingParticipant) {
+        console.error("Nickname already in session");
+        setJoining(false);
+        setAlertReason('general'); // Atau custom 'duplicateNickname'
+        setShowAlert(true);
+        return;
       }
 
-      // Simpan nickname di localStorage untuk session
-      localStorage.setItem("nickname", nickname.trim())
+      // BARU: Generate participant object
+      const participantId = generateXID() // Atau generateXID() kalau mau
+      const randomCar = ["purple", "white", "black", "aqua", "blue"][Math.floor(Math.random() * 5)];
+      const newParticipant = {
+        id: participantId,
+        nickname: nickname.trim(),
+        car: randomCar, // Asumsi schema support car
+        user_id: profile?.id || null, // Link ke profiles.id kalau logged in
+      };
+
+      // UPDATE: Append ke array participants
+      const updatedParticipants = [...(sessionData.participants || []), newParticipant];
+      const { error: updateError } = await supabase
+        .from("game_sessions")
+        .update({ participants: updatedParticipants })
+        .eq("id", sessionData.id);
+
+      if (updateError) {
+        console.error("Error joining session:", updateError);
+        setJoining(false);
+        return;
+      }
+
+      // Simpan untuk session (tambah participantId untuk lobby/game)
+      localStorage.setItem("nickname", nickname.trim());
+      localStorage.setItem("participantId", participantId); // Baru: untuk later use
+      localStorage.setItem("game_pin", roomCode);
+      localStorage.setItem("car", randomCar); // Kalau perlu di lobby
+      
+      
 
       // Navigasi ke lobby page
-      router.push(`/join/${roomCode}`)
+      setTimeout(() => {
+        router.push(`/join/${roomCode}`);
+      }, 500);
     } catch (error) {
       console.error("Unexpected error:", error)
       setJoining(false)
@@ -508,15 +564,16 @@ export default function HomePage() {
               <div className="flex items-center gap-3 p-3 bg-[#1a0a2a]/80 border border-[#00ffff]/30 rounded-lg">
                 {/* Avatar */}
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center overflow-hidden">
-                  {user?.user_metadata?.avatar_url ? (
+                  {profile?.avatar_url ? (
                     <img
-                      src={user.user_metadata.avatar_url}
+                      src={profile.avatar_url}
                       alt="Profile"
                       className="w-full h-full object-cover"
                     />
                   ) : (
                     <span className="text-xl font-bold text-white pixel-text">
-                      {user?.user_metadata?.full_name?.charAt(0)?.toUpperCase() ||
+                      {profile?.fullname?.charAt(0)?.toUpperCase() ||
+                        profile?.username?.charAt(0)?.toUpperCase() ||
                         user?.email?.charAt(0)?.toUpperCase() || 'U'}
                     </span>
                   )}
@@ -524,7 +581,7 @@ export default function HomePage() {
                 {/* Name & Email */}
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-[#00ffff] pixel-text ">
-                    {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
+                    {profile?.fullname || profile?.username || user?.email?.split('@')[0] || 'User'}
                   </p>
                 </div>
               </div>
@@ -831,7 +888,7 @@ export default function HomePage() {
               </CardHeader>
               <CardContent>
                 <Link href="/host">
-                  <Button className="w-full bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white focus:ring-[#00ffff]/30 transition-all duration-200">
+                  <Button className="w-full bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white focus:ring-[#00ffff]/30 transition-all duration-200 cursor-pointer">
                     Create Room
                   </Button>
                 </Link>
@@ -902,7 +959,7 @@ export default function HomePage() {
               <CardFooter>
                 <Button
                   onClick={handleJoin}
-                  disabled={joining}
+                  disabled={joining || profileLoading}
                   className={`w-full transition-all duration-300 ease-in-out pixel-button-large retro-button ${joining
                     ? 'opacity-50 cursor-not-allowed'
                     : `bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white border-[#0070f3]/80 hover:border-[#0ea5e9]/80 glow-cyan cursor-pointer`
