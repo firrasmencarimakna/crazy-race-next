@@ -112,9 +112,9 @@
       "id": "Bahasa Indonesia"
     }
   },
-    "quizList": {
+    "soal": {
     "title": "Select Quiz",
-    "searchPlaceholder": "Search Quiz...",
+    "search": "Search Quiz...",
     "allCategories": "All Categories",
     "previous": "Previous",
     "next": "Next",
