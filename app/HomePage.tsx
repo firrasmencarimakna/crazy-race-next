@@ -68,7 +68,7 @@ export default function HomePage() {
   const [currentPage, setCurrentPage] = useState(0)
   const [showTryoutInput, setShowTryoutInput] = useState(false)
   const [showAlert, setShowAlert] = useState(false)
-  const [alertReason, setAlertReason] = useState<'roomCode' | 'nickname' | 'both' | 'general' | 'roomNotFound' | ''>('')
+  const [alertReason, setAlertReason] = useState<'roomCode' | 'nickname' | 'both' | 'general' | 'roomNotFound' | 'duplicateNickname' | ''>('')
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   const [showLanguageMenu, setShowLanguageMenu] = useState(false)
   const [currentLanguage, setCurrentLanguage] = useState('en') // Added missing state
@@ -198,11 +198,6 @@ export default function HomePage() {
       console.log("Trigger alert:", reason || 'general')
       setAlertReason(reason || 'general')
       setShowAlert(true)
-      if (alertAudioRef.current && !isMuted) {
-        alertAudioRef.current.volume = volume / 100
-        alertAudioRef.current.currentTime = 0
-        alertAudioRef.current.play().catch((e) => console.log("Audio error:", e))
-      }
       return
     }
 
@@ -220,17 +215,33 @@ export default function HomePage() {
         setJoining(false)
         setAlertReason('roomNotFound')
         setShowAlert(true)
-        if (alertAudioRef.current && !isMuted) {
-          alertAudioRef.current.volume = volume / 100
-          alertAudioRef.current.currentTime = 0
-          alertAudioRef.current.play().catch((e) => console.log("Audio error:", e))
-        }
         return
       }
 
       if (roomData.status !== "waiting") {
         console.error("Error: Room is not accepting players")
         setJoining(false)
+        return
+      }
+
+      // Check for duplicate nickname
+      const { count: existingCount, error: countError } = await supabase
+        .from("players")
+        .select("*", { count: 'exact', head: true })
+        .eq("room_id", roomData.id)
+        .eq("nickname", nickname.trim())
+
+      if (countError) {
+        console.error("Error checking duplicate nickname:", countError)
+        setJoining(false)
+        return
+      }
+
+      if (existingCount && existingCount > 0) {
+        console.error("Duplicate nickname detected")
+        setJoining(false)
+        setAlertReason('duplicateNickname')
+        setShowAlert(true)
         return
       }
 
@@ -261,11 +272,6 @@ export default function HomePage() {
       console.log("Trigger tryout alert: nickname empty")
       setAlertReason('nickname')
       setShowAlert(true)
-      if (alertAudioRef.current && !isMuted) {
-        alertAudioRef.current.volume = volume / 100
-        alertAudioRef.current.currentTime = 0
-        alertAudioRef.current.play().catch((e) => console.log("Audio error:", e))
-      }
       return
     }
     setJoining(true)
@@ -388,7 +394,7 @@ export default function HomePage() {
             initial={{ opacity: 0, x: 300 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 300 }}
-            className="absolute top-20 right-4 z-30 w-64 bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm scrollbar-themed max-h-[70vh] overflow-y-auto"
+            className="absolute top-20 right-4 z-30 w-64 sm:w-72 bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm scrollbar-themed max-h-[70vh] overflow-y-auto"
           >
             <div className="space-y-4">
               <div className="flex items-center gap-3 p-3 bg-[#1a0a2a]/80 border border-[#00ffff]/30 rounded-lg">
@@ -632,10 +638,10 @@ export default function HomePage() {
       <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
         <div className="text-center relative pb-5 sm:pt-3 pt-16 space-y-3">
           <div className="pixel-border-large mx-auto relative z-0">
-            <h1 className="font-bold bg-clip-text text-4xl md:text-5xl lg:text-6xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-[#ff6bff] to-[#00ffff] tracking-wider drop-shadow-[0_0_4px_rgba(139,92,246,0.6)]">
+            <h1 className="font-bold bg-clip-text text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-[#ff6bff] to-[#00ffff] tracking-wider drop-shadow-[0_0_4px_rgba(139,92,246,0.6)]">
               {t('mainTitle.title1')}
             </h1>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff6bff] to-[#00ffff] relative z-10">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff6bff] to-[#00ffff] relative z-10">
               {t('mainTitle.title2')}
             </h2>
           </div>
@@ -647,12 +653,12 @@ export default function HomePage() {
               borderRadius: '4px'
             }}
           >
-            <p className="text-sm md:text-base px-4 py-2 bg-[#1a0a2a] text-white">
+            <p className="text-xs sm:text-sm md:text-base px-4 py-2 bg-[#1a0a2a] text-white">
               {t('mainTitle.subtitle')}
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-4xl w-full px-4 grid-rows-none sm:grid-flow-row grid-flow-dense max-sm:[grid-area:'join'_'host']">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-4xl w-full px-4 grid-rows-none sm:grid-flow-row grid-flow-dense max-sm:[grid-template-areas:'join'_'host']">
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
@@ -668,16 +674,16 @@ export default function HomePage() {
                 >
                   <Flag className="w-8 h-8 text-white" />
                 </motion.div>
-                <CardTitle className="text-xl font-bold text-[#00ffff] pixel-text glow-pink">
+                <CardTitle className="text-lg sm:text-xl font-bold text-[#00ffff] pixel-text glow-pink">
                   {t('hostGame.title')}
                 </CardTitle>
-                <CardDescription className="text-[#00ffff]/80 text-sm pixel-text glow-pink-subtle">
+                <CardDescription className="text-[#00ffff]/80 text-xs sm:text-sm pixel-text glow-pink-subtle">
                   {t('hostGame.description')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Link href="/host">
-                  <Button className="w-full bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white focus:ring-[#00ffff]/30 transition-all duration-200">
+                  <Button className="w-full bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white focus:ring-[#00ffff]/30 transition-all duration-200 text-sm sm:text-base py-3">
                     {t('hostGame.button')}
                   </Button>
                 </Link>
@@ -699,14 +705,14 @@ export default function HomePage() {
                 >
                   <Users className="w-8 h-8 text-white" />
                 </motion.div>
-                <CardTitle className="text-xl font-bold text-[#00ffff] glow-cyan pixel-text">
+                <CardTitle className="text-lg sm:text-xl font-bold text-[#00ffff] glow-cyan pixel-text">
                   {t('joinRace.title')}
                 </CardTitle>
-                <CardDescription className="text-sm text-[#00ffff]/80 glow-cyan-subtle pixel-text">
+                <CardDescription className="text-xs sm:text-sm text-[#00ffff]/80 glow-cyan-subtle pixel-text">
                   {t('joinRace.description')}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-3 sm:space-y-2">
                 <Input
                   placeholder={t('joinRace.roomCodePlaceholder')}
                   value={roomCode}
@@ -715,7 +721,7 @@ export default function HomePage() {
                     const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()
                     setRoomCode(value)
                   }}
-                  className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
+                  className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-xs sm:text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
                   aria-label="Room Code"
                 />
                 <div className="relative">
@@ -724,16 +730,16 @@ export default function HomePage() {
                     value={nickname}
                     maxLength={15}
                     onChange={(e) => setNickname(e.target.value)}
-                    className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30 pr-10"
+                    className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-xs sm:text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30 pr-10"
                     aria-label="Nickname"
                   />
                   <button
                     type="button"
                     onClick={() => setNickname(generateNickname())}
-                    className="absolute right-2 top-1/8 text-[#00ffff] hover:bg-[#00ffff]/20 hover:border-[#00ffff] transition-all duration-200 glow-cyan-subtle"
+                    className="absolute right-2 top-1/8 text-[#00ffff] hover:bg-[#00ffff]/20 hover:border-[#00ffff] transition-all duration-200 glow-cyan-subtle p-1"
                     aria-label="Generate Nickname"
                   >
-                    <span className="text-lg">🎲</span>
+                    <span className="text-base sm:text-lg">🎲</span>
                   </button>
                 </div>
               </CardContent>
@@ -744,7 +750,7 @@ export default function HomePage() {
                   className={`w-full transition-all duration-300 ease-in-out pixel-button-large retro-button ${joining
                     ? 'opacity-50 cursor-not-allowed'
                     : `bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white border-[#0070f3]/80 hover:border-[#0ea5e9]/80 glow-cyan cursor-pointer`
-                    }`}
+                    } text-xs sm:text-sm py-3`}
                 >
                   {joining ? t('joinRace.joining') : t('joinRace.joinButton')}
                 </Button>
@@ -932,7 +938,7 @@ export default function HomePage() {
           .pixel-button-large {
             padding: 1rem 1.5rem;
             font-size: 0.9rem;
-          }
+          } 
           .retro-button {
             padding: 10px;
             font-size: 0.9rem;
