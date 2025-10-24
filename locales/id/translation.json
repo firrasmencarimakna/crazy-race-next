@@ -112,9 +112,9 @@
       "id": "Bahasa Indonesia"
     }
   },
-   "quizList": {
+   "soal": {
     "title": "Pilih Kuis",
-    "searchPlaceholder": "Cari Kuis...",
+    "search": "Cari Kuis...",
     "allCategories": "Semua Kategori",
     "previous": "Sebelumnya",
     "next": "Selanjutnya",
