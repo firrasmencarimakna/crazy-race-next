@@ -40,6 +40,10 @@
       "title": "Oops Belum Siap Balapan",
       "message": "Fill in the Room Code (6 letters) and Nickname first, OK!"
     },
+    "duplicateNickname": {
+      "title": "Oops! Duplicate Nickname!",
+      "message": "That nickname is already taken in this room. Please choose another one."
+    },
     "closeButton": "Okay!"
   },
   "menu": {
@@ -83,5 +87,91 @@
     "title1": "CRAZY",
     "title2": "RACE",
     "subtitle": "ANSWER • RACE • WIN"
+  },
+    "hostSettings": {
+    "title": "Game Settings",
+    "quizTitle": "Selected Quiz",
+    "duration": "Duration",
+    "questions": "Questions",
+    "difficulty": "Difficulty",
+    "difficultyOptions": {
+      "Easy": "Easy",
+      "Medium": "Medium",
+      "Hard": "Hard"
+    },
+    "continueButton": "Continue",
+    "errorQuizNotFound": "Error: Quiz Not Found",
+    "backButton": "Back to Host",
+    "sound": "Sound",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "volume": "Volume",
+    "language": "Language",
+    "languages": {
+      "en": "English",
+      "id": "Bahasa Indonesia"
+    }
+  },
+    "quizList": {
+    "title": "Select Quiz",
+    "searchPlaceholder": "Search Quiz...",
+    "allCategories": "All Categories",
+    "previous": "Previous",
+    "next": "Next",
+    "initializing": "INITIALIZING...",
+    "noArchives": "NO ARCHIVES FOUND",
+    "backToHome": "Back to Home",
+    "sound": "Sound",
+    "volume": "Volume",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "language": "Language"
+  },
+    "hostRoom": {
+    "title": "Host Room",
+    "start": "Start",
+    "players": "{{count}} Player",
+    "waiting": "Waiting for players to join...",
+    "kickConfirmation": "Kick {{name}}?",
+    "cancel": "Cancel",
+    "kick": "Kick",
+    "backToSettings": "Back to Host",
+    "sound": "Sound",
+    "volume": "Volume",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "language": "Language",
+    "languages": {
+      "en": "English",
+      "id": "Bahasa Indonesia"
+    }
+  },
+    "lobby": {
+    "title": "Waiting Room",
+    "chooseCar": "CHOOSE CAR",
+    "exit": "Exit",
+    "": "Exit Room?",
+    "goToHomepage": "You will Go to the Homepage.",
+    "cancel": "Cancel",
+    "you": "YOU",
+    "languages": {
+      "en": "English",
+      "id": "Bahasa Indonesia"
+    }
+  },
+  "monitor":{
+  "title" : "Race Progrress",
+  "button": "End Race"
+
+  },
+    "resulthost":{
+    "title": "Leaderboard"
+  },
+  "joinresult":{
+    "title": "Result",
+    "correct": "Correct",
+    "score": "Score",
+    "time": "Time",
+    "accuracy": "Accuracy"
   }
 }

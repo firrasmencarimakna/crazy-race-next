@@ -40,6 +40,10 @@
       "title": "Oops Belum Siap Balapan!",
       "message": "Isi Kode Ruangan (6 huruf) dan Nama Panggilan dulu, ya!"
     },
+    "duplicateNickname": {
+      "title": "Oops! Nama Panggilan Duplikat!",
+      "message": "Nama panggilan itu sudah digunakan di ruangan ini. Silakan pilih yang lain."
+    },
     "closeButton": "Oke!"
   },
   "menu": {
@@ -83,5 +87,108 @@
     "title1": "CRAZY",
     "title2": "RACE",
     "subtitle": "JAWAB • BALAPAN • MENANG"
+  },
+   "hostSettings": {
+    "title": "Pengaturan Permainan",
+    "quizTitle": "Kuis Terpilih",
+    "duration": "Menit",
+    "questions": "Jumlah Soal",
+    "difficulty": "Tingkat Kesulitan",
+    "difficultyOptions": {
+      "Easy": "Mudah",
+      "Medium": "Sedang",
+      "Hard": "Sulit"
+    },
+    "continueButton": "Lanjutkan",
+    "errorQuizNotFound": "Kesalahan: Kuis Tidak Ditemukan",
+    "backButton": "Kembali ke Host",
+    "sound": "Suara",
+    "mute": "Senyap",
+    "unmute": "Bunyikan",
+    "volume": "Volume",
+    "language": "Bahasa",
+    "languages": {
+      "en": "Inggris",
+      "id": "Bahasa Indonesia"
+    }
+  },
+   "quizList": {
+    "title": "Pilih Kuis",
+    "searchPlaceholder": "Cari Kuis...",
+    "allCategories": "Semua Kategori",
+    "previous": "Sebelumnya",
+    "next": "Selanjutnya",
+    "initializing": "MEMUAT...",
+    "noArchives": "TIDAK ADA ARSIP DITEMUKAN",
+    "backToHome": "Kembali ke Beranda",
+    "sound": "Suara",
+    "volume": "Volume",
+    "mute": "Senyap",
+    "unmute": "Bunyikan",
+    "language": "Bahasa"
+  },
+    "hostRoom": {
+    "title": "Ruang Host",
+    "start": "Mulai",
+    "players": "{{count}} Pemain",  "hostRoom": {
+    "title": "Ruangan Host",
+    "start": "Mulai",
+    "players": "{{count}} Pemain{{#if (gt count 1)}}s{{/if}}",
+    "waiting": "Menunggu pemain bergabung...",
+    "kickConfirmation": "Kick {{name}}?",
+    "cancel": "Batal",
+    "kick": "Kick",
+    "backToSettings": "Kembali ke Host",
+    "sound": "Suara",
+    "volume": "Volume",
+    "mute": "Senyap",
+    "unmute": "Bunyikan",
+    "language": "Bahasa",
+    "languages": {
+      "en": "Inggris",
+      "id": "Bahasa Indonesia"
+    }
+  },
+    "waiting": "Menunggu pemain bergabung...",
+    "kickConfirmation": "Kick {{name}}?",
+    "cancel": "Batal",
+    "kick": "Kick",
+    "backToSettings": "Kembali ke Host",
+    "sound": "Suara",
+    "volume": "Volume",
+    "mute": "Senyap",
+    "unmute": "Bunyikan",
+    "language": "Bahasa",
+    "languages": {
+      "en": "Inggris",
+      "id": "Bahasa Indonesia"
+    }
+  },
+   "lobby": {
+    "title": "Ruang Tunggu",
+    "chooseCar": "PILIH MOBIL",
+    "exit": "Keluar",
+    "exitRoom": "Keluar Ruangan?",
+    "goToHomepage": "Anda akan kembali ke Beranda.",
+    "cancel": "Batal",
+    "you": "ANDA",
+    "languages": {
+      "en": "Inggris",
+      "id": "Bahasa Indonesia"
+    }
+  },
+  "monitor":{
+  "title" : "Progress Balapan",
+  "button": "Akhiri Balapan"
+  },
+  "resulthost":{
+    "title": "Peringkat"
+  },
+    "joinresult":{
+    "title": "Hasil",
+    "correct": "Benar",
+    "score": "Skor",
+    "time": "Waktu",
+    "accuracy": "Ketepatan"
   }
 }
