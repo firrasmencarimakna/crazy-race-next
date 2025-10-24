@@ -169,5 +169,5 @@
 html, body {
   font-family: 'Press Start 2P', cursive, monospace !important;
   image-rendering: pixelated;
-  user-select: none;
+  /* user-select: none; */
 }

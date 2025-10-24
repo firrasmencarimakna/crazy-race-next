@@ -27,7 +27,6 @@ type PlayerStats = {
 // Background GIFs (reuse from player results)
 const backgroundGifs = [
   "/assets/background/host/10.webp",
-  // Add more if available, or cycle this one
 ]
 
 const carGifMap: Record<string, string> = {
@@ -39,156 +38,149 @@ const carGifMap: Record<string, string> = {
 }
 
 export default function HostLeaderboardPage() {
-  const params = useParams()
-  const router = useRouter()
-  const roomCode = params.roomCode as string
+  const params = useParams();
+  const router = useRouter();
+  const roomCode = params.roomCode as string;
 
-  const [loading, setLoading] = useState(true)
-  const [playerStats, setPlayerStats] = useState<PlayerStats[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [currentBgIndex, setCurrentBgIndex] = useState(0)
-  const [roomId, setRoomId] = useState<string>("")
+  const [loading, setLoading] = useState(true);
+  const [playerStats, setPlayerStats] = useState<PlayerStats[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [currentBgIndex, setCurrentBgIndex] = useState(0);
 
-  const computePlayerStats = (result: any[], questions: any[]): Omit<PlayerStats, 'nickname' | 'car' | 'rank'> => {
-    // Parse aggregated result from players.result[0]
-    const stats = result[0] || {}
-    const totalQuestions = questions.length || stats.total_question || 0
-    const correctAnswers = stats.correct || 0
-    const accuracy = parseFloat(stats.accuracy) || (totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0)
-    const totalSeconds = stats.duration || 0
-    const mins = Math.floor(totalSeconds / 60)
-    const secs = Math.floor(totalSeconds % 60)
-    const totalTime = `${mins}:${secs.toString().padStart(2, '0')}`
-    const finalScore = stats.score || (correctAnswers * 10)
+  const computePlayerStats = (response: any, totalQuestions: number): Omit<PlayerStats, 'nickname' | 'car' | 'rank'> => {
+    const stats = response || {};
+    const correctAnswers = stats.correct || 0;
+    const accuracy = parseFloat(stats.accuracy) || (totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0);
+    const totalSeconds = stats.duration || 0;
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = Math.floor(totalSeconds % 60);
+    const totalTime = `${mins}:${secs.toString().padStart(2, '0')}`;
+    const finalScore = stats.score || (correctAnswers * 10);
 
-    return { finalScore, correctAnswers, totalQuestions, accuracy, totalTime, duration: totalSeconds }
-  }
+    return { finalScore, correctAnswers, totalQuestions, accuracy, totalTime, duration: totalSeconds };
+  };
 
-  // Pindahin fetchData ke function standalone + useCallback
+  // Fetch data
   const fetchData = useCallback(async () => {
     try {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
 
-      const { data: roomData, error: roomError } = await supabase
-        .from('game_rooms')
-        .select('*')
-        .eq('room_code', roomCode)
-        .single()
+      const { data: sessionData, error: sessionError } = await supabase
+        .from('game_sessions')
+        .select('participants, responses')
+        .eq('game_pin', roomCode)
+        .single();
 
-      if (roomError || !roomData) {
-        console.error('Error fetching room:', roomError)
-        setError('Failed to load room data')
-        return
+      if (sessionError || !sessionData) {
+        console.error('Error fetching session:', sessionError);
+        setError('Failed to load session data');
+        return;
       }
 
-      setRoomId(roomData.id)
-
-      // Format questions with ids to match player (though not used now, keep for future)
-      const formattedQuestions = (roomData.questions || []).map((q: any, i: number) => ({
-        id: `${roomCode}-${i}`,
-        ...q,
-        correct_answer: q.correct,
-      }))
-
-      const { data: playersData, error: playersError } = await supabase
-        .from('players')
-        .select('*')
-        .eq('room_id', roomData.id)
-        .eq('completion', true)
-
-      if (playersError || !playersData || playersData.length === 0) {
-        console.error('Error fetching players:', playersError)
-        setError('No completed players found')
-        return
+      // Parse participants & responses
+      let parsedParticipants = [];
+      let parsedResponses = [];
+      try {
+        parsedParticipants = typeof sessionData.participants === 'string' ? JSON.parse(sessionData.participants) : sessionData.participants || [];
+        parsedResponses = typeof sessionData.responses === 'string' ? JSON.parse(sessionData.responses) : sessionData.responses || [];
+      } catch (e) {
+        console.error('Parse error:', e);
+        setError('Failed to parse data');
+        return;
       }
 
-      // Compute stats for all players
-      const allStats = playersData
-        .filter((p: any) => p.result && p.result.length > 0)
-        .map((p: any) => ({
-          ...computePlayerStats(p.result, formattedQuestions),
-          nickname: p.nickname,
-          car: p.car
-        }))
+      if (parsedResponses.length === 0) {
+        setError('No responses found');
+        return;
+      }
+
+      // Filter complete responses
+      const completeResponses = parsedResponses.filter((r: any) => r.current_question === r.total_question && r.total_question > 0);
+
+      if (completeResponses.length === 0) {
+        setError('No completed players');
+        return;
+      }
+
+      // Compute stats
+      const allStats = completeResponses
+        .filter((r: any) => r.participant)
+        .map((r: any) => {
+          const participant = parsedParticipants.find((p: any) => p.id === r.participant);
+          if (!participant) return null;
+          return {
+            ...computePlayerStats(r, r.total_question || 0),
+            nickname: participant.nickname,
+            car: participant.car || 'blue',
+          };
+        })
+        .filter(Boolean); // Remove null
 
       if (allStats.length === 0) {
-        setError('No valid results')
-        return
+        setError('No valid results');
+        return;
       }
 
-      // Sort by finalScore descending for ranking
-      const sortedStats = [...allStats].sort((a, b) =>
-        b.finalScore - a.finalScore || a.duration - b.duration  // Tie-breaker: durasi kecil dulu
-      )
+      // Sort & rank
+      const sortedStats = [...allStats].sort((a, b) => 
+        b.finalScore - a.finalScore || a.duration - b.duration
+      );
       const rankedStats = sortedStats.map((stats, index) => ({
         ...stats,
-        rank: index + 1
-      }))
+        rank: index + 1,
+      }));
 
-      setPlayerStats(rankedStats)
-    } catch (err) {
-      console.error('Error fetching data:', err)
-      setError('Failed to load leaderboard')
+      setPlayerStats(rankedStats);
+    } catch (err: any) {
+      console.error('Error fetching data:', err);
+      setError('Failed to load leaderboard');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [roomCode]) // Deps: roomCode
+  }, [roomCode]);
 
-  // Initial fetch
   useEffect(() => {
-    if (roomCode) {
-      fetchData()
-    }
-  }, [fetchData]) // Depend pada fetchData callback
+    if (roomCode) fetchData();
+  }, [fetchData]);
 
-  // Realtime subscription for players updates (only after room loaded)
+  // Realtime sub
   useEffect(() => {
-    if (!roomId) return
+    if (!roomCode) return;
 
     const subscription = supabase
-      .channel(`host-leaderboard-${roomId}`)
+      .channel(`host-leaderboard-${roomCode}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'players',
-          filter: `room_id=eq.${roomId}`,
+          table: 'game_sessions',
+          filter: `game_pin=eq.${roomCode}`,
         },
-        async (payload) => {
-          console.log('Leaderboard player update:', payload.new)
-          // Refetch full data to recompute ranks
-          await fetchData()
-        }
+        () => fetchData() // Refetch on update
       )
-      .subscribe()
+      .subscribe();
 
-    return () => {
-      supabase.removeChannel(subscription)
-    }
-  }, [roomId, fetchData]) // Tambah fetchData di deps
+    return () => supabase.removeChannel(subscription);
+  }, [roomCode, fetchData]);
 
-  // Background cycling
+  // Background
   useEffect(() => {
     const bgInterval = setInterval(() => {
-      setCurrentBgIndex((prev) => (prev + 1) % backgroundGifs.length)
-    }, 5000)
-    return () => clearInterval(bgInterval)
-  }, [])
+      setCurrentBgIndex((prev) => (prev + 1) % backgroundGifs.length);
+    }, 5000);
+    return () => clearInterval(bgInterval);
+  }, []);
 
   const getRankColor = (rank: number) => {
     switch (rank) {
-      case 1:
-        return "text-yellow-400 glow-gold"
-      case 2:
-        return "text-gray-300 glow-silver"
-      case 3:
-        return "text-amber-600 glow-bronze"
-      default:
-        return "text-[#00ffff]"
+      case 1: return "text-yellow-400 glow-gold";
+      case 2: return "text-gray-300 glow-silver";
+      case 3: return "text-amber-600 glow-bronze";
+      default: return "text-[#00ffff]";
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -205,7 +197,7 @@ export default function HostLeaderboardPage() {
           />
         </AnimatePresence>
       </div>
-    )
+    );
   }
 
   if (error || playerStats.length === 0) {
@@ -235,11 +227,11 @@ export default function HostLeaderboardPage() {
           </Card>
         </div>
       </div>
-    )
+    );
   }
 
-  const topThree = playerStats.slice(0, 3)
-  const others = playerStats.slice(3)
+  const topThree = playerStats.slice(0, 3);
+  const others = playerStats.slice(3);
 
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">

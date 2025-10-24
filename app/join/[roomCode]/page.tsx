@@ -62,43 +62,31 @@ export default function LobbyPage() {
     car: null,
   });
 
-  const [players, setPlayers] = useState<any[]>([])
-  const [room, setRoom] = useState<any>(null)
-  const [quizTitle, setQuizTitle] = useState("")
+  const [participants, setParticipants] = useState<any[]>([]); // Ganti dari players → participants
+  const [session, setSession] = useState<any>(null); // Ganti dari room → session
   const [gamePhase, setGamePhase] = useState("waiting")
   const [countdown, setCountdown] = useState(0)
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [showCarDialog, setShowCarDialog] = useState(false)
   const [showExitDialog, setShowExitDialog] = useState(false)
+  const hasBootstrapped = useRef(false); // Prevent double bootstrap
 
-  const handleExit = async () => {
-    if (!currentPlayer.id) return;
-
-    const { error } = await supabase
-      .from('players')
-      .delete()
-      .eq('id', currentPlayer.id);
-
-    if (error) {
-      console.error('Error deleting player:', error);
-    } else {
-      console.log('Player exited room successfully');
-      localStorage.removeItem('playerId');
-      router.push('/');
-    }
-    setShowExitDialog(false);
+  // UPDATE: calculateCountdown inline (sama seperti host)
+  const calculateCountdown = (startTimestamp: string, durationSeconds: number = 10): number => {
+    const start = new Date(startTimestamp).getTime();
+    const now = Date.now();
+    const elapsed = (now - start) / 1000;
+    return Math.max(0, Math.floor(durationSeconds - elapsed));
   };
 
   // Fungsi sync countdown (pakai ref, no dependency loop)
   const startCountdownSync = useCallback((startTimestamp: string, duration: number = 10) => {
-    // Clear existing
     if (countdownIntervalRef.current) {
       clearInterval(countdownIntervalRef.current);
       countdownIntervalRef.current = null;
     }
 
-    // Initial calc
     let remaining = calculateCountdown(startTimestamp, duration);
     setCountdown(remaining);
 
@@ -107,7 +95,6 @@ export default function LobbyPage() {
       return;
     }
 
-    // Interval update
     countdownIntervalRef.current = setInterval(() => {
       remaining = calculateCountdown(startTimestamp, duration);
       setCountdown(remaining);
@@ -120,7 +107,7 @@ export default function LobbyPage() {
         setCountdown(0);
       }
     }, 1000);
-  }, []);  // No deps needed, ref stabil
+  }, []);
 
   const stopCountdownSync = useCallback(() => {
     if (countdownIntervalRef.current) {
@@ -130,152 +117,188 @@ export default function LobbyPage() {
     setCountdown(0);
   }, []);
 
-  // Monitor status room dan auto-redirect (tambah 'finished')
+  // UPDATE: Monitor status & auto-redirect
   useEffect(() => {
-    if (room?.status === 'playing' && !loading) {
-      console.log('Lobby detected playing status, redirecting to game');
+    if (session?.status === 'active' && !loading) {
       router.replace(`/join/${roomCode}/game`);
-    } else if (room?.status === 'finished' && !loading) {
-      console.log('Lobby detected finished status, redirecting to result');
+    } else if (session?.status === 'finished' && !loading) {
       router.replace(`/join/${roomCode}/result`);
     }
-  }, [room?.status, loading, roomCode, router]);
+  }, [session?.status, loading, roomCode, router]);
 
-  // Main bootstrap + subscriptions
+  // UPDATE: handleExit - remove dari participants array
+  const handleExit = async () => {
+    if (!currentPlayer.id || !session) return;
+
+    // Get current participants & remove by id
+    let currentParticipants = [];
+    try {
+      currentParticipants = typeof session.participants === 'string'
+        ? JSON.parse(session.participants)
+        : session.participants || [];
+    } catch (e) {
+      console.error("Error parsing participants for exit:", e);
+      return;
+    }
+
+    const updatedParticipants = currentParticipants.filter((p: any) => p.id !== currentPlayer.id);
+
+    const { error } = await supabase
+      .from('game_sessions')
+      .update({ participants: updatedParticipants })
+      .eq('game_pin', roomCode);
+
+    if (error) {
+      console.error('Error exiting session:', error);
+    } else {
+      console.log('Player exited session successfully, localstorage participant dan gamepin dihapus');
+      localStorage.removeItem('participantId'); // UPDATE: playerId → participantId
+      localStorage.removeItem('game_pin'); // Tambah: Clear pin
+      router.push('/');
+    }
+    setShowExitDialog(false);
+  };
+
+  // UPDATE: Main bootstrap + subscriptions - pakai game_sessions
   useEffect(() => {
+    if (hasBootstrapped.current) return;
+    hasBootstrapped.current = true;
+
     if (!roomCode) return;
 
-    let roomId = '';
-    let playerChannel: any = null;
-    let roomChannel: any = null;
+    let sessionChannel: any = null;
 
     const bootstrap = async () => {
       setLoading(true);
 
-      // 1. Fetch room
-      const { data: fetchedRoom, error: roomErr } = await supabase
-        .from('game_rooms')
-        .select('id, quiz_id, status, settings, countdown_start')
-        .eq('room_code', roomCode)
-        .single()
+      // 1. Fetch session
+      const { data: fetchedSession, error: sessionErr } = await supabase
+        .from('game_sessions')
+        .select('id, status, countdown_started_at, started_at, participants, quiz_detail') // Tambah participants & quiz_detail
+        .eq('game_pin', roomCode)
+        .single();
 
-      if (roomErr || !fetchedRoom) {
-        console.log('Room not found', roomErr);
+      if (sessionErr || !fetchedSession) {
+        console.log('Session not found', sessionErr);
         router.replace('/');
         return;
       }
 
-      console.log('Room data loaded', fetchedRoom);
-      roomId = fetchedRoom.id;
-      setRoom(fetchedRoom);
-      setGamePhase(fetchedRoom.status);
+      console.log("============== hanya untuk debug ===============");
+      console.log('Session data loaded', fetchedSession);
+      setSession(fetchedSession);
+      setGamePhase(fetchedSession.status);
 
-      // Immediate redirects
-      if (fetchedRoom.status === 'playing') {
-        router.replace(`/join/${roomCode}/game`);
-        return;
-      } else if (fetchedRoom.status === 'finished') {
-        router.replace(`/join/${roomCode}/result`);
-        return;
-      }
-
-      // Initial countdown sync
-      if (fetchedRoom.status === 'countdown' && fetchedRoom.countdown_start) {
-        startCountdownSync(fetchedRoom.countdown_start, 10);
+      if (fetchedSession.countdown_started_at) {  // Gak cek status, cukup field ini
+        startCountdownSync(fetchedSession.countdown_started_at, 10);
       } else {
         stopCountdownSync();
       }
 
-      // 2. Fetch quiz
-      const { data: quiz } = await supabase
-        .from('quizzes')
-        .select('title')
-        .eq('id', fetchedRoom.quiz_id)
-        .single()
-      if (quiz) setQuizTitle(quiz.title);
-
-      // 3. Fetch players
-      const { data: allPlayers, error: plErr } = await supabase
-        .from('players')
-        .select('id, nickname, car, joined_at')
-        .eq('room_id', roomId)
-        .order('joined_at', { ascending: true });
-
-      if (!plErr && allPlayers) {
-        setPlayers(allPlayers.map(p => ({ ...p, isReady: true })));
+      // Immediate redirects
+      if (fetchedSession.status === 'active') {
+        router.replace(`/join/${roomCode}/game`);
+        return;
+      } else if (fetchedSession.status === 'finished') {
+        router.replace(`/join/${roomCode}/result`);
+        return;
       }
 
-      // 4. Set current player
+      // 3. Parse participants untuk players
+      let parsedParticipants = [];
+      try {
+        parsedParticipants = typeof fetchedSession.participants === 'string'
+          ? JSON.parse(fetchedSession.participants)
+          : fetchedSession.participants || [];
+      } catch (e) {
+        console.error("Error parsing participants:", e);
+      }
+      setParticipants(parsedParticipants.map((p: any) => ({ ...p, isReady: true })));
+
+      // 4. Set current player - cari berdasarkan nickname atau participantId dari localStorage
       const myNick = localStorage.getItem('nickname') || '';
-      const me = allPlayers?.find(p => p.nickname === myNick);
+      const myParticipantId = localStorage.getItem('participantId') || '';
+      const me = parsedParticipants.find((p: any) => p.nickname === myNick || p.id === myParticipantId);
+
       if (!me) {
+        console.log("keluar karena tidak ada participant diriku");
         router.replace('/');
+        localStorage.removeItem('participantId');
+        localStorage.removeItem('game_pin');
         return;
       }
 
       setCurrentPlayer({ id: me.id, nickname: me.nickname, car: me.car || 'blue' });
-      localStorage.setItem('playerId', me.id);
+      localStorage.setItem('participantId', me.id); // Pastikan saved
 
-      // 5. Player subscription
-      playerChannel = supabase
-        .channel(`players:${roomCode}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'players', filter: `room_id=eq.${roomId}` }, (payload) => {
-          const newOne = { id: payload.new.id, nickname: payload.new.nickname, car: payload.new.car || 'blue', joined_at: new Date(payload.new.joined_at), isReady: true };
-          setPlayers(prev => [...prev, newOne]);
-          console.log('New player joined:', payload.new.nickname);
-        })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'players', filter: `room_id=eq.${roomId}` }, (payload) => {
-          console.log('Player updated:', payload.new.nickname, 'New car:', payload.new.car);
-          setPlayers(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p));
-        })
-        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'players', filter: `room_id=eq.${roomId}` }, (payload) => {
-          setPlayers(prev => prev.filter(p => p.id !== payload.old.id));
-          if (payload.old.id === currentPlayer.id) {
-            router.push('/');
-          }
-        })
-        .subscribe((status) => {
-          if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-            console.warn('Players sub dropped, retrying...');
-            setTimeout(bootstrap, 3000);
-          }
-        });
+      // 5. Session subscription (cover participants changes via UPDATE)
+      sessionChannel = supabase
+        .channel(`session:${roomCode}`)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'game_sessions',
+          filter: `game_pin=eq.${roomCode}`
+        }, (payload) => {
+          const newSessionData = payload.new;
+          console.log('Session update:', newSessionData.status);
+          setGamePhase(newSessionData.status);
+          setSession(newSessionData);
 
-      // 6. Room subscription (trigger sync!)
-      roomChannel = supabase
-        .channel(`room:${roomCode}`)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'game_rooms', filter: `room_code=eq.${roomCode}` }, (payload) => {
-          const newRoomData = payload.new;
-          console.log('Room update:', newRoomData.status);
-          setGamePhase(newRoomData.status);
-          setRoom(newRoomData);
+          // Parse updated participants
+          let updatedParticipants = [];
+          try {
+            updatedParticipants = typeof newSessionData.participants === 'string'
+              ? JSON.parse(newSessionData.participants)
+              : newSessionData.participants || [];
+          } catch (e) {
+            console.error("Error parsing updated participants:", e);
+          }
+          setParticipants(updatedParticipants.map((p: any) => ({ ...p, isReady: true })));
 
           // Auto-redirect
-          if (newRoomData.status === 'playing') {
+          if (newSessionData.status === 'active') {
             router.replace(`/join/${roomCode}/game`);
-          } else if (newRoomData.status === 'finished') {
+          } else if (newSessionData.status === 'finished') {
             router.replace(`/join/${roomCode}/result`);
           }
 
-          // Sync countdown on status change
-          if (newRoomData.status === 'countdown' && newRoomData.countdown_start) {
-            startCountdownSync(newRoomData.countdown_start, 10);
+          // Sync countdown - cek field saja
+          if (newSessionData.countdown_started_at) {
+            startCountdownSync(newSessionData.countdown_started_at, 10);
           } else {
             stopCountdownSync();
           }
+
+          // 🧠 Hanya cek kick kalau currentPlayer.id sudah terisi
+          // Ganti blok kick check kamu jadi:
+          const localId = localStorage.getItem('participantId');
+
+          if (!updatedParticipants.find((p: any) => p.id === (currentPlayer?.id || localId))) {
+            console.warn("🚪 Kicked from session (verified via fallback)");
+            localStorage.removeItem('participantId');
+            router.push('/');
+            return;
+          }
+
+          console.log('Realtime payload participants:', updatedParticipants);
+          console.log('Current player id:', currentPlayer.id);
         })
-        .subscribe();
+        .subscribe((status) => {
+          if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            console.warn('Session sub dropped, retrying...');
+            setTimeout(bootstrap, 3000);
+          }
+        });
 
       setLoading(false);
     };
 
     bootstrap();
 
-    // Cleanup semua di sini
     return () => {
       stopCountdownSync();
-      if (playerChannel) supabase.removeChannel(playerChannel);
-      if (roomChannel) supabase.removeChannel(roomChannel);
+      if (sessionChannel) supabase.removeChannel(sessionChannel);
     };
   }, [roomCode, router, startCountdownSync, stopCountdownSync]);
 
@@ -287,7 +310,7 @@ export default function LobbyPage() {
     return () => clearInterval(bgInterval);
   }, []);
 
-  const sortedPlayers = [...players].sort((a, b) => {
+  const sortedParticipants = [...participants].sort((a, b) => {
     if (a.id === currentPlayer.id) return -1;
     if (b.id === currentPlayer.id) return 1;
     return 0;
@@ -298,7 +321,7 @@ export default function LobbyPage() {
   }
 
   // Countdown display
-  if (countdown > 0 && room?.status === 'countdown') {
+  if (countdown > 0) {
     return (
       <div className={`min-h-screen bg-[#1a0a2a] flex items-center justify-center pixel-font`}>
         <div className="text-center">
@@ -314,20 +337,34 @@ export default function LobbyPage() {
     );
   }
 
-  // Handler pilih car
   const handleSelectCar = async (selectedCar: string) => {
-    if (!currentPlayer.id) return;
+    if (!currentPlayer.id || !session) return;
+
+    // Get current participants & update car
+    let currentParticipants = [];
+    try {
+      currentParticipants = typeof session.participants === 'string'
+        ? JSON.parse(session.participants)
+        : session.participants || [];
+    } catch (e) {
+      console.error("Error parsing participants for car update:", e);
+      return;
+    }
+
+    const updatedParticipants = currentParticipants.map((p: any) =>
+      p.id === currentPlayer.id ? { ...p, car: selectedCar } : p
+    );
 
     const { error } = await supabase
-      .from('players')
-      .update({ car: selectedCar })
-      .eq('id', currentPlayer.id);
+      .from('game_sessions')
+      .update({ participants: updatedParticipants })
+      .eq('game_pin', roomCode);
 
     if (error) {
       console.error('Error updating car:', error);
     } else {
       setCurrentPlayer(prev => ({ ...prev, car: selectedCar }));
-      setPlayers(prev => prev.map(p => p.id === currentPlayer.id ? { ...p, car: selectedCar } : p));
+      setParticipants(prev => prev.map(p => p.id === currentPlayer.id ? { ...p, car: selectedCar } : p));
       setShowCarDialog(false);
       console.log('Car updated successfully');
     }
@@ -386,7 +423,7 @@ export default function LobbyPage() {
               >
                 <Badge className="absolute bg-[#1a0a2a]/50 border-[#00ffff] text-[#00ffff] p-2 md:text-lg pixel-text glow-cyan top-0 left-0 gap-1 md:gap-3">
                   <Users className="!w-3 !h-3 md:!w-5 md:!h-5" />
-                  {players.length}
+                  {participants.length}
                 </Badge>
 
               </motion.div>
@@ -395,7 +432,7 @@ export default function LobbyPage() {
             <CardContent className="p-6">
               {/* Players Grid - 5 columns */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                {sortedPlayers.map((player) => (
+                {participants.map((player) => (
                   <motion.div
                     key={player.id}
                     className={`relative group ${player.id === currentPlayer.id ? 'glow-cyan' : 'glow-pink-subtle'

@@ -566,23 +566,6 @@
       triggerHapticFeedback('light');
     }
 
-    // async function updateRacingStatus() {
-    //   if (!playerId) return console.error("Missing playerId");
-
-    //   try {
-    //     const res = await fetch("/api/update-racing", {
-    //       method: "POST",
-    //       headers: { "Content-Type": "application/json" },
-    //       body: JSON.stringify({ playerId, racing: false }),
-    //     });
-
-    //     const data = await res.json();
-    //     console.log("Racing update result:", data);
-    //   } catch (err) {
-    //     console.error("Error updating racing:", err);
-    //   }
-    // }
-
     function update(dt) {
       if (gameFinished) {
         speed = 0; // Stop the car
