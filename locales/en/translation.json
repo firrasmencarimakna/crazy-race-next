@@ -88,9 +88,9 @@
     "title2": "RACE",
     "subtitle": "ANSWER • RACE • WIN"
   },
-    "hostSettings": {
-    "title": "Game Settings",
-    "quizTitle": "Selected Quiz",
+    "settings": {
+    "title": "Settings",
+    "quiztitle": "Selected Quiz",
     "duration": "Duration",
     "questions": "Questions",
     "difficulty": "Difficulty",
@@ -99,7 +99,7 @@
       "Medium": "Medium",
       "Hard": "Hard"
     },
-    "continueButton": "Continue",
+    "start": "Continue",
     "errorQuizNotFound": "Error: Quiz Not Found",
     "backButton": "Back to Host",
     "sound": "Sound",
@@ -115,7 +115,7 @@
     "soal": {
     "title": "Select Quiz",
     "search": "Search Quiz...",
-    "allCategories": "All Categories",
+    "categories": "All Categories",
     "previous": "Previous",
     "next": "Next",
     "initializing": "INITIALIZING...",
@@ -127,31 +127,26 @@
     "unmute": "Unmute",
     "language": "Language"
   },
-    "hostRoom": {
+    "hostroom": {
     "title": "Host Room",
     "start": "Start",
     "players": "{{count}} Player",
     "waiting": "Waiting for players to join...",
-    "kickConfirmation": "Kick {{name}}?",
+    "kickconfirmation": "Kick {{name}}?",
     "cancel": "Cancel",
     "kick": "Kick",
     "backToSettings": "Back to Host",
     "sound": "Sound",
     "volume": "Volume",
     "mute": "Mute",
-    "unmute": "Unmute",
-    "language": "Language",
-    "languages": {
-      "en": "English",
-      "id": "Bahasa Indonesia"
-    }
+    "unmute": "Unmute"
   },
     "lobby": {
     "title": "Waiting Room",
     "chooseCar": "CHOOSE CAR",
     "exit": "Exit",
-    "": "Exit Room?",
-    "goToHomepage": "You will Go to the Homepage.",
+    "keluar": "Exit Room?",
+    "homepage": "You will Go to the Homepage.",
     "cancel": "Cancel",
     "you": "YOU",
     "languages": {

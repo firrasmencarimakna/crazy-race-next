@@ -6,13 +6,14 @@ import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
-import { ArrowLeft, Clock, Hash, Play, Volume2, VolumeX, Menu, X, Settings } from "lucide-react"
+import { ArrowLeft, Clock, Hash, Play, Menu, X, Settings } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
 import { motion } from "framer-motion" // HAPUS: AnimatePresence, karena nggak ada transisi lagi
 import { supabase } from "@/lib/supabase"
 import LoadingRetro from "@/components/loadingRetro"
 import Image from "next/image"
+import { t } from "i18next"
 
 // HAPUS: backgroundGifs array, ganti jadi string statis untuk simplicity
 const backgroundGif = "/assets/background/host/7.webp" // Satu GIF aja
@@ -37,43 +38,12 @@ export default function HostSettingsPage() {
   const [quiz, setQuiz] = useState<any>(null); // Full quiz untuk questions
   const [quizDetail, setQuizDetail] = useState<any>(null); // Parsed dari game_sessions.quiz_detail
   const [loading, setLoading] = useState(true)
-  const [isMuted, setIsMuted] = useState(false)
-  const [volume, setVolume] = useState(50) // 0-100, default 50%
   const [saving, setSaving] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
   const audioRef = useRef<HTMLAudioElement>(null)
   const [selectedDifficulty, setSelectedDifficulty] = useState("easy");
 
-  // Inisialisasi audio: play otomatis dengan volume default
-  useEffect(() => {
-    if (audioRef.current) {
-      const initialVolume = volume / 100
-      audioRef.current.volume = isMuted ? 0 : initialVolume
-      audioRef.current.play().catch((e) => {
-        console.log("Autoplay dicegah oleh browser:", e)
-      })
-    }
-  }, [])
 
-  // Update audio volume berdasarkan state volume dan isMuted
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : (volume / 100)
-    }
-  }, [volume, isMuted])
-
-  // Handle toggle mute/unmute
-  const handleMuteToggle = () => {
-    setIsMuted(!isMuted)
-  }
-
-  // Handle volume change
-  const handleVolumeChange = (value: number[]) => {
-    setVolume(value[0])
-    if (isMuted && value[0] > 0) {
-      setIsMuted(false) // Auto unmute jika volume dinaikkan
-    }
-  }
 
   // Generate dynamic question count options
   const totalQuestions = quiz?.questions?.length || 0;
@@ -225,23 +195,6 @@ export default function HostSettingsPage() {
         Crazy Race
       </h1>
 
-      <motion.button
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        whileHover={{ scale: 1.05 }}
-        onClick={handleMuteToggle}
-        className={`absolute top-4 right-4 z-40 p-3 border-2 pixel-button rounded-lg shadow-lg min-w-[48px] min-h-[48px] flex items-center justify-center transition-all cursor-pointer
-    ${isMuted
-            ? "bg-[#ff6bff]/30 border-[#ff6bff] glow-pink shadow-[#ff6bff]/30 hover:bg-[#ff8aff]/50"
-            : "bg-[#00ffff]/30 border-[#00ffff] glow-cyan shadow-[#00ffff]/30 hover:bg-[#33ffff]/50"
-          }`}
-        aria-label={isMuted ? "Unmute" : "Mute"}
-      >
-        <span className="filter drop-shadow-[2px_2px_2px_rgba(0,0,0,0.7)]">
-          {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-        </span>
-      </motion.button>
-
       {saving && <LoadingRetro />}
 
       <div className="relative z-10 container mx-auto px-4 sm:px-6 py-6 max-w-4xl">
@@ -254,7 +207,7 @@ export default function HostSettingsPage() {
         >
           <div className="p-4 sm:p-6 sm:mt-7">
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-[#ffefff] pixel-text glow-pink">
-              Settings
+              {t('settings.title')}
             </h1>
           </div>
         </motion.div>
@@ -302,7 +255,7 @@ export default function HostSettingsPage() {
                   <div className="space-y-2 sm:space-y-3">
                     <Label className="text-base sm:text-lg font-semibold flex items-center space-x-2 text-[#00ffff] pixel-text glow-cyan">
                       <Clock className="h-4 w-4" />
-                      <span>Duration</span>
+                      <span>{t('settings.title')}</span>
                     </Label>
                     <Select value={duration} onValueChange={setDuration}>
                       <SelectTrigger className="text-base sm:text-lg p-3 sm:p-5 bg-[#0a0a0f] border-2 border-[#00ffff]/30 text-white pixel-text focus:border-[#00ffff] w-full transition-all">
@@ -322,7 +275,7 @@ export default function HostSettingsPage() {
                   <div className="space-y-2 sm:space-y-3">
                     <Label className="text-base sm:text-lg font-semibold flex items-center space-x-2 text-[#00ffff] pixel-text glow-cyan">
                       <Hash className="h-4 w-4" />
-                      <span>Questions</span>
+                      <span>{t('settings.questions')}</span>
                     </Label>
                     <Select value={questionCount} onValueChange={setQuestionCount}>
                       <SelectTrigger className="text-base sm:text-lg p-3 sm:p-5 bg-[#0a0a0f] border-2 border-[#00ffff]/30 text-white pixel-text focus:border-[#00ffff] w-full transition-all">
@@ -339,29 +292,29 @@ export default function HostSettingsPage() {
                   </div>
                 </div>
 
-                {/* Difficulty Section - Simplified without car */}
+                {/* Difficulty Selection */}
                 <div className="space-y-4 sm:space-y-6">
                   <Label className="text-base sm:text-lg font-semibold flex items-center justify-center space-x-2 text-[#00ffff] pixel-text glow-cyan mb-4">
                     <Settings className="h-4 w-4" />
-                    <span>Difficulty</span>
+                    <span>{t('settings.difficulty')}</span>
                   </Label>
 
-                  {/* Simple Difficulty Buttons */}
+                  {/* Difficulty Buttons dengan Terjemahan */}
                   <div className="flex justify-center space-x-3 sm:space-x-6">
-                    {["easy", "normal", "hard"].map((diff) => (
+                    {["Easy", "Medium", "Hard"].map((diff) => (
                       <Button
                         key={diff}
-                        onClick={() => setSelectedDifficulty(diff)}
+                        onClick={() => setSelectedDifficulty(diff.toLowerCase().replace('medium', 'normal'))} // Map ke lowercase + 'normal' untuk Medium, sesuaikan kalau perlu
                         className={`
-                        pixel-button text-sm sm:text-base px-6 sm:px-8 py-3 font-bold 
-                        w-24 sm:w-28 transition-all duration-200 border-2 capitalize
-                        ${selectedDifficulty === diff
-                            ? "bg-[#ff6bff] hover:bg-[#ff8aff] glow-pink text-white border-white shadow-lg shadow-[#ff6bff]/50"
-                            : "bg-[#0a0a0f] border-[#00ffff]/40 text-[#00ffff] hover:bg-[#00ffff]/10 hover:border-[#00ffff] hover:shadow-md hover:shadow-[#00ffff]/30"
-                          }
-                      `}
+                          pixel-button text-sm sm:text-base px-6 sm:px-8 py-3 font-bold 
+                          w-24 sm:w-28 transition-all duration-200 border-2 capitalize
+                          ${selectedDifficulty === diff.toLowerCase().replace('medium', 'normal')
+                              ? "bg-[#ff6bff] hover:bg-[#ff8aff] glow-pink text-white border-white shadow-lg shadow-[#ff6bff]/50"
+                              : "bg-[#0a0a0f] border-[#00ffff]/40 text-[#00ffff] hover:bg-[#00ffff]/10 hover:border-[#00ffff] hover:shadow-md hover:shadow-[#00ffff]/30"
+                            }
+                        `}
                       >
-                        {diff}
+                        {t(`settings.difficultyOptions.${diff}`)}
                       </Button>
                     ))}
                   </div>
@@ -375,7 +328,7 @@ export default function HostSettingsPage() {
                     className="w-full text-base sm:text-xl py-4 sm:py-6 bg-[#00ffff] pixel-button hover:bg-[#33ffff] glow-cyan text-black font-bold disabled:bg-[#6a4c93] disabled:cursor-not-allowed cursor-pointer transition-all shadow-lg shadow-[#00ffff]/30"
                   >
                     <Play className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
-                    CONTINUE
+                    {t('settings.start')}
                   </Button>
                 </div>
               </div>

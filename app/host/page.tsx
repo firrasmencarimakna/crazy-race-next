@@ -5,7 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
-import { Search, ArrowLeft, Clock, Star, Zap, Volume2, VolumeX, HelpCircle, Menu, X, Settings } from "lucide-react"
+import { Search, ArrowLeft, Clock, Star, Zap, HelpCircle, Menu, X, Settings } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -15,6 +15,8 @@ import LoadingRetro from "@/components/loadingRetro"
 import Image from "next/image"
 import { useAuth } from "@/contexts/authContext"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useTranslation } from "react-i18next"
+import { t } from "i18next"
 
 
 // List of background GIFs in filename order
@@ -32,7 +34,6 @@ export default function QuestionListPage() {
   const router = useRouter()
   const { user } = useAuth();
   const [isMuted, setIsMuted] = useState(false)
-  const [volume, setVolume] = useState(50) // 0-100, default 50%
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [currentPage, setCurrentPage] = useState(1)
@@ -97,36 +98,7 @@ export default function QuestionListPage() {
     }
   }, [user]);
 
-  // Inisialisasi audio: play otomatis dengan volume default
-  useEffect(() => {
-    if (audioRef.current) {
-      const initialVolume = volume / 100
-      audioRef.current.volume = isMuted ? 0 : initialVolume
-      audioRef.current.play().catch((e) => {
-        console.log("Autoplay dicegah oleh browser:", e)
-      })
-    }
-  }, [])
 
-  // Update audio volume berdasarkan state volume dan isMuted
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : (volume / 100)
-    }
-  }, [volume, isMuted])
-
-  // Handle toggle mute/unmute
-  const handleMuteToggle = () => {
-    setIsMuted(!isMuted)
-  }
-
-  // Handle volume change
-  const handleVolumeChange = (value: number[]) => {
-    setVolume(value[0])
-    if (isMuted && value[0] > 0) {
-      setIsMuted(false) // Auto unmute jika volume dinaikkan
-    }
-  }
 
   useEffect(() => {
     const fetchQuizzes = async () => {
@@ -205,7 +177,7 @@ export default function QuestionListPage() {
       total_time_minutes: 5, // Default dari contoh
       question_limit: 10, // Default
       difficulty: null,
-      game_end_mode: "manual", // Default
+      game_end_mode: "manual", // Default 
       allow_join_after_start: false, // Default
       participants: [], // Mulai kosong
       responses: [], // Kosong
@@ -298,64 +270,6 @@ export default function QuestionListPage() {
         Crazy Race
       </h1>
 
-
-      {/* Burger Menu Button - Fixed Top Right */}
-      <motion.button
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        whileHover={{ scale: 1.05 }}
-        onClick={() => setIsMenuOpen(!isMenuOpen)}
-        className="absolute top-4 right-4 z-40 p-3 bg-[#ff6bff]/20 border-2 border-[#ff6bff]/50 pixel-button hover:bg-[#ff8aff]/40 glow-pink rounded-lg shadow-lg shadow-[#ff6bff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
-        aria-label="Toggle menu"
-      >
-        {isMenuOpen ? <X size={20} /> : <Volume2 size={20} />}
-      </motion.button>
-
-      {/* Menu Dropdown - Muncul saat burger diklik, dari kanan */}
-      {isMenuOpen && (
-        <motion.div
-          initial={{ opacity: 0, x: 300 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 300 }}
-          className="absolute top-20 right-4 z-30 w-64 bg-[#1a0a2a]/20 border border-[#ff6bff]/50 rounded-lg p-3 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm"
-        >
-          <div className="space-y-2">
-            {/* Integrated Mute + Volume: Single row for button + slider, with label above for simplicity */}
-            <div className="p-1.5 bg-[#ff6bff]/10 rounded space-y-1"> {/* Unified bg for the whole section; adjusted to /10 for subtle highlight */}
-              {/* <span className="text-xs text-white pixel-text block">Suara</span> Moved "Suara" label here as section header; changed color to white for better contrast */}
-
-              {/* New flex row: Mute button on left, slider on right; tight spacing */}
-              <div className="flex items-center space-x-2 bg-[#1a0a2a]/60 border border-[#ff6bff]/30 rounded px-2 py-1"> {/* Shared container for row; reduced px-1 to px-2 for button fit, py-0.5 to py-1 */}
-                <button
-                  onClick={handleMuteToggle}
-                  className="p-1.5 bg-[#00ffff] border border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded flex-shrink-0" // Added flex-shrink-0 to prevent button compression
-                  aria-label={isMuted ? "Unmute" : "Mute"}
-                >
-                  {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
-                </button>
-
-                <div className="flex-1"> {/* Wrapper for slider to take remaining space */}
-                  <Slider
-                    value={[volume]}
-                    onValueChange={handleVolumeChange}
-                    max={100}
-                    min={0}
-                    step={1}
-                    className="w-full"
-                    orientation="horizontal"
-                    aria-label="Volume slider"
-                  />
-                </div>
-              </div>
-
-              {/* Volume value below slider for quick glance; optional but keeps info visible without cluttering row */}
-              <span className="text-xs text-[#ff6bff] pixel-text">Volume: {volume}%</span>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-
       {(loading || creating) && (
         <LoadingRetro />
       )}
@@ -370,7 +284,7 @@ export default function QuestionListPage() {
             className="pixel-border-large inline-block p-6"
           >
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#ffefff] pixel-text glow-pink">
-              Select Quiz
+             {t('soal.title')}
             </h1>
           </motion.div>
         </div>
@@ -386,7 +300,7 @@ export default function QuestionListPage() {
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#00ffff] h-5 w-5 glow-cyan" />
               <Input
-                placeholder="Search Quiz..."
+                placeholder= {t('soal.search')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-4 py-4 bg-[#0a0a0f] border-4 border-[#6a4c93] text-white placeholder:text-gray-400 focus:border-[#00ffff] focus:ring-0 text-lg pixel-text glow-cyan-subtle"
@@ -398,7 +312,7 @@ export default function QuestionListPage() {
              text-white focus:border-[#00ffff] focus:ring-0 text-lg pixel-text 
              glow-cyan-subtle py-4 px-4 h-auto"
               >
-                <SelectValue placeholder="All Categories" />
+                <SelectValue placeholder={t('soal.categories')} />
               </SelectTrigger>
 
               <SelectContent className="bg-[#1a0a2a] border-4 border-[#ff6bff]/50 text-white">

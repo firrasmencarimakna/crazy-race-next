@@ -17,6 +17,8 @@ import { breakOnCaps, formatUrlBreakable } from "@/utils/game"
 import { calculateCountdown } from "@/utils/countdown"  // Tambah ini
 import Image from "next/image"
 import { getSyncedServerTime, syncServerTime } from "@/utils/serverTime"
+import { useTranslation } from "react-i18next"
+import { t } from "i18next"
 
 /**
  * Konstanta untuk background GIFs, digunakan untuk cycling background.
@@ -36,14 +38,19 @@ const carGifMap: Record<string, string> = {
   blue: "/assets/car/car5_v2.webp",
 }
 
+
+
 /**
  * Komponen utama HostRoomPage.
  * Halaman ini menampilkan room host, daftar player real-time via Supabase,
  * QR code untuk join, tombol start game dengan countdown, dan fitur kick player.
  * Audio background dikelola dengan persist rendering untuk autoplay konsisten.
+ * 
  */
 export default function HostRoomPage() {
   // Hooks navigasi dan params
+  
+  
   const params = useParams()
   const router = useRouter()
   const roomCode = params.roomCode as string
@@ -79,7 +86,7 @@ export default function HostRoomPage() {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null) // ID player yang dipilih untuk kick
   const [selectedPlayerName, setSelectedPlayerName] = useState<string>('') // Nama player yang dipilih untuk kick
   const [selectedPlayerCar, setSelectedPlayerCar] = useState<string>('') // Warna mobil player yang dipilih untuk kick
-
+  const { t } = useTranslation();
   // Ref untuk audio element
   const audioRef = useRef<HTMLAudioElement>(null)
 
@@ -618,7 +625,7 @@ export default function HostRoomPage() {
           >
             <div className="inline-block py-4 md:pt-10">
               <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#ffefff] pixel-text glow-pink">
-                Host Room
+                {t('hostroom.title')}
               </h1>
             </div>
           </motion.div>
@@ -690,7 +697,7 @@ export default function HostRoomPage() {
                   className="text-base sm:text-lg py-3 sm:py-4 bg-[#00ffff] border-2 sm:border-3 border-white pixel-button hover:bg-[#33ffff] glow-cyan text-black font-bold disabled:bg-[#6a4c93] disabled:cursor-not-allowed w-full sm:w-auto"
                 >
                   <Play className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                  Start
+                  {t('hostroom.start')}
                 </Button>
               </div>
             </Card>
@@ -749,7 +756,7 @@ export default function HostRoomPage() {
                               }}
                               size="sm"
                               className="bg-[#ffff000]/90 text-red pixel-button "
-                              aria-label={`Kick ${player.nickname}`}
+                              aria-label={t('hostroom.kickconfirmation')}
                             >
                               <X size={4} className="text-white" />
                             </Button>
@@ -784,8 +791,9 @@ export default function HostRoomPage() {
                   className="h-24 w-74 object-contain animate-neon-bounce filter brightness-110 contrast-140 mx-auto"
                 />
               </div>
-
-              <CardTitle className="text-lg text-[#ffefff] pixel-text glow-pink mb-4">Kick <span className="text-[#00ffff]">{selectedPlayerName}</span> ?</CardTitle>
+                  <CardTitle className="text-lg text-[#ffefff] pixel-text glow-pink mb-4">
+                    {t('hostroom.kickconfirmation', { name: selectedPlayerName })}
+                  </CardTitle>
             </CardHeader>
             <CardContent className="pt-0 space-y-2">
               <div className="flex justify-center space-x-2">
@@ -794,13 +802,13 @@ export default function HostRoomPage() {
                   variant="outline"
                   className="bg-[#000] border text-[#00ffff] border-[#00ffff] hover:bg-gray-900 hover:text-white px-4 py-2 text-sm"
                 >
-                  Cancel
+                  {t('hostroom.cancel')}
                 </Button>
                 <Button
                   onClick={confirmKick}
                   className="bg-[#000] border text-[#00ffff] border-[#00ffff] hover:bg-gray-900 hover:text-white px-4 py-2 text-sm"
                 >
-                  Kick
+                  {t('hostroom.kick')}
                 </Button>
               </div>
             </CardContent>
