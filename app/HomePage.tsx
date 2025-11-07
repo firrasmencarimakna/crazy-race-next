@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
-import { Flag, Volume2, VolumeX, Settings, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight, Play, LogOut } from "lucide-react"
+import { Flag, Volume2, VolumeX, Settings, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight, Play, LogOut, Globe } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -16,8 +16,11 @@ import LoadingRetro from "@/components/loadingRetro"
 import LoadingRetroScreen from "@/components/loading-screnn"
 import { useAuth } from "@/contexts/authContext"
 import { generateXID } from "@/lib/id-generator"
+import { useTranslation } from "react-i18next"
+import "../lib/i18n"
 
 function LogoutDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const { t } = useTranslation()
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -38,12 +41,12 @@ function LogoutDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (op
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ display: open ? 'flex' : 'none' }}>
       <div className="bg-black/80 backdrop-blur-sm w-full h-full absolute" onClick={() => onOpenChange(false)} />
       <div className="relative bg-[#1a0a2a]/80 border border-cyan-400/30 p-6 rounded-lg text-white max-w-lg mx-auto">
-        <h2 className="text-xl font-bold text-[#00ffff] mb-4 pixel-text">Log Out</h2>
-        <p className="text-gray-300 mb-6 pixel-text">Are you sure you want to log out?</p>
+        <h2 className="text-xl font-bold text-[#00ffff] mb-4 pixel-text">{t('logoutDialog.title')}</h2>
+        <p className="text-gray-300 mb-6 pixel-text">{t('logoutDialog.message')}</p>
         <div className="flex gap-4 justify-end">
-          <Button onClick={() => onOpenChange(false)} variant="outline">Cancel</Button>
+          <Button onClick={() => onOpenChange(false)} variant="outline">{t('logoutDialog.cancel')}</Button>
           <Button onClick={handleLogout} disabled={loading} className="bg-red-500">
-            {loading ? 'Loading...' : 'Logout'}
+            {loading ? t('logoutDialog.loading') : t('logoutDialog.logout')}
           </Button>
         </div>
       </div>
@@ -62,6 +65,7 @@ export default function HomePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
+  const { t, i18n } = useTranslation()
 
   const { user, loading: authLoading } = useAuth()
 
@@ -84,6 +88,8 @@ export default function HomePage() {
   const [showHowToPlay, setShowHowToPlay] = useState(false) // Modal How to Play
   const [currentPage, setCurrentPage] = useState(0) // Pagination untuk modal How to Play
   const [showTryoutInput, setShowTryoutInput] = useState(false) // Toggle tryout input visibility
+  const [showLanguageMenu, setShowLanguageMenu] = useState(false)
+  const [currentLanguage, setCurrentLanguage] = useState('en')
 
   // State untuk modal alert (spesifik berdasarkan reason)
   const [showAlert, setShowAlert] = useState(false)
@@ -96,6 +102,13 @@ export default function HomePage() {
   // Arrays untuk generate random nickname
   const adjectives = ["Crazy", "Fast", "Speedy", "Turbo", "Neon", "Pixel", "Racing", "Wild", "Epic", "Flash"]
   const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", "Gear", "Track", "Lap"]
+
+  const languages = [
+    { code: 'en', name: 'English', flag: '🇺🇸' },
+    { code: 'id', name: 'Bahasa Indonesia', flag: '🇮🇩' },
+  ]
+
+  
 
   /**
    * Generate random nickname menggunakan adjectives + nouns.
@@ -113,18 +126,7 @@ export default function HomePage() {
    * @returns {string} Pesan yang sesuai untuk CardDescription
    */
   const getAlertMessage = (reason: string) => {
-    switch (reason) {
-      case 'roomCode':
-        return "The room code must be 6 letters."
-      case 'nickname':
-        return "The name cannot be blank, okay!"
-      case 'both':
-        return "Fill in the Room Code (6 letters) and Nickname first, OK!"
-      case 'roomNotFound':
-        return "Your room code is wrong"
-      default:
-        return "Fill in the Room Code (6 letters) and Nickname first, OK!"
-    }
+    return t(`alert.${reason}.message`)
   }
 
   /**
@@ -136,30 +138,28 @@ export default function HomePage() {
   }
 
   // Steps untuk modal How to Play (pagination content)
-  const steps = [
-    {
-      title: "Host a Game",
-      content: "Click 'HOST GAME' to create a room and get a unique code. Share it with your friends to start the challenge!"
-    },
-    {
-      title: "Join the Race",
-      content: "Enter the room code and your nickname in 'JOIN RACE'. Hit JOIN to hop into the action and pick your car color."
-    },
-    {
-      title: "Answer Questions",
-      content: "When the race kicks off, trivia questions pop up. Nail the answers right to zoom your car forward on the track."
-    },
-    {
-      title: "Race to Win",
-      content: "Speed to the finish line! The first player to answer the most questions correctly claims victory and bragging rights."
-    },
-    {
-      title: "Pro Tip",
-      content: "Pick a killer nickname and strategize: go for lightning-fast answers or laser-focused accuracy? Your call!"
-    }
-  ]
+  const steps = t('howToPlay.steps', { returnObjects: true }) as Array<{ title: string; content: string }>
 
   const totalPages = steps.length
+
+  const handleMuteToggle = () => {
+    setIsMuted(!isMuted)
+  }
+
+  const handleVolumeChange = (value: number[]) => {
+    setVolume(value[0])
+    if (isMuted && value[0] > 0) {
+      setIsMuted(false)
+    }
+  }
+
+  const handleLanguageSelect = (code: string, name: string) => {
+    i18n.changeLanguage(code)
+    setCurrentLanguage(code)
+    localStorage.setItem('language', code)
+    setShowLanguageMenu(false)
+    console.log(`Language changed to: ${name} (${code})`)
+  }
 
   // TAMBAH: Fetch profile setelah auth ready
   useEffect(() => {
@@ -210,6 +210,10 @@ export default function HomePage() {
 
     setNickname(defaultNick);
     localStorage.setItem("nickname", defaultNick);
+
+    const savedLanguage = localStorage.getItem('language') || 'en'
+    i18n.changeLanguage(savedLanguage)
+    setCurrentLanguage(savedLanguage)
   }, [user, profile]); // Tambah profile dependency
 
   // OJO DI ILANGI BREE
@@ -492,10 +496,7 @@ export default function HomePage() {
 
               {/* Dynamic Title berdasarkan reason */}
               <CardTitle className="text-xl font-bold text-[#ff6bff] mb-2 pixel-text glow-pink">
-                {alertReason === 'roomCode' ? 'Oops! Your Room Code!' :
-                  alertReason === 'nickname' ? 'Oops! Empty name!' :
-                    alertReason === 'both' ? 'Oops! Input Incomplete!' :
-                      alertReason === 'roomNotFound' ? 'Oops Room not found!' : 'Oops Belum Siap Balapan'}
+                {t(`alert.${alertReason}.title`)}
               </CardTitle>
 
               {/* Dynamic Description */}
@@ -508,7 +509,7 @@ export default function HomePage() {
                 onClick={closeAlert}
                 className="w-full bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] text-white pixel-button glow-pink"
               >
-                Okay!
+                {t('alert.closeButton')}
               </Button>
 
               {/* Close Icon (top-right) */}
@@ -571,7 +572,7 @@ export default function HomePage() {
                 {/* Name & Email */}
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-[#00ffff] pixel-text ">
-                    {profile?.fullname || profile?.username || user?.email?.split('@')[0] || 'User'}
+                    {profile?.fullname || profile?.username || user?.email?.split('@')[0] || t('menu.user')}
                   </p>
                 </div>
               </div>
@@ -628,7 +629,7 @@ export default function HomePage() {
               >
                 <div className="flex items-center justify-center gap-2">
                   {/* <BookOpen size={16} /> */}
-                  <span className="text-sm text-[#00ffff] pixel-text glow-cyan">How to Play</span>
+                  <span className="text-sm text-[#00ffff] pixel-text glow-cyan">{t('menu.howToPlay')}</span>
                 </div>
               </button>
 
@@ -640,7 +641,7 @@ export default function HomePage() {
               >
                 <div className="flex items-center justify-center gap-2">
                   {/* <Play size={16} /> */}
-                  <span className="text-sm text-[#ff6bff] pixel-text glow-pink">Solo Tryout</span>
+                  <span className="text-sm text-[#ff6bff] pixel-text glow-pink">{t('menu.soloTryout')}</span>
                 </div>
               </button>
 
@@ -655,7 +656,7 @@ export default function HomePage() {
                   >
                     <div className="relative">
                       <Input
-                        placeholder="Nickname"
+                        placeholder={t('joinRace.nicknamePlaceholder')}
                         value={nickname}
                         maxLength={15}
                         onChange={(e) => setNickname(e.target.value)}
@@ -682,7 +683,7 @@ export default function HomePage() {
                         : 'bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] hover:to-[#ffb3ff] text-white border-[#ff6bff]/80 hover:border-[#ff8aff]/80 glow-pink cursor-pointer'
                         } pixel-button`}
                     >
-                      {joining ? 'STARTING...' : 'TRYOUT'}
+                      {joining ? t('menu.starting') : t('menu.tryoutButton')}
                     </Button>
                   </motion.div>
                 )}
@@ -690,14 +691,44 @@ export default function HomePage() {
 
               {/* Settings Button (placeholder, bisa di-expand) */}
               <button
+                onClick={() => setShowLanguageMenu(!showLanguageMenu)}
                 className="w-full p-2 bg-[#1a0a2a]/60 border-2 border-[#00ffff]/50 hover:border-[#00ffff] pixel-button hover:bg-[#00ffff]/20 glow-cyan-subtle rounded text-center"
-                aria-label="Settings"
+                aria-label="Language"
               >
                 <div className="flex items-center justify-center gap-2">
-                  {/* <Settings size={16} /> */}
-                  <span className="text-sm text-[#00ffff] pixel-text glow-cyan">Language</span>
+                  <Globe size={16} />
+                  <span className="text-sm text-[#00ffff] pixel-text glow-cyan">{t('menu.language')}</span>
                 </div>
               </button>
+
+              <AnimatePresence>
+                {showLanguageMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden space-y-2"
+                  >
+                    {languages.map((lang) => (
+                      <motion.button
+                        key={lang.code}
+                        onClick={() => handleLanguageSelect(lang.code, lang.name)}
+                        whileHover={{ scale: 1.02, x: 2 }}
+                        className={`w-full flex items-center gap-3 p-3 bg-[#1a0a2a]/80 border border-[#00ffff]/30 rounded-lg transition-all duration-200 hover:bg-[#00ffff]/20 hover:border-[#00ffff] ${currentLanguage === lang.code ? 'border-[#00ffff] bg-[#00ffff]/10' : ''}`}
+                      >
+                        <span className="text-lg">{lang.flag}</span>
+                        <div className="flex-1 text-left">
+                          <p className="text-sm font-medium text-white pixel-text">{lang.name}</p>
+                          <p className="text-xs text-[#00ffff]/70 pixel-text">{lang.code.toUpperCase()}</p>
+                        </div>
+                        {currentLanguage === lang.code && (
+                          <div className="w-2 h-2 bg-[#00ffff] rounded-full glow-cyan-subtle" />
+                        )}
+                      </motion.button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Logout Button */}
               <button
@@ -707,7 +738,7 @@ export default function HomePage() {
               >
                 <div className="flex items-center justify-center gap-2">
                   {/* <LogOut size={16} /> */}
-                  <span className="text-sm text-[#ff0000] pixel-text glow-pink">Logout</span>
+                  <span className="text-sm text-[#ff0000] pixel-text glow-pink">{t('menu.logout')}</span>
                 </div>
               </button>
             </div>
@@ -744,10 +775,10 @@ export default function HomePage() {
               {/* Header */}
               <CardHeader className="text-center border-b-2 border-[#ff6bff]/20 p-6">
                 <CardTitle className="text-2xl font-bold text-[#00ffff] pixel-text glow-cyan mb-2">
-                  Crazy Race Guide
+                  {t('howToPlay.title')}
                 </CardTitle>
                 <CardDescription className="text-[#ff6bff]/80 text-base pixel-text glow-pink-subtle">
-                  Flip through the pages to learn how to race and win!
+                  {t('howToPlay.description')}
                 </CardDescription>
                 <p className="text-xs text-gray-200 mt-2 pixel-text">Page {currentPage + 1} of {totalPages}</p>
               </CardHeader>
@@ -785,7 +816,7 @@ export default function HomePage() {
                     className={`flex items-center gap-2 px-4 py-2 bg-[#1a0a2a]/60 hover:bg-[#00ffff]/20 border-2 border-[#00ffff]/50 text-[#00ffff] pixel-button glow-cyan-subtle transition-all duration-200 ${currentPage === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <ArrowLeft size={16} />
-                    Prev
+                    {t('howToPlay.prev')}
                   </Button>
 
                   {/* Page Dots */}
@@ -809,12 +840,12 @@ export default function HomePage() {
                   >
                     {currentPage === totalPages - 1 ? (
                       <>
-                        Got It!
+                        {t('howToPlay.gotIt')}
                         <BookOpen size={16} />
                       </>
                     ) : (
                       <>
-                        Next
+                        {t('howToPlay.next')}
                         <ArrowRight size={16} />
                       </>
                     )}
@@ -842,10 +873,10 @@ export default function HomePage() {
           {/* Title Border */}
           <div className="pixel-border-large mx-auto relative z-0">
             <h1 className="font-bold bg-clip-text text-4xl md:text-5xl lg:text-6xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-[#ff6bff] to-[#00ffff] tracking-wider drop-shadow-[0_0_4px_rgba(139,92,246,0.6)]">
-              CRAZY
+              {t('mainTitle.title1')}
             </h1>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff6bff] to-[#00ffff] relative z-10">
-              RACE
+              {t('mainTitle.title2')}
             </h2>
           </div>
 
@@ -859,7 +890,7 @@ export default function HomePage() {
             }}
           >
             <p className="text-sm md:text-base px-4 py-2 bg-[#1a0a2a] text-white">
-              ANSWER • RACE • WIN
+              {t('mainTitle.subtitle')}
             </p>
           </div>
         </div>
@@ -883,16 +914,16 @@ export default function HomePage() {
                   <Flag className="w-8 h-8 text-white" />
                 </motion.div>
                 <CardTitle className="text-xl font-bold text-[#00ffff] pixel-text glow-pink">
-                  HOST GAME
+                  {t('hostGame.title')}
                 </CardTitle>
                 <CardDescription className="text-[#00ffff]/80 text-sm pixel-text glow-pink-subtle">
-                  Create your own race and challenge others
+                  {t('hostGame.description')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Link href="/host">
                   <Button className="w-full bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white focus:ring-[#00ffff]/30 transition-all duration-200 cursor-pointer">
-                    Create Room
+                    {t('hostGame.button')}
                   </Button>
                 </Link>
               </CardContent>
@@ -917,17 +948,17 @@ export default function HomePage() {
                   <Users className="w-8 h-8 text-white" />
                 </motion.div>
                 <CardTitle className="text-xl font-bold text-[#00ffff] glow-cyan pixel-text">
-                  JOIN RACE
+                  {t('joinRace.title')}
                 </CardTitle>
                 <CardDescription className="text-sm text-[#00ffff]/80 glow-cyan-subtle pixel-text">
-                  Enter a code to join an existing race
+                  {t('joinRace.description')}
                 </CardDescription>
               </CardHeader>
 
               <CardContent className="space-y-2">
                 {/* Room Code Input */}
                 <Input
-                  placeholder="Room Code"
+                  placeholder={t('joinRace.roomCodePlaceholder')}
                   value={roomCode}
                   maxLength={6}
                   onChange={(e) => {
@@ -940,7 +971,7 @@ export default function HomePage() {
                 {/* Nickname Input dengan generate button */}
                 <div className="relative">
                   <Input
-                    placeholder="Nickname"
+                    placeholder={t('joinRace.nicknamePlaceholder')}
                     value={nickname}
                     maxLength={15}
                     onChange={(e) => setNickname(e.target.value)}
@@ -968,7 +999,7 @@ export default function HomePage() {
                     : `bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white border-[#0070f3]/80 hover:border-[#0ea5e9]/80 glow-cyan cursor-pointer`
                     }`}
                 >
-                  {joining ? 'JOINING...' : 'JOIN'}
+                  {joining ? t('joinRace.joining') : t('joinRace.joinButton')}
                 </Button>
               </CardFooter>
             </Card>
