@@ -22,6 +22,12 @@ const backgroundGifs = [
   "/assets/background/2_v2.webp",
 ]
 
+// UPDATE: generateRoomCode - rename ke generateGamePin (sama logic)
+export function generateGamePin(length = 6) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
+
 export default function QuestionListPage() {
   const router = useRouter()
   const { user } = useAuth();
@@ -42,9 +48,9 @@ export default function QuestionListPage() {
 
   const itemsPerPage = 9;
   useEffect(() => {
-    
-        console.log("============== hanya untuk debug =================")
-        
+
+    console.log("============== hanya untuk debug =================")
+
   }, [])
 
   useEffect(() => {
@@ -182,12 +188,6 @@ export default function QuestionListPage() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   )
-
-  // UPDATE: generateRoomCode - rename ke generateGamePin (sama logic)
-  function generateGamePin(length = 6) {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-  }
 
   // UPDATE: handleSelectQuiz - migrasi ke game_sessions, pakai host_id dari profile
   async function handleSelectQuiz(quizId: string, router: any) {
@@ -393,9 +393,14 @@ export default function QuestionListPage() {
               />
             </div>
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full sm:w-auto bg-[#0a0a0f] border-4 border-[#6a4c93] text-white focus:border-[#00ffff] focus:ring-0 text-lg pixel-text glow-cyan-subtle">
+              <SelectTrigger
+                className="w-full sm:w-auto bg-[#0a0a0f] border-4 border-[#6a4c93] 
+             text-white focus:border-[#00ffff] focus:ring-0 text-lg pixel-text 
+             glow-cyan-subtle py-4 px-4 h-auto"
+              >
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
+
               <SelectContent className="bg-[#1a0a2a] border-4 border-[#ff6bff]/50 text-white">
                 {categories.map((cat) => (
                   <SelectItem key={cat} value={cat} className="pixel-text capitalize">
@@ -500,13 +505,13 @@ export default function QuestionListPage() {
       </div>
 
       {/* Audio Element untuk Background Music */}
-      <audio
+      {/* <audio
         ref={audioRef}
         src="/assets/music/resonance.mp3"
         loop
         preload="auto"
         className="hidden"
-      />
+      /> */}
 
       <style jsx>{`
         .pixel-font {

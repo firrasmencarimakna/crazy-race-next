@@ -11,6 +11,17 @@ import AuthGate from '@/components/authGate'
 import ClientProviders from './ClientProvider';
 import './globals.css'
 
+export const metadata: Metadata = {
+  title: 'Crazy Race',
+  description: 'Answer • Race • Win',
+  generator: 'v0.app',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+  },
+
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{

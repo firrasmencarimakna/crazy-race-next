@@ -62,114 +62,7 @@ export default function QuizGamePage() {
   const currentQuestion = questions[currentQuestionIndex]
   const totalQuestions = questions.length
 
-  // UPDATE: Fetch game data dari game_sessions (with retry)
-  // UPDATE: Fetch game data dari game_sessions (with retry)
-const fetchGameData = useCallback(async (retryCount = 0) => {
-  console.log(`=== FETCH GAME DATA START (attempt ${retryCount + 1}) ===`);
-  setLoading(true)
-  setError(null)
-  try {
-    // Fetch session data
-    console.log("Querying game_sessions...");
-    const { data: sessionData, error: sessionError } = await supabase
-      .from("game_sessions")
-      .select("id, started_at, status, total_time_minutes, current_questions, responses")
-      .eq("game_pin", roomCode)
-      .single()
-
-    if (sessionError || !sessionData) {
-      console.error("Session query error:", sessionError);
-      throw new Error(`Session error: ${sessionError?.message || 'No data'}`)
-    }
-
-    console.log("Session fetched:", { id: sessionData.id, status: sessionData.status, started_at: sessionData.started_at });
-
-    if (sessionData.status !== 'active') {
-      console.log("Status not active:", sessionData.status);
-      throw new Error('Game not active')
-    }
-
-    setSession(sessionData);
-    console.log("Set session");
-
-    // Parse questions
-    console.log("Parsing current_questions...");
-    const parsedQuestions = sessionData.current_questions || [];
-    console.log("Parsed questions length:", parsedQuestions.length);
-    const formattedQuestions: QuizQuestion[] = parsedQuestions.map((q: any) => ({
-      id: q.id,
-      question: q.question,
-      options: q.answers.map((a: any) => a.answer),
-      correctAnswer: parseInt(q.correct),
-    }));
-
-    setQuestions(formattedQuestions);
-    console.log("Set questions:", formattedQuestions.length);
-
-    const duration = sessionData.total_time_minutes * 60;
-    setGameDuration(duration);
-    console.log("Set gameDuration:", duration);
-
-    // Set game start time
-    const startTime = sessionData.started_at ? new Date(sessionData.started_at).getTime() : null
-    if (!startTime) {
-      console.error("No started_at:", sessionData.started_at);
-      throw new Error('Game start time missing')
-    }
-    setGameStartTime(startTime)
-    console.log("Set gameStartTime:", startTime);
-
-    // Parse responses
-    console.log("Parsing responses...");
-    const parsedResponses = sessionData.responses || [];
-    console.log("Parsed responses length:", parsedResponses.length);
-    let myResponse = parsedResponses.find((r: any) => r.participant === participantId);
-
-    if (!myResponse) {
-      console.log('No response found, creating initial...');
-      myResponse = {
-        id: generateXID(),
-        participant: participantId,
-        score: 0,
-        racing: false,
-        answers: [],
-        correct: 0,
-        accuracy: "0.00",
-        duration: 0,
-        total_question: formattedQuestions.length,
-        current_question: 0,
-      };
-    } else {
-      console.log("Found myResponse:", { correct: myResponse.correct, current_question: myResponse.current_question });
-    }
-
-    // Set state dari myResponse
-    setCorrectAnswers(myResponse.correct || 0);
-    setCurrentQuestionIndex(myResponse.current_question || 0);
-
-    const savedAnswers = myResponse.answers.map((a: any) => parseInt(a.answer_id)) || new Array(formattedQuestions.length).fill(null);
-    setAnswers(savedAnswers);
-    console.log("Set answers length:", savedAnswers.length);
-
-    setLoading(false)
-    console.log('=== FETCH SUCCESS ===')
-  } catch (err: any) {
-    console.error("=== FETCH ERROR ===", err.message);
-    setError(err.message)
-    if (retryCount < 3) {
-      console.log(`Retrying in ${1000 * (retryCount + 1)}ms...`)
-      setTimeout(() => fetchGameData(retryCount + 1), 1000 * (retryCount + 1))
-    } else {
-      console.error('Max retries reached, redirecting to /')
-      router.replace(`/`)  // <-- INI PENYEBAB! Ganti ke `/join/${roomCode}` kalau mau balik lobby aja
-    }
-    setLoading(false)
-  }
-}, [roomCode, participantId, router])
-
-  // UPDATE: Initialize participantId and check session (racing dari responses)
-useEffect(() => {
-  const checkPlayerState = async () => {
+  useEffect(() => {
     console.log("=== CHECK PLAYER STATE START ===");
     const pid = localStorage.getItem("participantId") || "";
     console.log("Participant ID from localStorage:", pid);
@@ -181,62 +74,172 @@ useEffect(() => {
 
     setParticipantId(pid);
     console.log("Set participantId:", pid);
+  }, [])
 
-    // Fetch session untuk cek status
-    console.log("Fetching session status...");
-    const { data, error } = await supabase
-      .from("game_sessions")
-      .select("status")
-      .eq("game_pin", roomCode)
-      .single();
-
-    if (error || !data) {
-      console.error("Error fetching session status:", error);
-      console.log("Redirect to lobby due to session error");
-      router.replace(`/join/${roomCode}`);
-      return;
-    }
-
-    console.log("Session status:", data.status);
-    // Kalau gak active, balik lobby
-    if (data.status !== 'active') {
-      console.log("Status not active, redirect to lobby");
-      router.replace(`/join/${roomCode}`);
-      return;
-    }
-
-    // Cek racing dari responses
-    console.log("Fetching responses for racing check...");
-    const { data: participantData } = await supabase
-      .from("game_sessions")
-      .select("responses")
-      .eq("game_pin", roomCode)
-      .single();
-
-    let parsedResponses = [];
+  // UPDATE: Fetch game data dari game_sessions (with retry)
+  const fetchGameData = useCallback(async (retryCount = 0) => {
+    console.log(`=== FETCH GAME DATA START (attempt ${retryCount + 1}) ===`);
+    setLoading(true)
+    setError(null)
     try {
-      parsedResponses = typeof participantData?.responses === 'string' 
-        ? JSON.parse(participantData.responses) 
-        : participantData?.responses || [];
+      // Fetch session data
+      console.log("Querying game_sessions...");
+      const { data: sessionData, error: sessionError } = await supabase
+        .from("game_sessions")
+        .select("id, started_at, status, total_time_minutes, current_questions, responses")
+        .eq("game_pin", roomCode)
+        .single()
+
+      if (sessionError || !sessionData) {
+        console.error("Session query error:", sessionError);
+        throw new Error(`Session error: ${sessionError?.message || 'No data'}`)
+      }
+
+      console.log("Session fetched:", { id: sessionData.id, status: sessionData.status, started_at: sessionData.started_at });
+
+      if (sessionData.status !== 'active') {
+        console.log("Status not active:", sessionData.status);
+        throw new Error('Game not active')
+      }
+
+      setSession(sessionData);
+      console.log("Set session");
+
+      // Parse questions
+      console.log("Parsing current_questions...");
+      const parsedQuestions = sessionData.current_questions || [];
+      console.log("Parsed questions length:", parsedQuestions.length);
+      const formattedQuestions: QuizQuestion[] = parsedQuestions.map((q: any) => ({
+        id: q.id,
+        question: q.question,
+        options: q.answers.map((a: any) => a.answer),
+        correctAnswer: parseInt(q.correct),
+      }));
+
+      setQuestions(formattedQuestions);
+      console.log("Set questions:", formattedQuestions.length);
+
+      const duration = sessionData.total_time_minutes * 60;
+      setGameDuration(duration);
+      console.log("Set gameDuration:", duration);
+
+      // Set game start time
+      const startTime = sessionData.started_at ? new Date(sessionData.started_at).getTime() : null
+      if (!startTime) {
+        console.error("No started_at:", sessionData.started_at);
+        throw new Error('Game start time missing')
+      }
+      setGameStartTime(startTime)
+      console.log("Set gameStartTime:", startTime);
+
+      // Parse responses
+      console.log("Parsing responses...");
+      const parsedResponses = sessionData.responses || [];
       console.log("Parsed responses length:", parsedResponses.length);
-    } catch (e) {
-      console.error("Error parsing responses:", e);
+      let myResponse = parsedResponses.find((r: any) => r.participant === participantId);
+
+      if (!myResponse) {
+        console.log('No response found, creating initial...');
+        myResponse = {
+          id: generateXID(),
+          participant: participantId,
+          score: 0,
+          racing: false,
+          answers: [],
+          correct: 0,
+          accuracy: "0.00",
+          duration: 0,
+          total_question: formattedQuestions.length,
+          current_question: 0,
+        };
+      } else {
+        console.log("Found myResponse:", { correct: myResponse.correct, current_question: myResponse.current_question });
+      }
+
+      // Set state dari myResponse
+      setCorrectAnswers(myResponse.correct || 0);
+      setCurrentQuestionIndex(myResponse.current_question || 0);
+
+      const savedAnswers = myResponse.answers.map((a: any) => parseInt(a.answer_id)) || new Array(formattedQuestions.length).fill(null);
+      setAnswers(savedAnswers);
+      console.log("Set answers length:", savedAnswers.length);
+
+      setLoading(false)
+      console.log('=== FETCH SUCCESS ===')
+    } catch (err: any) {
+      console.error("=== FETCH ERROR ===", err.message);
+      setError(err.message)
+      if (retryCount < 3) {
+        console.log(`Retrying in ${1000 * (retryCount + 1)}ms...`)
+        setTimeout(() => fetchGameData(retryCount + 1), 1000 * (retryCount + 1))
+      } else {
+        console.error('Max retries reached, redirecting to /')
+        router.replace(`/`)  // <-- INI PENYEBAB! Ganti ke `/join/${roomCode}` kalau mau balik lobby aja
+      }
+      setLoading(false)
     }
+  }, [roomCode, participantId, router])
 
-    const myResponse = parsedResponses.find((r: any) => r.participant === pid);
-    console.log("My response found:", !!myResponse, myResponse?.racing);
-    if (myResponse && myResponse.racing === true) {
-      console.log("Racing true, redirect to minigame");
-      router.push(`/join/${roomCode}/minigame`);
-      return;
-    }
+  // UPDATE: Initialize participantId and check session (racing dari responses)
+  useEffect(() => {
+    if (!participantId) return;
 
-    console.log("Proceed to fetchGameData");
-    fetchGameData();
-  };
+    const checkPlayerState = async () => {
+      // Fetch session untuk cek status
+      console.log("Fetching session status...");
+      const { data, error } = await supabase
+        .from("game_sessions")
+        .select("status")
+        .eq("game_pin", roomCode)
+        .single();
 
-  checkPlayerState();
-}, [roomCode, router, fetchGameData]);
+      if (error || !data) {
+        console.error("Error fetching session status:", error);
+        console.log("Redirect to lobby due to session error");
+        router.replace(`/join/${roomCode}`);
+        return;
+      }
+
+      console.log("Session status:", data.status);
+      // Kalau gak active, balik lobby
+      if (data.status !== 'active') {
+        console.log("Status not active, redirect to lobby");
+        router.replace(`/join/${roomCode}`);
+        return;
+      }
+
+      // Cek racing dari responses
+      console.log("Fetching responses for racing check...");
+      const { data: participantData } = await supabase
+        .from("game_sessions")
+        .select("responses")
+        .eq("game_pin", roomCode)
+        .single();
+
+      let parsedResponses = [];
+      try {
+        parsedResponses = typeof participantData?.responses === 'string'
+          ? JSON.parse(participantData.responses)
+          : participantData?.responses || [];
+        console.log("Parsed responses length:", parsedResponses.length);
+      } catch (e) {
+        console.error("Error parsing responses:", e);
+      }
+
+      const myResponse = parsedResponses.find((r: any) => r.participant === participantId);
+      console.log("My response found:", !!myResponse, myResponse?.racing);
+      if (myResponse && myResponse.racing === true) {
+        console.log("Racing true, redirect to minigame");
+        router.push(`/join/${roomCode}/minigame`);
+        return;
+      }
+
+      console.log("Proceed to fetchGameData");
+      fetchGameData();
+    };
+
+    checkPlayerState();
+  }, [roomCode, router, fetchGameData]);
 
   // UPDATE: Save progress - update responses object di game_sessions
   const saveProgressAndRedirect = useCallback(async () => {
@@ -281,52 +284,52 @@ useEffect(() => {
 
   // Realtime timer based on wall time from DB start (updated: run even if partial, but safe)
   useEffect(() => {
-  if (loading || questions.length === 0 || gameDuration === 0) {
-    console.log("Timer skipped:", loading, questions.length, gameDuration);
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-    }
-    return;
-  } 
-
-  console.log('Starting timer with startTime:', gameStartTime);
-
-  const updateRemaining = () => {
-    if (!gameStartTime) {
-      setTotalTimeRemaining(0);
+    if (loading || questions.length === 0 || gameDuration === 0) {
+      console.log("Timer skipped:", loading, questions.length, gameDuration);
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
       return;
     }
-    const now = Date.now();
-    const elapsed = Math.floor((now - gameStartTime) / 1000);
-    const remaining = gameDuration - elapsed;
-    setTotalTimeRemaining(Math.max(0, remaining));
 
-    if (remaining <= 0) {
-      saveProgressAndRedirect();
-    }
-  };
+    console.log('Starting timer with startTime:', gameStartTime);
 
-  // Initial
-  updateRemaining();
+    const updateRemaining = () => {
+      if (!gameStartTime) {
+        setTotalTimeRemaining(0);
+        return;
+      }
+      const now = Date.now();
+      const elapsed = Math.floor((now - gameStartTime) / 1000);
+      const remaining = gameDuration - elapsed;
+      setTotalTimeRemaining(Math.max(0, remaining));
 
-  // Clear old & set new
-  if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-  timerIntervalRef.current = setInterval(updateRemaining, 1000);
+      if (remaining <= 0) {
+        saveProgressAndRedirect();
+      }
+    };
 
-  return () => {
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-    }
-  };
-}, [gameStartTime, loading, questions.length, gameDuration, saveProgressAndRedirect]);
+    // Initial
+    updateRemaining();
+
+    // Clear old & set new
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    timerIntervalRef.current = setInterval(updateRemaining, 1000);
+
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+    };
+  }, [gameStartTime, loading, questions.length, gameDuration, saveProgressAndRedirect]);
 
 
   // UPDATE: Subscribe to game_sessions status changes
   useEffect(() => {
     if (!roomCode || !participantId || hasBootstrapped.current) return; // FIX: Prevent multiple subs
-  hasBootstrapped.current = true;
+    hasBootstrapped.current = true;
 
     const channelName = `game-player:${roomCode}:${participantId}` // Unique per player
     const subscription = supabase
@@ -343,19 +346,10 @@ useEffect(() => {
           console.log('Game session update:', payload.new.status)
           if (payload.new.status === "finished") {
             saveProgressAndRedirect()
-          } else if (payload.new.status === 'active' && !gameStartTime) {
-            // Fallback: Re-fetch if start time missed
-            fetchGameData()
-          }
+          } 
         }
       )
-      .subscribe((status) => {
-        console.log('Subscription status:', status) // Debug
-        if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          console.warn('Subscription dropped, retrying...')
-          setTimeout(() => fetchGameData(), 3000) // Retry fetch on disconnect
-        }
-      })
+      .subscribe()
 
     return () => {
       hasBootstrapped.current = false;
@@ -478,7 +472,7 @@ useEffect(() => {
 
         router.push(`/join/${roomCode}/result`);
       }
-    }, 1500);
+    }, 500);
   }, [isAnswered, answers, currentQuestionIndex, currentQuestion?.correctAnswer, correctAnswers, totalQuestions, gameStartTime, participantId, session, roomCode, router])
 
   const getOptionStyle = (optionIndex: number) => {
@@ -555,7 +549,7 @@ useEffect(() => {
       <div className="relative z-10 max-w-7xl mx-auto pt-8 px-4">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-4xl sm:text-6xl font-bold text-[#00ffff] pixel-text glow-cyan tracking-wider">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-[#00ffff] pixel-text glow-cyan tracking-wider">
             CRAZY RACE
           </h1>
         </div>

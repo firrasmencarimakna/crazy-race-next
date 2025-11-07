@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/authContext"
 
 // Background GIFs - Sesuai tema retro neon, optimized for mobile (smaller files if possible)
 const backgroundGifs = [
-  "/assets/background/host/4.webp",
+  "/assets/background/host/10.webp",
 ]
 
 export default function LoginPage() {
