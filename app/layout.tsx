@@ -1,6 +1,5 @@
-// app/layout.tsx
 import type { Metadata } from 'next';
-import ClientLayout from './ClientLayout';  // Import komponen client baru
+import ClientLayout from './ClientLayout';
 
 export const metadata: Metadata = {
   title: 'Crazy Race',
@@ -12,14 +11,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">  {/* Default lang ke 'en', akan di-update oleh client */}
-      <ClientLayout>{children}</ClientLayout>
+    <html lang="en">
+      <body>
+        <ClientLayout>{children}</ClientLayout>
+      </body>
     </html>
   );
 }
