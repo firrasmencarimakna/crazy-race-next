@@ -5,30 +5,32 @@ import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import enTranslation from "../locales/en/translation.json";
 import idTranslation from "../locales/id/translation.json";
-const resources = {
-    en: {
-    translation: enTranslation,
-  },
-    id: {
-    translation: idTranslation,
-  },
 
+const resources = {
+  en: { translation: enTranslation },
+  id: { translation: idTranslation },
 };
 
-i18n
-  .use(LanguageDetector) // Detect browser language
-  .use(initReactI18next) // Integrate with React
-  .init({
-    resources,
-    fallbackLng: "en",
-    supportedLngs: ["en", "id"],
-    interpolation: {
-      escapeValue: false, // React handles XSS
-    },
-    detection: {
-      order: ["localStorage", "navigator", "cookie"], // localStorage first
-      caches: ["localStorage", "cookie"], // Cache language preference
-    },
-  });
+let initialized = false;
+
+export const getI18nInstance = () => {
+  if (!initialized && !i18n.isInitialized) {
+    i18n
+      .use(LanguageDetector)
+      .use(initReactI18next)
+      .init({
+        resources,
+        fallbackLng: "en",
+        supportedLngs: ["en", "id"],
+        interpolation: { escapeValue: false },
+        detection: {
+          order: ["localStorage", "navigator", "cookie"],
+          caches: ["localStorage", "cookie"],
+        },
+      });
+    initialized = true;
+  }
+  return i18n;
+};
 
 export default i18n;

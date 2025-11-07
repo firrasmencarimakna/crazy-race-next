@@ -17,7 +17,6 @@ import LoadingRetroScreen from "@/components/loading-screnn"
 import { useAuth } from "@/contexts/authContext"
 import { generateXID } from "@/lib/id-generator"
 import { useTranslation } from "react-i18next"
-import "../lib/i18n"
 
 function LogoutDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { t } = useTranslation()
@@ -176,10 +175,6 @@ export default function HomePage() {
         console.error('Error fetching profile:', error);
       } else {
         setProfile(profileData);
-        console.log("============== hanya untuk debug =================")
-        console.log("Tersambung dengan supabase gameforsmart.com")
-        console.log("fullname:", profileData.fullname)
-        console.log("profile", profileData)
       }
       setProfileLoading(false);
     };
@@ -537,7 +532,6 @@ export default function HomePage() {
         {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
       </motion.button>
 
-      {/* Burger Menu Dropdown */}
       {/* Burger Menu Dropdown */}
       <AnimatePresence>
         {isMenuOpen && (
