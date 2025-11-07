@@ -16,6 +16,7 @@ import { Slider } from "@/components/ui/slider"
 import { breakOnCaps, formatUrlBreakable } from "@/utils/game"
 import { calculateCountdown } from "@/utils/countdown"  // Tambah ini
 import Image from "next/image"
+import { getSyncedServerTime, syncServerTime } from "@/utils/serverTime"
 
 /**
  * Konstanta untuk background GIFs, digunakan untuk cycling background.
@@ -49,17 +50,19 @@ export default function HostRoomPage() {
 
   // Ref buat interval countdown (stabil, gak cause re-render)
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const countdownAudioRef = useRef<HTMLAudioElement>(null);
 
   // State untuk data room dan player
+  const [isCountdownPlaying, setIsCountdownPlaying] = useState(false);
   const [participants, setParticipants] = useState<any[]>([]); // Daftar participants real-time
   const [session, setSession] = useState<any>(null); // Data game_sessions dari Supabase
   const [room, setRoom] = useState<any>(null) // Data room dari Supabase
   const [gameStarted, setGameStarted] = useState(false) // Flag apakah game sudah dimulai
-  const [countdown, setCountdown] = useState(0) // Timer countdown (0 = tidak aktif)
+  const [countdown, setCountdown] = useState(0); // Timer countdown (0 = tidak aktif)
 
   // State untuk audio controls
   const [isMuted, setIsMuted] = useState(false) // Status mute audio
-  const [volume, setVolume] = useState(50) // Volume audio (0-100)
+  const [hasInteracted, setHasInteracted] = useState(false);
 
   // State untuk UI dan animasi
   const [currentBgIndex, setCurrentBgIndex] = useState(0) // Index background GIF saat ini
@@ -89,12 +92,24 @@ export default function HostRoomPage() {
     console.log('Realtime status:', status);
   });
 
+  useEffect(() => {
+    syncServerTime() // sync offset waktu sekali
+  }, [])
+
+
   // UPDATE: calculateCountdown util (inline kalau gak ada, asumsi fixed 10s countdown)
+  // const calculateCountdown = (startTimestamp: string, durationSeconds: number = 10): number => {
+  //   const start = new Date(startTimestamp).getTime()
+  //   const now = getSyncedServerTime() // pakai waktu server, bukan client
+  //   const elapsed = (now - start) / 1000
+  //   return Math.max(0, Math.min(durationSeconds, Math.ceil(durationSeconds - elapsed)));
+  // }
+
   const calculateCountdown = (startTimestamp: string, durationSeconds: number = 10): number => {
     const start = new Date(startTimestamp).getTime();
     const now = Date.now();
     const elapsed = (now - start) / 1000;
-    return Math.max(0, Math.floor(durationSeconds - elapsed));
+    return Math.max(0, Math.min(durationSeconds, Math.ceil(durationSeconds - elapsed)));
   };
 
   // UPDATE: startCountdownSync - pakai countdown_started_at, duration fixed 10s
@@ -108,7 +123,7 @@ export default function HostRoomPage() {
     setCountdown(remaining);
 
     if (remaining <= 0) {
-      console.log('Countdown already finished on start');
+      console.log('Countdown already finished on start, skip GO & start game');
       return;
     }
 
@@ -122,13 +137,15 @@ export default function HostRoomPage() {
         clearInterval(countdownIntervalRef.current!);
         countdownIntervalRef.current = null;
         setCountdown(0);
-        // End countdown: Update DB ke playing & redirect
+        console.log('Show GO for 1s, then start game');
+
+        // Delay 1s for GO, then update DB & redirect
         setTimeout(async () => {
           try {
             const { error } = await supabase
               .from("game_sessions")
               .update({
-                status: "playing",
+                status: "active",
                 started_at: new Date().toISOString(),
                 countdown_started_at: null  // Clear countdown
               })
@@ -137,14 +154,14 @@ export default function HostRoomPage() {
             if (error) {
               console.error('End countdown error:', error);
             } else {
-              console.log('Host updated to playing status');
+              console.log('Host updated to active status');
               setLoading(true);
-              router.push(`/host/${roomCode}/game`); // UPDATE: path dengan roomCode
+              router.push(`/host/${roomCode}/game`);
             }
           } catch (err: unknown) {
             console.error('End countdown error:', err);
           }
-        }, 500);
+        }, 1000); // 1s for GO
       }
     }, 1000);
   }, [roomCode, router]);
@@ -154,39 +171,97 @@ export default function HostRoomPage() {
       clearInterval(countdownIntervalRef.current);
       countdownIntervalRef.current = null;
     }
-    setCountdown(0);
+    setCountdown(0); // Null to hide
   }, []);
 
   useEffect(() => {
-    let isFirstInteraction = true
+    const audio = audioRef.current;
+    if (!audio) return;
 
-    const enableAudioOnInteraction = () => {
-      if (isFirstInteraction && audioRef.current) {
-        isFirstInteraction = false
-        audioRef.current.volume = isMuted ? 0 : (volume / 100)
-        audioRef.current.play().then(() => {
-          console.log("Audio started after user interaction!")
-        }).catch((e) => {
-          console.log("Still blocked:", e)
-        })
-        // Hapus listener setelah first play
-        document.removeEventListener('click', enableAudioOnInteraction)
-        document.removeEventListener('scroll', enableAudioOnInteraction)
-        document.removeEventListener('keydown', enableAudioOnInteraction)
+    const startAudio = async () => {
+      if (!hasInteracted) {
+        try {
+          audio.muted = isMuted;
+          await audio.play();
+          setHasInteracted(true);
+          console.log("🔊 Audio started via interaction!");
+        } catch (err) {
+          console.warn("⚠️ Audio play blocked, waiting for interaction...");
+        } finally {
+          // lepas listener apapun hasilnya
+          document.removeEventListener("click", startAudio);
+          document.removeEventListener("keydown", startAudio);
+          document.removeEventListener("scroll", startAudio);
+        }
       }
-    }
+    };
 
-    // Listener untuk berbagai gesture
-    document.addEventListener('click', enableAudioOnInteraction)
-    document.addEventListener('scroll', enableAudioOnInteraction)
-    document.addEventListener('keydown', enableAudioOnInteraction)
+    // 🧠 coba autoplay duluan
+    const tryAutoplay = async () => {
+      try {
+        audio.muted = isMuted;
+        await audio.play();
+        console.log("✅ Autoplay berhasil tanpa interaksi!");
+        setHasInteracted(true);
+      } catch {
+        console.log("❌ Autoplay gagal, tunggu interaksi user...");
+        // kalau gagal, baru pasang listener
+        document.addEventListener("click", startAudio);
+        document.addEventListener("keydown", startAudio);
+        document.addEventListener("scroll", startAudio);
+      }
+    };
+
+    tryAutoplay();
 
     return () => {
-      document.removeEventListener('click', enableAudioOnInteraction)
-      document.removeEventListener('scroll', enableAudioOnInteraction)
-      document.removeEventListener('keydown', enableAudioOnInteraction)
+      document.removeEventListener("click", startAudio);
+      document.removeEventListener("keydown", startAudio);
+      document.removeEventListener("scroll", startAudio);
+    };
+  }, [hasInteracted, isMuted]);
+
+  useEffect(() => {
+    const countdownAudio = countdownAudioRef.current;
+    const bgAudio = audioRef.current;
+    if (!countdownAudio) return;
+
+    if (countdown > 0 && !isCountdownPlaying) {
+      // Baru mulai countdown
+      setIsCountdownPlaying(true);
+
+      if (bgAudio && !bgAudio.paused) bgAudio.pause();
+
+      countdownAudio.currentTime = 0;
+      countdownAudio.muted = isMuted;
+      countdownAudio
+        .play()
+        .then(() => console.log("🔊 Countdown sound started"))
+        .catch((err) => console.warn("⚠️ Countdown sound blocked:", err));
     }
-  }, [isMuted, volume])
+
+    if (countdown <= 0 && isCountdownPlaying) {
+      // Countdown selesai
+      setIsCountdownPlaying(false);
+
+      countdownAudio.pause();
+      countdownAudio.currentTime = 0;
+
+      if (bgAudio && hasInteracted) {
+        bgAudio.muted = isMuted;
+        bgAudio.play().catch(() => console.warn("⚠️ BG audio failed resume"));
+      }
+    }
+  }, [countdown, isMuted, hasInteracted, isCountdownPlaying]);
+
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.muted = isMuted;
+    }
+  }, [isMuted]);
+
+  const handleMuteToggle = () => setIsMuted((prev) => !prev);
 
   useEffect(() => {
     if (room?.status === 'playing' && !loading) {
@@ -298,22 +373,6 @@ export default function HostRoomPage() {
   }, [roomCode, startCountdownSync, stopCountdownSync]);
 
   useEffect(() => {
-    if (audioRef.current) {
-      const initialVolume = volume / 100
-      audioRef.current.volume = isMuted ? 0 : initialVolume
-      audioRef.current.play().catch((e) => {
-        console.log("Autoplay dicegah oleh browser:", e)
-      })
-    }
-  }, [])
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : (volume / 100)
-    }
-  }, [volume, isMuted])
-
-  useEffect(() => {
     if (typeof window !== 'undefined') {
       setJoinLink(`${window.location.origin}/?code=${roomCode}`)
     }
@@ -331,20 +390,6 @@ export default function HostRoomPage() {
     }, 5000)
     return () => clearInterval(bgInterval)
   }, [])
-
-  const handleMuteToggle = () => {
-    setIsMuted(!isMuted)
-  }
-
-  /**
-   * Handler: Update volume dari slider, auto unmute jika volume >0.
-   */
-  const handleVolumeChange = (value: number[]) => {
-    setVolume(value[0])
-    if (isMuted && value[0] > 0) {
-      setIsMuted(false)
-    }
-  }
 
   /**
    * Handler: Copy room code ke clipboard dengan feedback toast-like.
@@ -471,20 +516,28 @@ export default function HostRoomPage() {
   };
 
   if (countdown > 0) {
-      return (
-        <div className={`min-h-screen bg-[#1a0a2a] flex items-center justify-center pixel-font`}>
-          <div className="text-center">
-            <motion.div
-              className="text-8xl md:text-9xl lg:text-[10rem] xl:text-[12rem] leading-none font-bold text-[#00ffff] pixel-text glow-cyan race-pulse"
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ repeat: Infinity, duration: 0.5 }}
-            >
-              {countdown}
-            </motion.div>
-          </div>
+    return (
+      <div className={`min-h-screen bg-[#1a0a2a] flex items-center justify-center pixel-font`}>
+        <audio
+          ref={countdownAudioRef}
+          src="/assets/music/countdown.mp3"
+          preload="auto"
+          className="hidden"
+        />
+        <div className="text-center">
+          <motion.div
+            className="text-8xl md:text-9xl lg:text-[10rem] xl:text-[12rem] leading-none font-bold text-[#00ffff] pixel-text glow-cyan race-pulse"
+            animate={{ scale: [1, 1.1, 1] }}
+            transition={{ repeat: Infinity, duration: 0.5 }}
+          >
+            {countdown}
+          </motion.div>
         </div>
-      );
-    }
+      </div>
+    );
+  }
+
+  if (loading) return <LoadingRetro />
 
   // Render utama: Semua conditional inline untuk persist audio dan background
   return (
@@ -492,10 +545,11 @@ export default function HostRoomPage() {
       {/* Audio Element: Selalu render untuk autoplay konsisten */}
       <audio
         ref={audioRef}
-        src="/assets/music/robbers.mp3"
+        src="/assets/music/hostroom.mp3"
         loop
         preload="auto"
         className="hidden"
+        autoPlay
       />
 
       {/* Background Image Cycling dengan AnimatePresence */}
@@ -511,7 +565,6 @@ export default function HostRoomPage() {
         />
       </AnimatePresence>
 
-      {/* Fixed Elements: Back Button, Logo, Title, Burger Menu */}
       {/* Back Button - Fixed Top Left */}
       <motion.button
         initial={{ opacity: 0, x: -20 }}
@@ -537,84 +590,24 @@ export default function HostRoomPage() {
         Crazy Race
       </h1>
 
-      {/* Burger Menu Button - Fixed Top Right */}
       <motion.button
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         whileHover={{ scale: 1.05 }}
-        onClick={() => setIsMenuOpen(!isMenuOpen)}
-        className="absolute top-4 right-4 z-40 p-3 bg-[#ff6bff]/20 border-2 border-[#ff6bff]/50 pixel-button hover:bg-[#ff8aff]/40 glow-pink rounded-lg shadow-lg shadow-[#ff6bff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
-        aria-label="Toggle menu"
+        onClick={handleMuteToggle}
+        className={`absolute top-4 right-4 z-40 p-3 border-2 pixel-button rounded-lg shadow-lg min-w-[48px] min-h-[48px] flex items-center justify-center transition-all cursor-pointer
+    ${isMuted
+            ? "bg-[#ff6bff]/30 border-[#ff6bff] glow-pink shadow-[#ff6bff]/30 hover:bg-[#ff8aff]/50"
+            : "bg-[#00ffff]/30 border-[#00ffff] glow-cyan shadow-[#00ffff]/30 hover:bg-[#33ffff]/50"
+          }`}
+        aria-label={isMuted ? "Unmute" : "Mute"}
       >
-        {isMenuOpen ? <X size={20} /> : <Volume2 size={20} />}
+        <span className="filter drop-shadow-[2px_2px_2px_rgba(0,0,0,0.7)]">
+          {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+        </span>
       </motion.button>
 
-      {/* Menu Dropdown: Audio controls dan settings */}
-      <AnimatePresence>
-        {isMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, x: 300 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 300 }}
-            className="absolute top-20 right-4 z-30 w-64 bg-[#1a0a2a]/20 border border-[#ff6bff]/50 rounded-lg p-3 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm"
-          >
-            <div className="space-y-2">
-              {/* Integrated Mute + Volume: Single row for button + slider, with label above for simplicity */}
-              <div className="p-1.5 bg-[#ff6bff]/10 rounded space-y-1"> {/* Unified bg for the whole section; adjusted to /10 for subtle highlight */}
-                {/* <span className="text-xs text-white pixel-text block">Suara</span> Moved "Suara" label here as section header; changed color to white for better contrast */}
-
-                {/* New flex row: Mute button on left, slider on right; tight spacing */}
-                <div className="flex items-center space-x-2 bg-[#1a0a2a]/60 border border-[#ff6bff]/30 rounded px-2 py-1"> {/* Shared container for row; reduced px-1 to px-2 for button fit, py-0.5 to py-1 */}
-                  <button
-                    onClick={handleMuteToggle}
-                    className="p-1.5 bg-[#00ffff] border border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded flex-shrink-0" // Added flex-shrink-0 to prevent button compression
-                    aria-label={isMuted ? "Unmute" : "Mute"}
-                  >
-                    {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
-                  </button>
-
-                  <div className="flex-1"> {/* Wrapper for slider to take remaining space */}
-                    <Slider
-                      value={[volume]}
-                      onValueChange={handleVolumeChange}
-                      max={100}
-                      min={0}
-                      step={1}
-                      className="w-full"
-                      orientation="horizontal"
-                      aria-label="Volume slider"
-                    />
-                  </div>
-                </div>
-
-                {/* Volume value below slider for quick glance; optional but keeps info visible without cluttering row */}
-                <span className="text-xs text-[#ff6bff] pixel-text">Volume: {volume}%</span>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Loading Overlay: Tampil saat loading, tapi DOM tetap */}
-      {loading && <LoadingRetro />}
-
-      {/* Countdown Overlay: Full-screen saat countdown aktif */}
-      {countdown > 0 && room?.status === 'countdown' && (  // Tambah check status
-        <div className="fixed inset-0 z-50 bg-[#1a0a2a] flex items-center justify-center pixel-font">
-          <div className="text-center">
-            <motion.div
-              className="text-8xl md:text-9xl lg:text-[10rem] xl:text-[12rem] leading-none font-bold text-[#00ffff] pixel-text glow-cyan race-pulse"
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ repeat: Infinity, duration: 0.5 }}
-            >
-              {countdown}
-            </motion.div>
-          </div>
-        </div>
-      )}
-
-      {/* Main Content: Hanya tampil saat !loading && countdown === 0 */}
-      {!loading && countdown === 0 && (
+      {/* Main Content */}
         <div className="relative z-10 max-w-8xl mx-auto p-4 sm:p-6 md:p-8">
           {/* Title */}
           <motion.div
@@ -630,10 +623,10 @@ export default function HostRoomPage() {
             </div>
           </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-2">
             {/* Room Info & QR Code Card */}
             <Card className="bg-[#1a0a2a]/60 border-2 sm:border-3 border-[#ff6bff]/50 pixel-card glow-pink-subtle p-4 sm:p-6 md:p-8 lg:col-span-2 order-1 lg:order-1">
-              <div className="text-center space-y-3 sm:space-y-4">
+              <div className="text-center space-y-3">
                 {/* Room Code Display */}
                 <div className="relative p-3 sm:p-4 md:p-5 bg-[#0a0a0f] rounded-lg">
                   <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#00ffff] pixel-text glow-cyan">{roomCode}</div>
@@ -770,7 +763,6 @@ export default function HostRoomPage() {
             </Card>
           </div>
         </div>
-      )}
 
       {/* Kick Confirmation Dialog */}
       <Dialog open={kickDialogOpen} onOpenChange={setKickDialogOpen}>

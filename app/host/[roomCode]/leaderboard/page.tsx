@@ -11,6 +11,9 @@ import { supabase } from "@/lib/supabase"
 import { breakOnCaps } from "@/utils/game"
 import Image from "next/image"
 import { HomeIcon, RotateCwIcon } from "lucide-react"
+import { generateGamePin } from "../../page"
+import { shuffleArray } from "../settings/page"
+import { useAuth } from "@/contexts/authContext"
 
 type PlayerStats = {
   nickname: string
@@ -38,6 +41,7 @@ const carGifMap: Record<string, string> = {
 }
 
 export default function HostLeaderboardPage() {
+  const { user } = useAuth();
   const params = useParams();
   const router = useRouter();
   const roomCode = params.roomCode as string;
@@ -95,8 +99,11 @@ export default function HostLeaderboardPage() {
         return;
       }
 
-      // Filter complete responses
-      const completeResponses = parsedResponses.filter((r: any) => r.current_question === r.total_question && r.total_question > 0);
+      // Filter hanya pemain yang sudah completion = true
+      const completeResponses = parsedResponses.filter(
+        (r: any) => r.completion === true
+      );
+
 
       if (completeResponses.length === 0) {
         setError('No completed players');
@@ -123,7 +130,7 @@ export default function HostLeaderboardPage() {
       }
 
       // Sort & rank
-      const sortedStats = [...allStats].sort((a, b) => 
+      const sortedStats = [...allStats].sort((a, b) =>
         b.finalScore - a.finalScore || a.duration - b.duration
       );
       const rankedStats = sortedStats.map((stats, index) => ({
@@ -162,7 +169,10 @@ export default function HostLeaderboardPage() {
       )
       .subscribe();
 
-    return () => supabase.removeChannel(subscription);
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+
   }, [roomCode, fetchData]);
 
   // Background
@@ -172,6 +182,72 @@ export default function HostLeaderboardPage() {
     }, 5000);
     return () => clearInterval(bgInterval);
   }, []);
+
+  // Tambah function restartGame di atas return (dalam component, di leaderboard)
+  const restartGame = async (e: React.MouseEvent) => {
+    const icon = e.currentTarget.querySelector("svg");
+    if (icon) icon.classList.add("animate-spin");
+
+    try {
+      // Step 1: Fetch current session untuk settings & quiz_id
+      const { data: currentSession, error: fetchError } = await supabase
+        .from("game_sessions")
+        .select("quiz_id, host_id, total_time_minutes, question_limit, difficulty, game_end_mode, allow_join_after_start, application, difficulty")
+        .eq("game_pin", roomCode)
+        .single();
+
+      if (fetchError || !currentSession) throw fetchError || new Error('Current session not found');
+
+      // Step 2: Fetch full quiz untuk questions
+      const { data: quizData, error: quizError } = await supabase
+        .from("quizzes")
+        .select("questions")
+        .eq("id", currentSession.quiz_id)
+        .single();
+
+      if (quizError || !quizData) throw quizError || new Error('Quiz not found');
+
+      // Step 3: Shuffle & slice questions (reuse question_limit)
+      const shuffledQuestions = shuffleArray(quizData.questions);
+      const slicedQuestions = shuffledQuestions.slice(0, parseInt(currentSession.question_limit || '10'));
+
+      // Step 4: Generate new game_pin
+      const newGamePin = generateGamePin(6);
+
+      // Step 5: Insert new session (same settings, new pin, waiting, empty participants/responses, shuffled questions)
+      const newSession = {
+        quiz_id: currentSession.quiz_id,
+        host_id: currentSession.host_id,
+        game_pin: newGamePin,
+        status: 'waiting',
+        total_time_minutes: currentSession.total_time_minutes || 5,
+        question_limit: currentSession.question_limit || '10',
+        game_end_mode: currentSession.game_end_mode || 'manual',
+        allow_join_after_start: currentSession.allow_join_after_start || false,
+        participants: [], // Empty
+        responses: [], // Empty
+        current_questions: slicedQuestions, // Shuffled slice
+        application: currentSession.application || 'crazyrace',
+        created_at: new Date().toISOString(),
+        difficulty: currentSession.difficulty
+      };
+
+      const { data: newSessionData, error: insertError } = await supabase
+        .from("game_sessions")
+        .insert(newSession)
+        .select("game_pin")
+        .single();
+
+      if (insertError || !newSessionData) throw insertError || new Error('Failed to create new session');
+
+      console.log('New session created:', newGamePin);
+      router.push(`/host/${newGamePin}`); // Direct to new host room
+    } catch (err: any) {
+      console.error('Restart error:', err);
+    } finally {
+      if (icon) icon.classList.remove("animate-spin");
+    }
+  };
 
   const getRankColor = (rank: number) => {
     switch (rank) {
@@ -393,19 +469,7 @@ export default function HostLeaderboardPage() {
 
           {/* Tombol New Race (kanan tengah) */}
           <button
-            onClick={(e) => {
-              const icon = e.currentTarget.querySelector("svg");
-              if (icon) {
-                icon.classList.add("animate-spin");
-                setTimeout(() => {
-                  icon.classList.remove("animate-spin");
-                  router.push("/host");
-                }, 700);
-              } else {
-                // fallback kalau entah kenapa svg-nya gak ketemu
-                router.push("/host");
-              }
-            }}
+            onClick={restartGame}
             className="pointer-events-auto flex items-center justify-center w-12 h-12 rounded-full bg-[#ff6bff]/70 border border-white text-white hover:bg-[#ff8aff]/80 transition-all duration-300 shadow-lg"
           >
             <RotateCwIcon className="w-6 h-6" />

@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogOverlay, 
 
 import Image from "next/image"
 import { breakOnCaps } from "@/utils/game"
+import { getSyncedServerTime, syncServerTime } from "@/utils/serverTime"
 
 // Background GIFs
 const backgroundGifs = [
@@ -72,12 +73,23 @@ export default function LobbyPage() {
   const [showExitDialog, setShowExitDialog] = useState(false)
   const hasBootstrapped = useRef(false); // Prevent double bootstrap
 
+  useEffect(() => {
+    syncServerTime() // sync offset waktu sekali
+  }, [])
+
   // UPDATE: calculateCountdown inline (sama seperti host)
+  // const calculateCountdown = (startTimestamp: string, durationSeconds: number = 10): number => {
+  //   const start = new Date(startTimestamp).getTime()
+  //   const now = getSyncedServerTime() // pakai waktu server, bukan client
+  //   const elapsed = (now - start) / 1000
+  //   return Math.max(0, Math.min(durationSeconds, Math.ceil(durationSeconds - elapsed)));
+  // }
+
   const calculateCountdown = (startTimestamp: string, durationSeconds: number = 10): number => {
     const start = new Date(startTimestamp).getTime();
     const now = Date.now();
     const elapsed = (now - start) / 1000;
-    return Math.max(0, Math.floor(durationSeconds - elapsed));
+    return Math.max(0, Math.min(durationSeconds, Math.ceil(durationSeconds - elapsed)));
   };
 
   // Fungsi sync countdown (pakai ref, no dependency loop)
@@ -320,23 +332,6 @@ export default function LobbyPage() {
     return <LoadingRetro />;
   }
 
-  // Countdown display
-  if (countdown > 0) {
-    return (
-      <div className={`min-h-screen bg-[#1a0a2a] flex items-center justify-center pixel-font`}>
-        <div className="text-center">
-          <motion.div
-            className="text-8xl md:text-9xl lg:text-[10rem] xl:text-[12rem] leading-none font-bold text-[#00ffff] pixel-text glow-cyan race-pulse"
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ repeat: Infinity, duration: 0.5 }}
-          >
-            {countdown}
-          </motion.div>
-        </div>
-      </div>
-    );
-  }
-
   const handleSelectCar = async (selectedCar: string) => {
     if (!currentPlayer.id || !session) return;
 
@@ -369,6 +364,20 @@ export default function LobbyPage() {
       console.log('Car updated successfully');
     }
   };
+
+  if (countdown > 0) {
+    return (
+      <div className="absolute inset-0 flex items-center justify-center bg-[#1a0a2a] z-[9999]">
+          <motion.div
+            className="text-8xl md:text-9xl lg:text-[10rem] xl:text-[12rem] leading-none font-bold text-[#00ffff] pixel-text glow-cyan race-pulse"
+            animate={{ scale: [1, 1.1, 1] }}
+            transition={{ repeat: Infinity, duration: 0.5 }}
+          >
+            {countdown}
+          </motion.div>
+        </div>
+    )
+  }
 
   return (
     <div className={`min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font p-4`}>
@@ -432,7 +441,7 @@ export default function LobbyPage() {
             <CardContent className="p-6">
               {/* Players Grid - 5 columns */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                {participants.map((player) => (
+                {sortedParticipants.map((player) => (
                   <motion.div
                     key={player.id}
                     className={`relative group ${player.id === currentPlayer.id ? 'glow-cyan' : 'glow-pink-subtle'

@@ -110,22 +110,6 @@ export default function PlayerResultsPage() {
           throw new Error("No responses found");
         }
 
-        // Filter complete responses (current_question === total_question)
-        const completeResponses = parsedResponses.filter((r: any) => r.current_question === r.total_question && r.total_question > 0);
-
-        if (completeResponses.length === 0) {
-          throw new Error("No completed players");
-        }
-
-        // Isi cache awal dari complete responses
-        completeResponses.forEach((r: any) => {
-          if (!r.participant) return;
-          responsesCache[r.participant] = {
-            score: r.score || 0,
-            duration: r.duration || Infinity,
-          };
-        });
-
         // Ambil current player response
         const myResponse = parsedResponses.find((r: any) => r.participant === participantId);
         if (!myResponse) {
@@ -146,7 +130,7 @@ export default function PlayerResultsPage() {
 
         // Hitung rank awal
         const sorted = Object.entries(responsesCache)
-          .sort(([ , a], [ , b]) => b.score - a.score || a.duration - b.duration)
+          .sort(([, a], [, b]) => b.score - a.score || a.duration - b.duration)
           .map(([pid]) => pid);
         const rank = sorted.findIndex((pid) => pid === participantId) + 1;
 
@@ -163,65 +147,8 @@ export default function PlayerResultsPage() {
           participantId,
         });
 
-        // Realtime subscription
-        channel = supabase
-          .channel(`realtime-rank-${roomCode}`)
-          .on(
-            "postgres_changes",
-            {
-              event: "UPDATE",
-              schema: "public",
-              table: "game_sessions",
-              filter: `game_pin=eq.${roomCode}`,
-            },
-            (payload) => {
-              const newSession = payload.new;
-              if (!newSession.responses) return;
-
-              let newParsedResponses = [];
-              try {
-                newParsedResponses = typeof newSession.responses === 'string' ? JSON.parse(newSession.responses) : newSession.responses || [];
-              } catch (e) {
-                console.error("Parse realtime responses error:", e);
-                return;
-              }
-
-              const newCompleteResponses = newParsedResponses.filter((r: any) => r.current_question === r.total_question && r.total_question > 0);
-
-              // Update cache
-              newCompleteResponses.forEach((r: any) => {
-                if (!r.participant) return;
-                responsesCache[r.participant] = {
-                  score: r.score || 0,
-                  duration: r.duration || Infinity,
-                };
-              });
-
-              // Recalculate rank
-              const sorted = Object.entries(responsesCache)
-                .sort(([ , a], [ , b]) => b.score - a.score || a.duration - b.duration)
-                .map(([pid]) => pid);
-              const newRank = sorted.findIndex((pid) => pid === participantId) + 1;
-
-              setCurrentPlayerStats((prev) =>
-                prev ? {
-                  ...prev,
-                  rank: newRank,
-                  totalPlayers: sorted.length,
-                } : prev
-              );
-            }
-          )
-          .subscribe((status) => {
-            if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-              console.warn('Realtime sub dropped, retrying...');
-              setTimeout(setupInitialData, 3000);
-            }
-          });
-
         setLoading(false);
       } catch (err: any) {
-        console.error("Error setting up realtime:", err);
         setError(err.message);
         setLoading(false);
       }
@@ -249,6 +176,10 @@ export default function PlayerResultsPage() {
       <LoadingRetro />
     )
   }
+
+  const formatAccuracy = (value: string | number) =>
+    parseFloat(Number(value).toFixed(2)).toString();
+
 
   const { finalScore, correctAnswers, totalQuestions, accuracy, totalTime, rank, nickname, car } = currentPlayerStats
 
@@ -307,7 +238,7 @@ export default function PlayerResultsPage() {
                 className="h-28 w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
               />
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-white pixel-text glow-text break-words line-clamp-2">{breakOnCaps(nickname)}</h2>
+            <h2 className="text-2xl md:text-4xl font-bold text-white pixel-text glow-text ">{breakOnCaps(nickname)}</h2>
           </Card>
         </motion.div>
 
@@ -333,7 +264,7 @@ export default function PlayerResultsPage() {
             <div className="text-xs text-[#ff6bff] pixel-text">Time</div>
           </Card>
           <Card className="p-5 text-center bg-[#1a0a2a]/10 border-[#00ffff]/70 backdrop-blur-xs pixel-card">
-            <div className="text-xl font-bold text-[#00ffff] mb-1 pixel-text glow-cyan">{accuracy}%</div>
+            <div className="text-xl font-bold text-[#00ffff] mb-1 pixel-text glow-cyan">{formatAccuracy(accuracy)}%</div>
             <div className="text-xs text-[#ff6bff] pixel-text">Accuracy</div>
           </Card>
         </motion.div>
@@ -348,7 +279,7 @@ export default function PlayerResultsPage() {
           <Button
             size="sm"
             variant="outline"
-            className="bg-[#1a0a2a]/50 border-[#00ffff] text-[#00ffff] pixel-button glow-cyan hover:bg-[#00ffff]/20"
+            className="bg-[#1a0a2a]/50 border-[#00ffff] text-[#00ffff] pixel-button glow-cyan hover:bg-[#00ffff]/70"
             onClick={() => router.push('/')}
           >
             <Home className="mr-1 h-4 w-4" />

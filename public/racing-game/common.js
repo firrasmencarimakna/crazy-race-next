@@ -378,9 +378,9 @@ var SPRITES = {
   BOULDER3:               { x:  230, y:  280, w:  320, h:  220 },
   COLUMN:                 { x:  995, y:    5, w:  200, h:  315 },
   BILLBOARD01:            { x:  625, y:  375, w:  300, h:  170 },
-  BILLBOARD06:            { x:  488, y:  555, w:  298, h:  190 },
+  BILLBOARD07:            { x:  488, y:  555, w:  298, h:  190 },
   BILLBOARD05:            { x:    5, y:  897, w:  298, h:  190 },
-  BILLBOARD07:            { x:  313, y:  897, w:  298, h:  190 },
+  BILLBOARD06:            { x:  313, y:  897, w:  298, h:  190 },
   BOULDER2:               { x:  621, y:  897, w:  298, h:  140 },
   TREE2:                  { x: 1205, y:    5, w:  282, h:  295 },
   BILLBOARD04:            { x: 1205, y:  310, w:  268, h:  170 },
@@ -398,11 +398,11 @@ var SPRITES = {
   CAR02:                  { x: 1383, y:  825, w:   80, h:   59 },
   CAR04:                  { x: 1383, y:  894, w:   80, h:   57 },
   CAR01:                  { x: 1205, y: 1018, w:   80, h:   56 },
-  PLAYER_UPHILL_LEFT:     { x: 1383, y:  961, w:   80, h:   45 },
-  PLAYER_UPHILL_STRAIGHT: { x: 1295, y: 1018, w:   80, h:   45 },
+  PLAYER_UPHILL_STRAIGHT: { x: 1383, y:  961, w:   80, h:   45 },
+  PLAYER_UPHILL_LEFT:     { x: 1295, y: 1018, w:   80, h:   45 },
   PLAYER_UPHILL_RIGHT:    { x: 1385, y: 1018, w:   80, h:   45 },
-  PLAYER_LEFT:            { x:  995, y:  480, w:   80, h:   41 },
-  PLAYER_STRAIGHT:        { x: 1085, y:  480, w:   80, h:   41 },
+  PLAYER_STRAIGHT:        { x:  995, y:  480, w:   80, h:   41 },
+  PLAYER_LEFT:            { x: 1085, y:  480, w:   80, h:   41 },
   PLAYER_RIGHT:           { x:  995, y:  531, w:   80, h:   41 }
 };
 

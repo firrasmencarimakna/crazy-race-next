@@ -92,7 +92,6 @@ export default function HomePage() {
 
   // Refs untuk audio elements
   const audioRef = useRef<HTMLAudioElement>(null) // Background music
-  const alertAudioRef = useRef<HTMLAudioElement>(null) // Alert sound (gas.mp3)
 
   // Arrays untuk generate random nickname
   const adjectives = ["Crazy", "Fast", "Speedy", "Turbo", "Neon", "Pixel", "Racing", "Wild", "Epic", "Flash"]
@@ -179,8 +178,8 @@ export default function HomePage() {
         setProfile(profileData);
         console.log("============== hanya untuk debug =================")
         console.log("Tersambung dengan supabase gameforsmart.com")
-      console.log("fullname:", profileData.fullname)
-      console.log("profile", profileData)
+        console.log("fullname:", profileData.fullname)
+        console.log("profile", profileData)
       }
       setProfileLoading(false);
     };
@@ -215,18 +214,18 @@ export default function HomePage() {
 
   // OJO DI ILANGI BREE
   // TAMBAH: Check kalau udah join, redirect ke lobby
-// useEffect(() => {
-//   if (authLoading || profileLoading) return;
+  // useEffect(() => {
+  //   if (authLoading || profileLoading) return;
 
-//   const participantId = localStorage.getItem('participantId');
-//   const gamePin = localStorage.getItem('game_pin');
+  //   const participantId = localStorage.getItem('participantId');
+  //   const gamePin = localStorage.getItem('game_pin');
 
-//   if (participantId && gamePin) {
-//     console.log('User already joined, redirecting to lobby');
-//     router.push(`/join/${gamePin}`);
-//     return;
-//   }
-// }, [authLoading, profileLoading, router]);
+  //   if (participantId && gamePin) {
+  //     console.log('User already joined, redirecting to lobby');
+  //     router.push(`/join/${gamePin}`);
+  //     return;
+  //   }
+  // }, [authLoading, profileLoading, router]);
 
   // useEffect: Auto-fill roomCode dari URL query param (?code=ABC123)
   useEffect(() => {
@@ -291,12 +290,6 @@ export default function HomePage() {
       console.log("Trigger alert:", reason || 'general')
       setAlertReason(reason || 'general')
       setShowAlert(true)
-      // Play alert audio jika tidak muted
-      if (alertAudioRef.current && !isMuted) {
-        alertAudioRef.current.volume = volume / 100
-        alertAudioRef.current.currentTime = 0 // Reset untuk replay
-        alertAudioRef.current.play().catch((e) => console.log("Audio error:", e))
-      }
       return // Stop proses join
     }
 
@@ -315,12 +308,6 @@ export default function HomePage() {
         setJoining(false);
         setAlertReason('roomNotFound');
         setShowAlert(true);
-        // Play alert audio jika tidak muted
-        if (alertAudioRef.current && !isMuted) {
-          alertAudioRef.current.volume = volume / 100
-          alertAudioRef.current.currentTime = 0 // Reset untuk replay
-          alertAudioRef.current.play().catch((e) => console.log("Audio error:", e))
-        }
         return
       }
 
@@ -370,8 +357,6 @@ export default function HomePage() {
       localStorage.setItem("participantId", participantId); // Baru: untuk later use
       localStorage.setItem("game_pin", roomCode);
       localStorage.setItem("car", randomCar); // Kalau perlu di lobby
-      
-      
 
       // Navigasi ke lobby page
       setTimeout(() => {
@@ -391,12 +376,6 @@ export default function HomePage() {
       console.log("Trigger tryout alert: nickname empty")
       setAlertReason('nickname')
       setShowAlert(true)
-      // Play alert audio jika tidak muted
-      if (alertAudioRef.current && !isMuted) {
-        alertAudioRef.current.volume = volume / 100
-        alertAudioRef.current.currentTime = 0
-        alertAudioRef.current.play().catch((e) => console.log("Audio error:", e))
-      }
       return
     }
     setJoining(true)
@@ -414,6 +393,20 @@ export default function HomePage() {
   // Preload check: Tampilkan loading jika belum siap
   const { isLoaded, progress } = usePreloaderScreen()
   if (!isLoaded) return <LoadingRetroScreen progress={progress} />
+
+  // Handle toggle fullscreen
+  const handleToggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.warn(`Error attempting to enable full-screen mode: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen().catch((err) => {
+        console.warn(`Error attempting to disable full-screen mode: ${err.message}`);
+      });
+    }
+  };
+
 
   // Functions untuk modal How to Play
   const closeHowToPlay = () => {
@@ -440,13 +433,13 @@ export default function HomePage() {
   return (
     <div className={`min-h-[100dvh] w-full relative overflow-hidden pixel-font ${isLoaded ? 'p-2' : ''}`}>
       {/* Background Music Audio (hidden) */}
-      <audio
+      {/* <audio
         ref={audioRef}
         src="/assets/music/resonance.mp3"
         loop
         preload="auto"
         className="hidden"
-      />
+      /> */}
 
       {/* Background Image (full viewport) */}
       <Image
@@ -458,17 +451,9 @@ export default function HomePage() {
         style={{ objectPosition: 'center' }}
       />
 
-      {/* <h1 className="absolute top-6 md:top-4 left-4 w-42 md:w-50 lg:w-100">
+      <h1 className="absolute top-6 md:top-4 left-4 w-42 md:w-50 lg:w-100">
         <Image src="/gameforsmartlogo.webp" alt="Gameforsmart Logo" width="256" height="64" priority />
-      </h1> */}
-
-      {/* Alert Audio (hidden, untuk efek suara) */}
-      {/* <audio
-        ref={alertAudioRef}
-        src="/assets/music/gas.mp3"
-        preload="auto"
-        className="hidden"
-      /> */}
+      </h1>
 
       {/* Modal Alert: Tampil jika showAlert true, dengan pesan dinamis berdasarkan alertReason */}
       <AnimatePresence>
@@ -564,10 +549,15 @@ export default function HomePage() {
               <div className="flex items-center gap-3 p-3 bg-[#1a0a2a]/80 border border-[#00ffff]/30 rounded-lg">
                 {/* Avatar */}
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center overflow-hidden">
-                  {profile?.avatar_url ? (
+                  {profileLoading ? (
+                    <div className="flex items-center justify-center w-full h-full text-gray-400">
+                      Loading...
+                    </div>
+                  ) : profile?.avatar_url ? (
                     <img
                       src={profile.avatar_url}
                       alt="Profile"
+                      referrerPolicy="no-referrer"
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -613,6 +603,19 @@ export default function HomePage() {
                   />
                 </div>
               </div> */}
+
+              {/* Fullscreen Button */}
+              <button
+                onClick={handleToggleFullscreen}
+                className="w-full p-2 bg-[#1a0a2a]/60 border-2 border-[#00ffff]/50 hover:border-[#00ffff] pixel-button hover:bg-[#00ffff]/20 glow-cyan-subtle rounded text-center"
+                aria-label="Toggle Fullscreen"
+              >
+                <div className="flex items-center justify-center gap-2">
+                  {/* <Maximize2 size={16} /> atau <Minimize2 /> kalau mau dinamis */}
+                  <span className="text-sm text-[#00ffff] pixel-text glow-cyan">Fullscreen</span>
+                </div>
+              </button>
+
 
               {/* How to Play Button */}
               <button

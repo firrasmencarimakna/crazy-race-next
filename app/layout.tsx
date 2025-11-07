@@ -10,6 +10,11 @@ export const metadata: Metadata = {
   title: 'Crazy Race',
   description: 'Answer • Race • Win',
   generator: 'v0.app',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+  },
+
 }
 
 export default function RootLayout({
@@ -24,7 +29,6 @@ export default function RootLayout({
         <link rel="prefetch" as="image" href="/gameforsmartlogo.webp" type="image/webp" fetchPriority="high" />
         <link rel="preload" as="image" href="/assets/background/1.webp" type="image/webp" fetchPriority="high" />
         <link rel="preload" as="image" href="/assets/background/host/10.webp" type="image/webp" fetchPriority="high" />
-        <link rel="prefetch" as="image" href="/racing-game/images/sprites.png" type="image/png" fetchPriority="high" />
       </head>
       <body>
         <AuthProvider>

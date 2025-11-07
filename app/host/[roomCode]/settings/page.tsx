@@ -17,6 +17,16 @@ import Image from "next/image"
 // HAPUS: backgroundGifs array, ganti jadi string statis untuk simplicity
 const backgroundGif = "/assets/background/host/7.webp" // Satu GIF aja
 
+// Shuffle array function
+export function shuffleArray(array: any[]) {
+  const shuffled = [...array]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled
+}
+
 export default function HostSettingsPage() {
   const router = useRouter()
   const params = useParams()
@@ -32,7 +42,7 @@ export default function HostSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
   const audioRef = useRef<HTMLAudioElement>(null)
-  const [selectedDifficulty, setSelectedDifficulty] = useState("normal");
+  const [selectedDifficulty, setSelectedDifficulty] = useState("easy");
 
   // Inisialisasi audio: play otomatis dengan volume default
   useEffect(() => {
@@ -67,13 +77,12 @@ export default function HostSettingsPage() {
 
   // Generate dynamic question count options
   const totalQuestions = quiz?.questions?.length || 0;
-  const questionCountOptions = totalQuestions > 0
-    ? Array.from({ length: Math.floor(totalQuestions / 5) + 1 }, (_, i) => (i + 1) * 5)
-        .filter((count) => count <= totalQuestions)
-    : [5, 10, 15, 20, 25];
-  if (totalQuestions > 0 && !questionCountOptions.includes(totalQuestions)) {
-    questionCountOptions.push(totalQuestions);
-  }
+  const baseOptions = [5, 10, 15, 20];
+  const questionCountOptions =
+    totalQuestions > 0
+      ? baseOptions.filter((count) => count <= totalQuestions)
+      : baseOptions;
+
 
   // Set default question count to 10 or closest valid option
   useEffect(() => {
@@ -115,8 +124,8 @@ export default function HostSettingsPage() {
 
       // Parse quiz_detail JSON
       try {
-        const parsedDetail = typeof sessionData.quiz_detail === 'string' 
-          ? JSON.parse(sessionData.quiz_detail) 
+        const parsedDetail = typeof sessionData.quiz_detail === 'string'
+          ? JSON.parse(sessionData.quiz_detail)
           : sessionData.quiz_detail;
         setQuizDetail(parsedDetail);
       } catch (e) {
@@ -143,16 +152,6 @@ export default function HostSettingsPage() {
     }
   }, [roomCode]);
 
-  // Shuffle array function
-  function shuffleArray(array: any[]) {
-    const shuffled = [...array]
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-        ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-    }
-    return shuffled
-  }
-
   const handleCreateRoom = async () => {
     if (!quiz || saving) return;
     setSaving(true);
@@ -162,7 +161,7 @@ export default function HostSettingsPage() {
       question_limit: parseInt(questionCount),
       difficulty: selectedDifficulty,
       game_end_mode: "manual", // Hardcode dari contoh, atau tambah state
-      current_questions: [] as any[], 
+      current_questions: [] as any[],
     };
 
     // Prepare questions: Shuffle & slice
@@ -219,68 +218,29 @@ export default function HostSettingsPage() {
           width={256}
           height={64}
         />
-      
+
       </h1>
 
       <h1 className="absolute top-6 left-20 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">
         Crazy Race
       </h1>
 
-      {/* Burger Menu Button - Fixed Top Right */}
       <motion.button
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         whileHover={{ scale: 1.05 }}
-        onClick={() => setIsMenuOpen(!isMenuOpen)}
-        className="absolute top-4 right-4 z-40 p-3 bg-[#ff6bff]/20 border-2 border-[#ff6bff]/50 pixel-button hover:bg-[#ff8aff]/40 glow-pink rounded-lg shadow-lg shadow-[#ff6bff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
-        aria-label="Toggle menu"
+        onClick={handleMuteToggle}
+        className={`absolute top-4 right-4 z-40 p-3 border-2 pixel-button rounded-lg shadow-lg min-w-[48px] min-h-[48px] flex items-center justify-center transition-all cursor-pointer
+    ${isMuted
+            ? "bg-[#ff6bff]/30 border-[#ff6bff] glow-pink shadow-[#ff6bff]/30 hover:bg-[#ff8aff]/50"
+            : "bg-[#00ffff]/30 border-[#00ffff] glow-cyan shadow-[#00ffff]/30 hover:bg-[#33ffff]/50"
+          }`}
+        aria-label={isMuted ? "Unmute" : "Mute"}
       >
-        {isMenuOpen ? <X size={20} /> : <Volume2 size={20} />} {/* HAPUS: Volume2, ganti Menu untuk burger icon yang pas */}
+        <span className="filter drop-shadow-[2px_2px_2px_rgba(0,0,0,0.7)]">
+          {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+        </span>
       </motion.button>
-
-      {/* Menu Dropdown - Muncul saat burger diklik, dari kanan */}
-            {isMenuOpen && (
-        <motion.div
-          initial={{ opacity: 0, x: 300 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 300 }}
-          className="absolute top-20 right-4 z-30 w-64 bg-[#1a0a2a]/20 border border-[#ff6bff]/50 rounded-lg p-3 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm"
-        >
-          <div className="space-y-2">
-            {/* Integrated Mute + Volume: Single row for button + slider, with label above for simplicity */}
-            <div className="p-1.5 bg-[#ff6bff]/10 rounded space-y-1"> {/* Unified bg for the whole section; adjusted to /10 for subtle highlight */}
-              {/* <span className="text-xs text-white pixel-text block">Suara</span> Moved "Suara" label here as section header; changed color to white for better contrast */}
-              
-              {/* New flex row: Mute button on left, slider on right; tight spacing */}
-              <div className="flex items-center space-x-2 bg-[#1a0a2a]/60 border border-[#ff6bff]/30 rounded px-2 py-1"> {/* Shared container for row; reduced px-1 to px-2 for button fit, py-0.5 to py-1 */}
-                <button
-                  onClick={handleMuteToggle}
-                  className="p-1.5 bg-[#00ffff] border border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded flex-shrink-0" // Added flex-shrink-0 to prevent button compression
-                  aria-label={isMuted ? "Unmute" : "Mute"}
-                >
-                  {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
-                </button>
-                
-                <div className="flex-1"> {/* Wrapper for slider to take remaining space */}
-                  <Slider
-                    value={[volume]}
-                    onValueChange={handleVolumeChange}
-                    max={100}
-                    min={0}
-                    step={1}
-                    className="w-full"
-                    orientation="horizontal"
-                    aria-label="Volume slider"
-                  />
-                </div>
-              </div>
-              
-              {/* Volume value below slider for quick glance; optional but keeps info visible without cluttering row */}
-              <span className="text-xs text-[#ff6bff] pixel-text">Volume: {volume}%</span>
-            </div>
-          </div>
-        </motion.div>
-      )}
 
       {saving && <LoadingRetro />}
 
@@ -317,122 +277,121 @@ export default function HostSettingsPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-          <Card className="bg-[#1a0a2a]/60 border-2 sm:border-4 border-[#ff87ff]/50 pixel-card glow-pink-subtle p-6 sm:p-8">
-            <div className="space-y-6 sm:space-y-8">
-              {/* Selected Quiz - Ditambahkan ikon dan wrapper untuk konsistensi */}
-              <div className="p-3 sm:p-4 bg-[#0a0a0f] border-2 border-[#ff87ff]/30 rounded-lg">
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 mt-1">
-                    <Hash className="h-5 w-5 text-[#ff87ff]" />
+            <Card className="bg-[#1a0a2a]/60 border-2 sm:border-4 border-[#ff87ff]/50 pixel-card glow-pink-subtle p-6 sm:p-8">
+              <div className="space-y-6 sm:space-y-8">
+                {/* Selected Quiz - Ditambahkan ikon dan wrapper untuk konsistensi */}
+                <div className="p-3 sm:p-4 bg-[#0a0a0f] border-2 border-[#ff87ff]/30 rounded-lg">
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-shrink-0 mt-1">
+                      <Hash className="h-5 w-5 text-[#ff87ff]" />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <p className="text-base sm:text-lg text-[#ff87ff] pixel-text font-semibold">
+                        {quizDetail.title || quiz?.title || 'Unknown Quiz'}
+                      </p>
+                      <p className="text-[#00ffff] pixel-text text-xs sm:text-sm overflow-y-auto max-h-[60px]">
+                        {quizDetail.description || quiz?.description || 'No description available'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-base sm:text-lg text-[#ff87ff] pixel-text font-semibold">
-                      {quizDetail.title || quiz?.title || 'Unknown Quiz'}
-                    </p>
-                    <p className="text-[#00ffff] pixel-text text-xs sm:text-sm overflow-y-auto max-h-[60px]">
-                      {quizDetail.description || quiz?.description || 'No description available'}
-                    </p>
+                </div>
+
+                {/* Settings Grid - Diubah ke grid 2 kolom di sm+ untuk layout lebih compact */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {/* Duration */}
+                  <div className="space-y-2 sm:space-y-3">
+                    <Label className="text-base sm:text-lg font-semibold flex items-center space-x-2 text-[#00ffff] pixel-text glow-cyan">
+                      <Clock className="h-4 w-4" />
+                      <span>Duration</span>
+                    </Label>
+                    <Select value={duration} onValueChange={setDuration}>
+                      <SelectTrigger className="text-base sm:text-lg p-3 sm:p-5 bg-[#0a0a0f] border-2 border-[#00ffff]/30 text-white pixel-text focus:border-[#00ffff] w-full transition-all">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#0a0a0f] border-2 sm:border-4 border-[#6a4c93] text-white pixel-text">
+                        {Array.from({ length: 6 }, (_, i) => (i + 1) * 5).map((min) => (
+                          <SelectItem key={min} value={(min * 60).toString()}>
+                            {min} Minutes
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Number of Questions */}
+                  <div className="space-y-2 sm:space-y-3">
+                    <Label className="text-base sm:text-lg font-semibold flex items-center space-x-2 text-[#00ffff] pixel-text glow-cyan">
+                      <Hash className="h-4 w-4" />
+                      <span>Questions</span>
+                    </Label>
+                    <Select value={questionCount} onValueChange={setQuestionCount}>
+                      <SelectTrigger className="text-base sm:text-lg p-3 sm:p-5 bg-[#0a0a0f] border-2 border-[#00ffff]/30 text-white pixel-text focus:border-[#00ffff] w-full transition-all">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#0a0a0f] border-2 sm:border-4 border-[#6a4c93] text-white pixel-text">
+                        {questionCountOptions.map((count) => (
+                          <SelectItem key={count} value={count.toString()}>
+                            {count}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-              </div>
 
-              {/* Settings Grid - Diubah ke grid 2 kolom di sm+ untuk layout lebih compact */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {/* Duration */}
-                <div className="space-y-2 sm:space-y-3">
-                  <Label className="text-base sm:text-lg font-semibold flex items-center space-x-2 text-[#00ffff] pixel-text glow-cyan">
-                    <Clock className="h-4 w-4" />
-                    <span>Duration</span>
+                {/* Difficulty Section - Simplified without car */}
+                <div className="space-y-4 sm:space-y-6">
+                  <Label className="text-base sm:text-lg font-semibold flex items-center justify-center space-x-2 text-[#00ffff] pixel-text glow-cyan mb-4">
+                    <Settings className="h-4 w-4" />
+                    <span>Difficulty</span>
                   </Label>
-                  <Select value={duration} onValueChange={setDuration}>
-                    <SelectTrigger className="text-base sm:text-lg p-3 sm:p-5 bg-[#0a0a0f] border-2 border-[#00ffff]/30 text-white pixel-text focus:border-[#00ffff] w-full transition-all">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#0a0a0f] border-2 sm:border-4 border-[#6a4c93] text-white pixel-text">
-                      {Array.from({ length: 6 }, (_, i) => (i + 1) * 5).map((min) => (
-                        <SelectItem key={min} value={(min * 60).toString()}>
-                          {min} Minutes
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
 
-                {/* Number of Questions */}
-                <div className="space-y-2 sm:space-y-3">
-                  <Label className="text-base sm:text-lg font-semibold flex items-center space-x-2 text-[#00ffff] pixel-text glow-cyan">
-                    <Hash className="h-4 w-4" />
-                    <span>Questions</span>
-                  </Label>
-                  <Select value={questionCount} onValueChange={setQuestionCount}>
-                    <SelectTrigger className="text-base sm:text-lg p-3 sm:p-5 bg-[#0a0a0f] border-2 border-[#00ffff]/30 text-white pixel-text focus:border-[#00ffff] w-full transition-all">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#0a0a0f] border-2 sm:border-4 border-[#6a4c93] text-white pixel-text">
-                      {questionCountOptions.map((count) => (
-                        <SelectItem key={count} value={count.toString()}>
-                          {count === totalQuestions ? `${count} (All)` : count}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Difficulty Section - Simplified without car */}
-              <div className="space-y-4 sm:space-y-6">
-                <Label className="text-base sm:text-lg font-semibold flex items-center justify-center space-x-2 text-[#00ffff] pixel-text glow-cyan mb-4">
-                  <Settings className="h-4 w-4" />
-                  <span>CHOOSE DIFFICULTY</span>
-                </Label>
-                
-                {/* Simple Difficulty Buttons */}
-                <div className="flex justify-center space-x-3 sm:space-x-6">
-                  {["easy", "normal", "hard"].map((diff) => (
-                    <Button
-                      key={diff}
-                      onClick={() => setSelectedDifficulty(diff)}
-                      className={`
+                  {/* Simple Difficulty Buttons */}
+                  <div className="flex justify-center space-x-3 sm:space-x-6">
+                    {["easy", "normal", "hard"].map((diff) => (
+                      <Button
+                        key={diff}
+                        onClick={() => setSelectedDifficulty(diff)}
+                        className={`
                         pixel-button text-sm sm:text-base px-6 sm:px-8 py-3 font-bold 
                         w-24 sm:w-28 transition-all duration-200 border-2 capitalize
-                        ${
-                          selectedDifficulty === diff
+                        ${selectedDifficulty === diff
                             ? "bg-[#ff6bff] hover:bg-[#ff8aff] glow-pink text-white border-white shadow-lg shadow-[#ff6bff]/50"
                             : "bg-[#0a0a0f] border-[#00ffff]/40 text-[#00ffff] hover:bg-[#00ffff]/10 hover:border-[#00ffff] hover:shadow-md hover:shadow-[#00ffff]/30"
-                        }
+                          }
                       `}
-                    >
-                      {diff}
-                    </Button>
-                  ))}
+                      >
+                        {diff}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Continue Button - Ditambahkan subtle glow dan spacing */}
+                <div className="pt-4 border-t border-[#ff87ff]/20">
+                  <Button
+                    onClick={handleCreateRoom}
+                    disabled={saving}
+                    className="w-full text-base sm:text-xl py-4 sm:py-6 bg-[#00ffff] pixel-button hover:bg-[#33ffff] glow-cyan text-black font-bold disabled:bg-[#6a4c93] disabled:cursor-not-allowed cursor-pointer transition-all shadow-lg shadow-[#00ffff]/30"
+                  >
+                    <Play className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
+                    CONTINUE
+                  </Button>
                 </div>
               </div>
-
-              {/* Continue Button - Ditambahkan subtle glow dan spacing */}
-              <div className="pt-4 border-t border-[#ff87ff]/20">
-                <Button
-                  onClick={handleCreateRoom}
-                  disabled={saving}
-                  className="w-full text-base sm:text-xl py-4 sm:py-6 bg-[#00ffff] pixel-button hover:bg-[#33ffff] glow-cyan text-black font-bold disabled:bg-[#6a4c93] disabled:cursor-not-allowed cursor-pointer transition-all shadow-lg shadow-[#00ffff]/30"
-                >
-                  <Play className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
-                  CONTINUE
-                </Button>
-              </div>
-            </div>
-          </Card>
+            </Card>
           </motion.div>
         )}
       </div>
 
       {/* Audio Element untuk Background Music */}
-      <audio
+      {/* <audio
         ref={audioRef}
         src="/assets/music/resonance.mp3"
         loop
         preload="auto"
         className="hidden"
-      />
+      /> */}
 
       <style jsx>{`
         .pixel-font {
