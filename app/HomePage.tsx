@@ -538,6 +538,7 @@ export default function HomePage() {
       </motion.button>
 
       {/* Burger Menu Dropdown */}
+      {/* Burger Menu Dropdown */}
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
@@ -571,7 +572,7 @@ export default function HomePage() {
                 </div>
                 {/* Name & Email */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-[#00ffff] pixel-text ">
+                  <p className="text-xs font-bold text-[#00ffff] pixel-text truncate">
                     {profile?.fullname || profile?.username || user?.email?.split('@')[0] || t('menu.user')}
                   </p>
                 </div>
@@ -581,29 +582,6 @@ export default function HomePage() {
                 {/* <span className="text-sm text-white pixel-text">Audio</span> */}
 
               </div>
-
-              {/* Volume Slider */}
-              {/* <div className="space-y-2"> */}
-              {/* <span className="text-xs text-[#ff6bff] pixel-text glow-pink-subtle">Volume</span> */}
-              {/* <div className="bg-[#1a0a2a]/60 border border-[#ff6bff]/50 rounded px-2 py-1 display flex gap-2">
-                <button
-                  onClick={handleMuteToggle}
-                  className="p-2 bg-[#1a0a2a]/60 border-2 border-[#00ffff]/50 hover:border-[#00ffff] pixel-button hover:bg-[#00ffff]/20 glow-cyan-subtle rounded"
-                  aria-label={isMuted ? "Unmute" : "Mute"}
-                >
-                  {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-                </button>
-                  <Slider
-                    value={[volume]}
-                    onValueChange={handleVolumeChange}
-                    max={100}
-                    min={0}
-                    step={1}
-                    className="w-full"
-                    orientation="horizontal"
-                  />
-                </div>
-              </div> */}
 
               {/* Fullscreen Button */}
               <button
@@ -747,124 +725,129 @@ export default function HomePage() {
       </AnimatePresence>
 
       {/* How to Play Modal (paginated guide) */}
-      <AnimatePresence>
-        {showHowToPlay && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            onClick={closeHowToPlay} // Close on backdrop click
-          >
-            {/* Backdrop */}
-            <motion.div
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              onClick={(e) => e.stopPropagation()} // Prevent close on modal click
-            />
+    <AnimatePresence>
+  {showHowToPlay && (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={closeHowToPlay}
+    >
+      {/* Backdrop */}
+      <motion.div
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        onClick={(e) => e.stopPropagation()}
+      />
 
-            {/* Modal Content */}
+      {/* Modal Content */}
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0, y: 20 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className="relative w-full max-w-md max-h-[90vh] overflow-y-auto bg-gradient-to-br from-[#1a0a2a]/70 via-[#1a0a2a]/50 to-[#1a0a2a]/70 border border-[#ff6bff]/30 rounded-3xl shadow-2xl shadow-[#ff6bff]/25 backdrop-blur-xl pixel-card scrollbar-themed book-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close Button (top-right) */}
+        <button
+          onClick={closeHowToPlay}
+          className="absolute top-4 right-4 z-10 p-2 bg-[#1a0a2a]/80 border border-[#00ffff]/40 rounded-xl text-[#00ffff] hover:bg-[#00ffff]/10 hover:border-[#00ffff]/60 transition-all duration-300 glow-cyan-subtle shadow-lg shadow-[#00ffff]/20 hover:shadow-[#00ffff]/40"
+          aria-label="Close modal"
+        >
+          <X size={18} className="stroke-current" />
+        </button>
+
+        {/* Header */}
+        <CardHeader className="text-center border-b border-[#ff6bff]/15 p-6 pt-16 pb-4">
+          <CardTitle className="text-2xl font-bold text-[#00ffff] pixel-text glow-cyan mb-3 tracking-wide">
+            {t('howToPlay.title')}
+          </CardTitle>
+          <CardDescription className="text-[#ff6bff]/70 text-sm pixel-text glow-pink-subtle leading-relaxed">
+            {t('howToPlay.description')}
+          </CardDescription>
+          <p className="text-xs text-gray-300 mt-3 pixel-text opacity-80">
+            Page {currentPage + 1} of {totalPages}
+          </p>
+        </CardHeader>
+
+        {/* Paginated Content */}
+        <div className="flex-1 p-6 overflow-hidden min-h-[200px]">
+          <AnimatePresence mode="wait">
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="relative w-full max-w-lg max-h-[85vh] overflow-hidden bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-2xl shadow-2xl shadow-[#ff6bff]/40 backdrop-blur-md pixel-card scrollbar-themed book-modal"
-              onClick={(e) => e.stopPropagation()}
+              key={currentPage}
+              initial={{ x: currentPage > 0 ? "100%" : "-100%", opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: currentPage > 0 ? "-100%" : "100%", opacity: 0 }}
+              transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="h-full flex flex-col justify-center items-center book-page"
             >
-              {/* Header */}
-              <CardHeader className="text-center border-b-2 border-[#ff6bff]/20 p-6">
-                <CardTitle className="text-2xl font-bold text-[#00ffff] pixel-text glow-cyan mb-2">
-                  {t('howToPlay.title')}
-                </CardTitle>
-                <CardDescription className="text-[#ff6bff]/80 text-base pixel-text glow-pink-subtle">
-                  {t('howToPlay.description')}
-                </CardDescription>
-                <p className="text-xs text-gray-200 mt-2 pixel-text">Page {currentPage + 1} of {totalPages}</p>
-              </CardHeader>
-
-              {/* Paginated Content */}
-              <div className="flex-1 p-6 overflow-hidden">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={currentPage}
-                    initial={{ x: currentPage > 0 ? "100%" : "-100%", opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    exit={{ x: currentPage > 0 ? "-100%" : "100%", opacity: 0 }}
-                    transition={{ duration: 0.4, ease: "easeInOut" }}
-                    className="h-full flex flex-col justify-center book-page"
-                  >
-                    <div className="text-center mb-6">
-                      <h3 className="text-xl font-bold text-[#00ffff] mb-4 pixel-text glow-cyan">
-                        {steps[currentPage].title}
-                      </h3>
-                    </div>
-                    <p className="text-gray-200 leading-relaxed pixel-text text-center max-w-md mx-auto line-clamp-3">
-                      {steps[currentPage].content}
-                    </p>
-                  </motion.div>
-                </AnimatePresence>
+              <div className="text-center mb-6 w-full">
+                <h3 className="text-xl font-bold text-[#00ffff] mb-4 pixel-text glow-cyan tracking-wide">
+                  {steps[currentPage].title}
+                </h3>
+                <p className="text-gray-200 leading-relaxed pixel-text text-center max-w-sm mx-auto text-base">
+                  {steps[currentPage].content}
+                </p>
               </div>
-
-              {/* Pagination Footer */}
-              <CardFooter className="border-t-2 border-[#ff6bff]/20 p-4 bg-[#1a0a2a]/50">
-                <div className="w-full flex items-center justify-between">
-                  {/* Prev Button */}
-                  <Button
-                    onClick={goToPrevPage}
-                    disabled={currentPage === 0}
-                    className={`flex items-center gap-2 px-4 py-2 bg-[#1a0a2a]/60 hover:bg-[#00ffff]/20 border-2 border-[#00ffff]/50 text-[#00ffff] pixel-button glow-cyan-subtle transition-all duration-200 ${currentPage === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <ArrowLeft size={16} />
-                    {t('howToPlay.prev')}
-                  </Button>
-
-                  {/* Page Dots */}
-                  <div className="flex space-x-2">
-                    {steps.map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => goToPage(index)}
-                        className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentPage
-                          ? 'bg-[#a100ff] shadow-md shadow-[#a100ff]/50 scale-110'
-                          : 'bg-white/30 hover:bg-white/50'
-                          }`}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Next / Got It Button */}
-                  <Button
-                    onClick={goToNextPage}
-                    className={`flex items-center gap-2 px-4 py-2 bg-[#1a0a2a]/60 hover:bg-[#ff6bff]/20 border-2 border-[#ff6bff]/50 text-[#ff6bff] pixel-button glow-pink-subtle transition-all duration-200`}
-                  >
-                    {currentPage === totalPages - 1 ? (
-                      <>
-                        {t('howToPlay.gotIt')}
-                        <BookOpen size={16} />
-                      </>
-                    ) : (
-                      <>
-                        {t('howToPlay.next')}
-                        <ArrowRight size={16} />
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </CardFooter>
-
-              {/* Close Button (top-right) */}
-              <button
-                onClick={closeHowToPlay}
-                className="absolute top-3 right-3 p-2 bg-[#1a0a2a]/60 border-2 border-[#ff6bff]/50 rounded-lg text-[#00ffff] hover:bg-[#ff6bff]/20 hover:border-[#ff6bff] transition-all duration-200 glow-cyan-subtle"
-                aria-label="Close"
-              >
-                <X size={20} />
-              </button>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </AnimatePresence>
+        </div>
+
+        {/* Pagination Footer */}
+        <CardFooter className="border-t border-[#ff6bff]/15 p-6 pt-4 bg-[#1a0a2a]/60 backdrop-blur-sm rounded-b-3xl">
+          <div className="w-full flex items-center justify-between">
+            {/* Prev Button */}
+            <Button
+              onClick={goToPrevPage}
+              disabled={currentPage === 0}
+              className={`flex items-center gap-2 px-6 py-3 bg-transparent hover:bg-[#00ffff]/10 border-2 border-[#00ffff]/40 text-[#00ffff] pixel-button glow-cyan-subtle transition-all duration-300 shadow-md shadow-[#00ffff]/20 hover:shadow-[#00ffff]/40 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none ${
+                currentPage === 0 ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              <ArrowLeft size={18} className="stroke-current" />
+              {/* <span className="font-medium">{t('howToPlay.prev')}</span> */}
+            </Button>
+
+            {/* Page Dots */}
+            <div className="flex space-x-3">
+              {steps.map((_, index) => (
+                <motion.button
+                  key={index}
+                  onClick={() => goToPage(index)}
+                  whileHover={{ scale: 1.2 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 shadow-sm ${
+                    index === currentPage
+                      ? 'bg-[#a100ff] shadow-lg shadow-[#a100ff]/40 scale-125'
+                      : 'bg-white/20 hover:bg-white/40 hover:scale-110'
+                  }`}
+                />
+              ))}
+            </div>
+
+            {/* Next / Got It Button */}
+            <Button
+              onClick={goToNextPage}
+              className="flex items-center gap-2 px-6 py-3 bg-transparent hover:bg-[#ff6bff]/10 border-2 border-[#ff6bff]/40 text-[#ff6bff] pixel-button glow-pink-subtle transition-all duration-300 shadow-md shadow-[#ff6bff]/20 hover:shadow-[#ff6bff]/40"
+            >
+              <span className="font-medium">
+                {/* {currentPage === totalPages - 1 ? t('howToPlay.gotIt') : t('howToPlay.next')} */}
+              </span>
+              {currentPage === totalPages - 1 ? (
+                <BookOpen size={18} className="stroke-current" />
+              ) : (
+                <ArrowRight size={18} className="stroke-current" />
+              )}
+            </Button>
+          </div>
+        </CardFooter>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
 
       {/* Main Content Area */}
       <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
