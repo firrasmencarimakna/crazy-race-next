@@ -17,6 +17,7 @@ import LoadingRetroScreen from "@/components/loading-screnn"
 import { useAuth } from "@/contexts/authContext"
 import { generateXID } from "@/lib/id-generator"
 import { useTranslation } from "react-i18next"
+import jsQR from 'jsqr';
 
 function LogoutDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { t } = useTranslation()
@@ -67,6 +68,8 @@ export default function HomePage() {
   const { t, i18n } = useTranslation()
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [scanFeedback, setScanFeedback] = useState('');
 
   const { user, loading: authLoading } = useAuth()
 
@@ -988,8 +991,46 @@ export default function HomePage() {
           </motion.div>
         </div>
       </div>
-
-      <LogoutDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog} />
+      <input
+      type="file"
+      ref={fileInputRef}
+      accept="image/*"
+      capture="environment"
+      style={{ display: 'none' }}
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          const url = URL.createObjectURL(file); // Simpan URL
+          const img = document.createElement('img');
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              canvas.width = img.width;
+              canvas.height = img.height;
+              ctx.drawImage(img, 0, 0);
+              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              const code = jsQR(imageData.data, imageData.width, imageData.height); // Sekarang jsQR imported
+              if (code) {
+                const extractedCode = code.data.toUpperCase().replace(/[^a-zA-Z0-9]/g, "").slice(0, 6); // Fix: replace, bukan reset
+                setRoomCode(extractedCode);
+                setScanFeedback(`QR scanned: ${extractedCode}`); // Feedback sukses
+                console.log('QR Code scanned:', extractedCode);
+              } else {
+                setScanFeedback('No QR code detected. Try again.'); // Feedback error
+                console.error('No QR code detected');
+              }
+            }
+            URL.revokeObjectURL(url); // Cleanup proper
+            e.target.value = '';
+            // Auto clear feedback setelah 3 detik
+            setTimeout(() => setScanFeedback(''), 3000);
+          };
+          img.src = url;
+        }
+      }}
+      aria-hidden="true"
+    />
 
       <style jsx>{`
         .pixel-font {
@@ -1221,47 +1262,6 @@ export default function HomePage() {
             max-w-full max-h-[95vh];
           }
         }
-
-
-        <input
-        type="file"
-        ref={fileInputRef}
-        accept="image/*"
-        capture="environment"
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) {
-            const img = new Image();
-            img.onload = () => {
-              const canvas = document.createElement('canvas');
-              const ctx = canvas.getContext('2d');
-              if (ctx) {
-                canvas.width = img.width;
-                canvas.height = img.height;
-                ctx.drawImage(img, 0, 0);
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height);
-                if (code) {
-                  // Assuming the QR code contains the room code
-                  const extractedCode = code.data.toUpperCase().replace(/[^a-zA-Z0-9]/g, "").slice(0, 6); // Clean and limit to 6 chars
-                  setRoomCode(extractedCode);
-                  // Optional: Show success feedback
-                  console.log('QR Code scanned:', extractedCode);
-                } else {
-                  // Optional: Show error, e.g., toast "No QR code found"
-                  console.error('No QR code detected');
-                }
-              }
-              // Cleanup
-              URL.revokeObjectURL(URL.createObjectURL(file));
-              e.target.value = '';
-            };
-            img.src = URL.createObjectURL(file);
-          }
-        }}
-        aria-hidden="true"
-      />
       `}</style>
     </div>
   )
