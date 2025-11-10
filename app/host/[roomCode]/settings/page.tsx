@@ -33,14 +33,13 @@ export default function HostSettingsPage() {
   const roomCode = params.roomCode as string
 
   const [duration, setDuration] = useState("300") // Default: 5 minutes (300 seconds)
-  const [questionCount, setQuestionCount] = useState("10") // Default: 10 questions
+  const [questionCount, setQuestionCount] = useState("5") // Default: 10 questions
   const [quiz, setQuiz] = useState<any>(null); // Full quiz untuk questions
   const [quizDetail, setQuizDetail] = useState<any>(null); // Parsed dari game_sessions.quiz_detail
   const [loading, setLoading] = useState(true)
   const [isMuted, setIsMuted] = useState(false)
   const [volume, setVolume] = useState(50) // 0-100, default 50%
   const [saving, setSaving] = useState(false)
-  const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
   const audioRef = useRef<HTMLAudioElement>(null)
   const [selectedDifficulty, setSelectedDifficulty] = useState("easy");
 
@@ -77,7 +76,7 @@ export default function HostSettingsPage() {
 
   // Generate dynamic question count options
   const totalQuestions = quiz?.questions?.length || 0;
-  const baseOptions = [5, 10, 15, 20];
+  const baseOptions = [5, 10, 20];
   const questionCountOptions =
     totalQuestions > 0
       ? baseOptions.filter((count) => count <= totalQuestions)
@@ -187,6 +186,8 @@ export default function HostSettingsPage() {
     setSaving(false);
   };
 
+  if (saving || loading) return <LoadingRetro />
+
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
 
@@ -211,7 +212,7 @@ export default function HostSettingsPage() {
         <ArrowLeft size={20} className="text-white" />
       </motion.button>
 
-      <h1 className="absolute top-5 right-20 hidden md:block display-flex">
+      <h1 className="absolute top-5 right-5 hidden md:block display-flex">
         <Image
           src="/gameforsmartlogo.webp"
           alt="Gameforsmart Logo"
@@ -224,25 +225,6 @@ export default function HostSettingsPage() {
       <h1 className="absolute top-6 left-20 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">
         Crazy Race
       </h1>
-
-      <motion.button
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        whileHover={{ scale: 1.05 }}
-        onClick={handleMuteToggle}
-        className={`absolute top-4 right-4 z-40 p-3 border-2 pixel-button rounded-lg shadow-lg min-w-[48px] min-h-[48px] flex items-center justify-center transition-all cursor-pointer
-    ${isMuted
-            ? "bg-[#ff6bff]/30 border-[#ff6bff] glow-pink shadow-[#ff6bff]/30 hover:bg-[#ff8aff]/50"
-            : "bg-[#00ffff]/30 border-[#00ffff] glow-cyan shadow-[#00ffff]/30 hover:bg-[#33ffff]/50"
-          }`}
-        aria-label={isMuted ? "Unmute" : "Mute"}
-      >
-        <span className="filter drop-shadow-[2px_2px_2px_rgba(0,0,0,0.7)]">
-          {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-        </span>
-      </motion.button>
-
-      {saving && <LoadingRetro />}
 
       <div className="relative z-10 container mx-auto px-4 sm:px-6 py-6 max-w-4xl">
         {/* Title */}
@@ -260,9 +242,7 @@ export default function HostSettingsPage() {
         </motion.div>
 
         {/* Loading State */}
-        {loading ? (
-          <LoadingRetro />
-        ) : !quizDetail ? (
+        {!quizDetail ? (
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

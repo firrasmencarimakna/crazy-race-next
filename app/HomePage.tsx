@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
-import { Flag, Volume2, VolumeX, Settings, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight, Play, LogOut, Globe } from "lucide-react"
+import { Flag, Volume2, VolumeX, Settings, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight, Play, LogOut, Globe, Dice1, Dices, ScanLine } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -12,11 +12,17 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import Image from "next/image"
 import { usePreloaderScreen } from "@/components/preloader-screen"
-import LoadingRetro from "@/components/loadingRetro"
 import LoadingRetroScreen from "@/components/loading-screnn"
 import { useAuth } from "@/contexts/authContext"
 import { generateXID } from "@/lib/id-generator"
 import { useTranslation } from "react-i18next"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import dynamic from "next/dynamic"
+
+const Scanner = dynamic(
+  () => import('@yudiel/react-qr-scanner').then(mod => ({ default: mod.Scanner })),
+  { ssr: false }
+);
 
 function LogoutDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { t } = useTranslation()
@@ -53,12 +59,6 @@ function LogoutDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (op
   );
 }
 
-/**
- * HomePage Component
- * Halaman utama aplikasi Crazy Race, berisi tombol Host Game, Join Race,
- * menu burger untuk audio settings, How to Play modal, dan Solo Tryout.
- * Mengintegrasikan validasi input dengan modal alert spesifik berdasarkan field kosong.
- */
 export default function HomePage() {
   // Hooks untuk navigasi dan query params
   const router = useRouter()
@@ -70,10 +70,6 @@ export default function HomePage() {
 
   // State untuk loading dan joining process
   const [joining, setJoining] = useState(false)
-
-  // State untuk audio controls
-  const [isMuted, setIsMuted] = useState(false)
-  const [volume, setVolume] = useState(50) // 0-100, default 50%
 
   // State untuk input fields
   const [roomCode, setRoomCode] = useState("")
@@ -95,9 +91,6 @@ export default function HomePage() {
   const [alertReason, setAlertReason] = useState<'roomCode' | 'nickname' | 'both' | 'general' | 'duplicate' | 'roomNotFound' | ''>('')
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
-  // Refs untuk audio elements
-  const audioRef = useRef<HTMLAudioElement>(null) // Background music
-
   // Arrays untuk generate random nickname
   const adjectives = ["Crazy", "Fast", "Speedy", "Turbo", "Neon", "Pixel", "Racing", "Wild", "Epic", "Flash"]
   const nouns = ["Racer", "Driver", "Speedster", "Bolt", "Dash", "Zoom", "Nitro", "Gear", "Track", "Lap"]
@@ -107,30 +100,91 @@ export default function HomePage() {
     { code: 'id', name: 'Bahasa Indonesia', flag: '🇮🇩' },
   ]
 
-  
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null); // State buat error message
+  const handleScan = (detectedCodes: any[]) => { // Tipe: IDetectedBarcode[], tapi any[] buat sederhana
+    if (detectedCodes && detectedCodes.length > 0) {
+      const rawResult = detectedCodes[0].rawValue; // Ambil string dari QR pertama
+      console.log('Raw QR result:', rawResult); // Debug: Cek isi QR
 
-  /**
-   * Generate random nickname menggunakan adjectives + nouns.
-   * @returns {string} Nickname acak, e.g., "CrazyRacer"
-   */
+      let extractedCode = '';
+
+      // Coba parse sebagai URL lengkap (fleksibel buat localhost, IP, Vercel, Coolify, dll.)
+      if (typeof rawResult === 'string' && (rawResult.startsWith('http://') || rawResult.startsWith('https://'))) {
+        try {
+          const url = new URL(rawResult);
+          const params = new URLSearchParams(url.search);
+          extractedCode = params.get('code') || '';
+          console.log('Parsed URL:', url.origin + url.pathname, 'Code from query:', extractedCode);
+        } catch (e) {
+          console.warn('URL parse failed, fallback to strip:', e);
+          extractedCode = rawResult.replace(/[^a-zA-Z0-9]/g, '');
+        }
+      } else if (typeof rawResult === 'string') {
+        // Kalau gak mulai dengan http(s), anggap direct code atau relative URL
+        try {
+          const params = new URLSearchParams(rawResult);
+          if (params.has('code')) {
+            extractedCode = params.get('code')!;
+            console.log('Parsed relative query, code:', extractedCode);
+          } else {
+            extractedCode = rawResult.replace(/[^a-zA-Z0-9]/g, '');
+          }
+        } catch (e) {
+          extractedCode = rawResult.replace(/[^a-zA-Z0-9]/g, '');
+        }
+      } else {
+        console.warn('Raw result is not a string:', rawResult);
+        return; // Skip kalau gak string
+      }
+
+      // Final format: Strip non-alphanum, uppercase, max 6 char
+      extractedCode = extractedCode.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 6);
+
+      // Validasi: Harus 6 char alfanum
+      if (extractedCode.length === 6 && /^[A-Z0-9]{6}$/.test(extractedCode)) {
+        setRoomCode(extractedCode);
+        setOpen(false);
+        setError(null);
+        console.log('✅ Room code final:', extractedCode);
+      } else {
+        setError(`Kode dari QR tidak valid: "${extractedCode}". Harus 6 huruf/angka. Coba scan ulang.`);
+        console.log('❌ Invalid code:', extractedCode);
+      }
+    } else {
+      console.log('No detected codes'); // Debug kalau array kosong
+    }
+  };
+
+  const handleError = (error: unknown) => {
+    console.error('QR Scan Error:', error); // Log full error dulu
+
+    // Type guard: Cast ke Error kalau memungkinkan
+    const errorAsError = error instanceof Error ? error : new Error(String(error)); // Fallback ke string kalau bukan Error
+
+    let message = 'Terjadi kesalahan scan. Coba lagi!';
+
+    if (errorAsError.name === 'NotAllowedError' || errorAsError.message.includes('Permission denied') || errorAsError.message.includes('User denied')) {
+      message = 'Izinkan akses kamera di pop-up browser dulu. Jika sudah ditolak, refresh halaman dan coba lagi.';
+    } else if (errorAsError.name === 'NotFoundError' || errorAsError.message.includes('No cameras')) {
+      message = 'Kamera tidak ditemukan. Cek hardware atau izin browser.';
+    } else if (typeof error === 'string' && error.includes('secure context') || errorAsError.message.includes('secure context')) {
+      message = 'Akses kamera butuh koneksi aman (HTTPS atau localhost). Coba via ngrok kalau test di HP.';
+    }
+
+    setError(message);
+  };
+
   const generateNickname = () => {
     const randomAdj = adjectives[Math.floor(Math.random() * adjectives.length)]
     const randomNoun = nouns[Math.floor(Math.random() * nouns.length)]
     return `${randomAdj}${randomNoun}`
   }
 
-  /**
-   * Helper function untuk pesan alert dinamis berdasarkan reason.
-   * @param {string} reason - Alasan trigger alert ('roomCode', 'nickname', 'both', dll.)
-   * @returns {string} Pesan yang sesuai untuk CardDescription
-   */
   const getAlertMessage = (reason: string) => {
     return t(`alert.${reason}.message`)
   }
 
-  /**
-   * Close modal alert dan reset reason.
-   */
   const closeAlert = () => {
     setShowAlert(false)
     setAlertReason('')
@@ -140,17 +194,6 @@ export default function HomePage() {
   const steps = t('howToPlay.steps', { returnObjects: true }) as Array<{ title: string; content: string }>
 
   const totalPages = steps.length
-
-  const handleMuteToggle = () => {
-    setIsMuted(!isMuted)
-  }
-
-  const handleVolumeChange = (value: number[]) => {
-    setVolume(value[0])
-    if (isMuted && value[0] > 0) {
-      setIsMuted(false)
-    }
-  }
 
   const handleLanguageSelect = (code: string, name: string) => {
     i18n.changeLanguage(code)
@@ -254,27 +297,6 @@ export default function HomePage() {
     }
   }, [authLoading, user, searchParams, pathname, router])
 
-  // useEffect: Inisialisasi background audio (autoplay dengan volume default)
-  useEffect(() => {
-    if (audioRef.current) {
-      const initialVolume = volume / 100
-      audioRef.current.volume = isMuted ? 0 : initialVolume
-      audioRef.current.play().catch((e) => {
-        console.log("Autoplay dicegah oleh browser:", e)
-      })
-    }
-  }, []) // Run sekali on mount
-
-  // useEffect: Update volume background audio saat volume/mute berubah
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : (volume / 100)
-    }
-  }, [volume, isMuted])
-
-  /**
-   * Handle join race: Validasi input, insert player ke Supabase, navigasi ke lobby.
-   */
   const handleJoin = async () => {
     // Deteksi reason untuk alert spesifik
     localStorage.removeItem("roomCode")
@@ -367,9 +389,6 @@ export default function HomePage() {
     }
   }
 
-  /**
-   * Handle solo tryout: Validasi nickname, simpan ke localStorage, navigasi ke tryout page.
-   */
   const handleTryout = () => {
     if (!nickname.trim() || joining) {
       console.log("Trigger tryout alert: nickname empty")
@@ -431,15 +450,6 @@ export default function HomePage() {
 
   return (
     <div className={`min-h-[100dvh] w-full relative overflow-hidden pixel-font ${isLoaded ? 'p-2' : ''}`}>
-      {/* Background Music Audio (hidden) */}
-      {/* <audio
-        ref={audioRef}
-        src="/assets/music/resonance.mp3"
-        loop
-        preload="auto"
-        className="hidden"
-      /> */}
-
       {/* Background Image (full viewport) */}
       <Image
         src="/assets/background/1.webp"
@@ -719,129 +729,127 @@ export default function HomePage() {
       </AnimatePresence>
 
       {/* How to Play Modal (paginated guide) */}
-    <AnimatePresence>
-  {showHowToPlay && (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={closeHowToPlay}
-    >
-      {/* Backdrop */}
-      <motion.div
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        onClick={(e) => e.stopPropagation()}
-      />
-
-      {/* Modal Content */}
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0, y: 20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.95, opacity: 0, y: 20 }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="relative w-full max-w-md max-h-[90vh] overflow-y-auto bg-gradient-to-br from-[#1a0a2a]/70 via-[#1a0a2a]/50 to-[#1a0a2a]/70 border border-[#ff6bff]/30 rounded-3xl shadow-2xl shadow-[#ff6bff]/25 backdrop-blur-xl pixel-card scrollbar-themed book-modal"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Close Button (top-right) */}
-        <button
-          onClick={closeHowToPlay}
-          className="absolute top-4 right-4 z-10 p-2 bg-[#1a0a2a]/80 border border-[#00ffff]/40 rounded-xl text-[#00ffff] hover:bg-[#00ffff]/10 hover:border-[#00ffff]/60 transition-all duration-300 glow-cyan-subtle shadow-lg shadow-[#00ffff]/20 hover:shadow-[#00ffff]/40"
-          aria-label="Close modal"
-        >
-          <X size={18} className="stroke-current" />
-        </button>
-
-        {/* Header */}
-        <CardHeader className="text-center border-b border-[#ff6bff]/15 p-6 pt-16 pb-4">
-          <CardTitle className="text-2xl font-bold text-[#00ffff] pixel-text glow-cyan mb-3 tracking-wide">
-            {t('howToPlay.title')}
-          </CardTitle>
-          <CardDescription className="text-[#ff6bff]/70 text-sm pixel-text glow-pink-subtle leading-relaxed">
-            {t('howToPlay.description')}
-          </CardDescription>
-          <p className="text-xs text-gray-300 mt-3 pixel-text opacity-80">
-            Page {currentPage + 1} of {totalPages}
-          </p>
-        </CardHeader>
-
-        {/* Paginated Content */}
-        <div className="flex-1 p-6 overflow-hidden min-h-[200px]">
-          <AnimatePresence mode="wait">
+      <AnimatePresence>
+        {showHowToPlay && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            onClick={closeHowToPlay}
+          >
+            {/* Backdrop */}
             <motion.div
-              key={currentPage}
-              initial={{ x: currentPage > 0 ? "100%" : "-100%", opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: currentPage > 0 ? "-100%" : "100%", opacity: 0 }}
-              transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-              className="h-full flex flex-col justify-center items-center book-page"
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              onClick={(e) => e.stopPropagation()}
+            />
+
+            {/* Modal Content */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="relative w-full max-w-md max-h-[90vh] overflow-y-auto bg-gradient-to-br from-[#1a0a2a]/70 via-[#1a0a2a]/50 to-[#1a0a2a]/70 border border-[#ff6bff]/30 rounded-3xl shadow-2xl shadow-[#ff6bff]/25 backdrop-blur-xl pixel-card scrollbar-themed book-modal"
+              onClick={(e) => e.stopPropagation()}
             >
-              <div className="text-center mb-6 w-full">
-                <h3 className="text-xl font-bold text-[#00ffff] mb-4 pixel-text glow-cyan tracking-wide">
-                  {steps[currentPage].title}
-                </h3>
-                <p className="text-gray-200 leading-relaxed pixel-text text-center max-w-sm mx-auto text-base">
-                  {steps[currentPage].content}
+              {/* Close Button (top-right) */}
+              <button
+                onClick={closeHowToPlay}
+                className="absolute top-4 right-4 z-10 p-2 bg-[#1a0a2a]/80 border border-[#00ffff]/40 rounded-xl text-[#00ffff] hover:bg-[#00ffff]/10 hover:border-[#00ffff]/60 transition-all duration-300 glow-cyan-subtle shadow-lg shadow-[#00ffff]/20 hover:shadow-[#00ffff]/40"
+                aria-label="Close modal"
+              >
+                <X size={18} className="stroke-current" />
+              </button>
+
+              {/* Header */}
+              <CardHeader className="text-center border-b border-[#ff6bff]/15 p-6 pt-16 pb-4">
+                <CardTitle className="text-2xl font-bold text-[#00ffff] pixel-text glow-cyan mb-3 tracking-wide">
+                  {t('howToPlay.title')}
+                </CardTitle>
+                <CardDescription className="text-[#ff6bff]/70 text-sm pixel-text glow-pink-subtle leading-relaxed">
+                  {t('howToPlay.description')}
+                </CardDescription>
+                <p className="text-xs text-gray-300 mt-3 pixel-text opacity-80">
+                  Page {currentPage + 1} of {totalPages}
                 </p>
+              </CardHeader>
+
+              {/* Paginated Content */}
+              <div className="flex-1 p-6 overflow-hidden min-h-[200px]">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentPage}
+                    initial={{ x: currentPage > 0 ? "100%" : "-100%", opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    exit={{ x: currentPage > 0 ? "-100%" : "100%", opacity: 0 }}
+                    transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+                    className="h-full flex flex-col justify-center items-center book-page"
+                  >
+                    <div className="text-center mb-6 w-full">
+                      <h3 className="text-xl font-bold text-[#00ffff] mb-4 pixel-text glow-cyan tracking-wide">
+                        {steps[currentPage].title}
+                      </h3>
+                      <p className="text-gray-200 leading-relaxed pixel-text text-center max-w-sm mx-auto text-base">
+                        {steps[currentPage].content}
+                      </p>
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
               </div>
+
+              {/* Pagination Footer */}
+              <CardFooter className="border-t border-[#ff6bff]/15 p-6 pt-4 bg-[#1a0a2a]/60 backdrop-blur-sm rounded-b-3xl">
+                <div className="w-full flex items-center justify-between">
+                  {/* Prev Button */}
+                  <Button
+                    onClick={goToPrevPage}
+                    disabled={currentPage === 0}
+                    className={`flex items-center gap-2 px-6 py-3 bg-transparent hover:bg-[#00ffff]/10 border-2 border-[#00ffff]/40 text-[#00ffff] pixel-button glow-cyan-subtle transition-all duration-300 shadow-md shadow-[#00ffff]/20 hover:shadow-[#00ffff]/40 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none ${currentPage === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                  >
+                    <ArrowLeft size={18} className="stroke-current" />
+                    {/* <span className="font-medium">{t('howToPlay.prev')}</span> */}
+                  </Button>
+
+                  {/* Page Dots */}
+                  <div className="flex space-x-3">
+                    {steps.map((_, index) => (
+                      <motion.button
+                        key={index}
+                        onClick={() => goToPage(index)}
+                        whileHover={{ scale: 1.2 }}
+                        whileTap={{ scale: 0.95 }}
+                        className={`w-3 h-3 rounded-full transition-all duration-300 shadow-sm ${index === currentPage
+                          ? 'bg-[#a100ff] shadow-lg shadow-[#a100ff]/40 scale-125'
+                          : 'bg-white/20 hover:bg-white/40 hover:scale-110'
+                          }`}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Next / Got It Button */}
+                  <Button
+                    onClick={goToNextPage}
+                    className="flex items-center gap-2 px-6 py-3 bg-transparent hover:bg-[#ff6bff]/10 border-2 border-[#ff6bff]/40 text-[#ff6bff] pixel-button glow-pink-subtle transition-all duration-300 shadow-md shadow-[#ff6bff]/20 hover:shadow-[#ff6bff]/40"
+                  >
+                    <span className="font-medium">
+                      {/* {currentPage === totalPages - 1 ? t('howToPlay.gotIt') : t('howToPlay.next')} */}
+                    </span>
+                    {currentPage === totalPages - 1 ? (
+                      <BookOpen size={18} className="stroke-current" />
+                    ) : (
+                      <ArrowRight size={18} className="stroke-current" />
+                    )}
+                  </Button>
+                </div>
+              </CardFooter>
             </motion.div>
-          </AnimatePresence>
-        </div>
-
-        {/* Pagination Footer */}
-        <CardFooter className="border-t border-[#ff6bff]/15 p-6 pt-4 bg-[#1a0a2a]/60 backdrop-blur-sm rounded-b-3xl">
-          <div className="w-full flex items-center justify-between">
-            {/* Prev Button */}
-            <Button
-              onClick={goToPrevPage}
-              disabled={currentPage === 0}
-              className={`flex items-center gap-2 px-6 py-3 bg-transparent hover:bg-[#00ffff]/10 border-2 border-[#00ffff]/40 text-[#00ffff] pixel-button glow-cyan-subtle transition-all duration-300 shadow-md shadow-[#00ffff]/20 hover:shadow-[#00ffff]/40 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none ${
-                currentPage === 0 ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              <ArrowLeft size={18} className="stroke-current" />
-              {/* <span className="font-medium">{t('howToPlay.prev')}</span> */}
-            </Button>
-
-            {/* Page Dots */}
-            <div className="flex space-x-3">
-              {steps.map((_, index) => (
-                <motion.button
-                  key={index}
-                  onClick={() => goToPage(index)}
-                  whileHover={{ scale: 1.2 }}
-                  whileTap={{ scale: 0.95 }}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 shadow-sm ${
-                    index === currentPage
-                      ? 'bg-[#a100ff] shadow-lg shadow-[#a100ff]/40 scale-125'
-                      : 'bg-white/20 hover:bg-white/40 hover:scale-110'
-                  }`}
-                />
-              ))}
-            </div>
-
-            {/* Next / Got It Button */}
-            <Button
-              onClick={goToNextPage}
-              className="flex items-center gap-2 px-6 py-3 bg-transparent hover:bg-[#ff6bff]/10 border-2 border-[#ff6bff]/40 text-[#ff6bff] pixel-button glow-pink-subtle transition-all duration-300 shadow-md shadow-[#ff6bff]/20 hover:shadow-[#ff6bff]/40"
-            >
-              <span className="font-medium">
-                {/* {currentPage === totalPages - 1 ? t('howToPlay.gotIt') : t('howToPlay.next')} */}
-              </span>
-              {currentPage === totalPages - 1 ? (
-                <BookOpen size={18} className="stroke-current" />
-              ) : (
-                <ArrowRight size={18} className="stroke-current" />
-              )}
-            </Button>
-          </div>
-        </CardFooter>
-      </motion.div>
-    </motion.div>
-  )}
-</AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Content Area */}
       <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
@@ -933,20 +941,29 @@ export default function HomePage() {
               </CardHeader>
 
               <CardContent className="space-y-2">
-                {/* Room Code Input */}
-                <Input
-                  placeholder={t('joinRace.roomCodePlaceholder')}
-                  value={roomCode}
-                  maxLength={6}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()
-                    setRoomCode(value)
-                  }}
-                  className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
-                  aria-label="Room Code"
-                />
-                {/* Nickname Input dengan generate button */}
-                <div className="relative">
+                <div className="relative flex items-center">
+                  <Input
+                    placeholder={t('joinRace.roomCodePlaceholder')}
+                    value={roomCode}
+                    maxLength={6}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()
+                      setRoomCode(value)
+                    }}
+                    className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30 pr-10" // kasih padding kanan biar teks gak ketimpa icon
+                    aria-label="Room Code"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setOpen(true)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center text-[#00ffff] hover:bg-[#00ffff]/20 transition-all duration-200 glow-cyan-subtle p-1"
+                    aria-label="Scan QR"
+                  >
+                    <ScanLine className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="relative flex items-center">
                   <Input
                     placeholder={t('joinRace.nicknamePlaceholder')}
                     value={nickname}
@@ -958,10 +975,10 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => setNickname(generateNickname())}
-                    className="absolute right-2 top-1/8 text-[#00ffff] hover:bg-[#00ffff]/20 hover:border-[#00ffff] transition-all duration-200 glow-cyan-subtle"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center text-[#00ffff] hover:bg-[#00ffff]/20 transition-all duration-200 glow-cyan-subtle p-1"
                     aria-label="Generate Nickname"
                   >
-                    <span className="text-lg">🎲</span>
+                    <Dices className="w-5 h-5" />
                   </button>
                 </div>
               </CardContent>
@@ -983,6 +1000,36 @@ export default function HomePage() {
           </motion.div>
         </div>
       </div>
+
+      {/* Dialog QR Scanner */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="bg-[#0a0a0a]/90 border-[#00ffff]/50 max-w-md mx-auto p-0">
+          <DialogHeader className="p-4 border-b border-[#00ffff]/20">
+            <DialogTitle className="text-[#00ffff] text-center text-sm pixel-text">
+              Scan QR Code Room
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-4 flex flex-col items-center space-y-4">
+            <div className="relative w-full max-w-xs">
+              <Scanner
+                onScan={handleScan}
+                onError={handleError}
+                constraints={{ facingMode: 'environment' }} // Kamera belakang
+                classNames={{
+                  container: "rounded-lg overflow-hidden border border-[#00ffff]/30"
+                }}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="text-[#00ffff]/70 hover:text-[#00ffff] text-sm transition-colors"
+            >
+              Batal
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <LogoutDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog} />
 

@@ -1,8 +1,6 @@
 "use client";
 
 import type { ReactNode } from 'react';
-import { GeistSans } from 'geist/font/sans';
-import { GeistMono } from 'geist/font/mono';
 import { Analytics } from '@vercel/analytics/next';
 import { AuthProvider } from '@/contexts/authContext';
 import { useEffect, useState } from "react";
@@ -36,39 +34,15 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
     }
   }, [i18n.language, isClient]);
 
-  const preloadImages = [
-    "/gameforsmartlogo.webp",
-    "/assets/background/1.webp",
-  ];
-
   if (!isClient) {
     return <div className="bg-black min-h-screen" />;
   }
 
   return (
-    <>
-      <link
-        href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
-        rel="stylesheet"
-      />
-      {preloadImages.map((src) => (
-        <link
-          key={src}
-          rel="preload"
-          as="image"
-          href={src}
-          type="image/webp"
-          fetchPriority="high"
-        />
-      ))}
-
-      <div className={`${GeistSans.className} ${GeistMono.className} antialiased`}>
-        <AuthProvider>
-          <ClientProviders>
-            <AuthGate>{children}</AuthGate>
-          </ClientProviders>
-        </AuthProvider>
-      </div>
-    </>
+    <AuthProvider>
+      <ClientProviders>
+        <AuthGate>{children}</AuthGate>
+      </ClientProviders>
+    </AuthProvider>
   );
 }

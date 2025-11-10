@@ -5,7 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
-import { Search, ArrowLeft, Clock, Star, Zap, Volume2, VolumeX, HelpCircle, Menu, X, Settings } from "lucide-react"
+import { Search, ArrowLeft, Clock, Star, Zap, Volume2, VolumeX, HelpCircle, Menu, X, Settings, Heart, User } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -41,10 +41,11 @@ export default function QuestionListPage() {
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [creating, setCreating] = useState(false)
-  const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
   const audioRef = useRef<HTMLAudioElement>(null)
   const [profile, setProfile] = useState<any>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [favoritesMode, setFavoritesMode] = useState(false); // New: Toggle for favorites filter
+  const [myQuizzesMode, setMyQuizzesMode] = useState(false); // New: Toggle for my quizzes filter
 
   const itemsPerPage = 9;
   useEffect(() => {
@@ -133,7 +134,7 @@ export default function QuestionListPage() {
       setLoading(true);
       let query = supabase
         .from("quizzes")
-        .select("id, title, description, category, questions, is_public, created_at, updated_at")
+        .select("id, title, description, category, questions, is_public, created_at, updated_at,creator_id")
         .order("created_at", { ascending: false });
 
       // FIX: Tambah OR filter - public ATAU milik user (untuk favorites)
@@ -157,30 +158,49 @@ export default function QuestionListPage() {
     fetchQuizzes();
   }, [profile?.id]);
 
-  // Reset to first page when filters change
   useEffect(() => {
-    setCurrentPage(1)
-  }, [searchQuery, selectedCategory])
+  setCurrentPage(1); // Reset to 1 on filter change
+}, [searchQuery, selectedCategory, favoritesMode, myQuizzesMode]); // Add all filter deps
 
   // UPDATE: Compute categories - tambah "Favorites" sebagai opsi
   const categories = [
     "All",
     ...new Set(quizzes.map(q => q.category).filter(Boolean)),
-    "Favorites" // Tambah opsi Favorites
   ];
 
+  // Update filteredQuestions logic (AND my quizzes + category/favorites)
   const filteredQuestions = quizzes.filter((q) => {
     const matchesSearch = q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       q.description.toLowerCase().includes(searchQuery.toLowerCase());
     let matchesCategory = selectedCategory === "All" || q.category === selectedCategory;
 
-    if (selectedCategory === "Favorites") {
-      matchesCategory = favorites.includes(q.id);
-      console.log(`Favorites check for ${q.title}: ${q.id} in favorites?`, favorites.includes(q.id)); // Debug per quiz
+    // Favorites mode
+    if (favoritesMode) {
+      const isFavorite = favorites.includes(q.id);
+      matchesCategory = isFavorite && matchesCategory;
+    }
+
+    // New: My quizzes mode (AND with category/favorites)
+    if (myQuizzesMode) {
+      const isMine = q.creator_id === profile?.id;
+      matchesCategory = isMine && matchesCategory;
     }
 
     return matchesSearch && matchesCategory;
-  });
+  }, [searchQuery, selectedCategory, favoritesMode, myQuizzesMode, favorites, profile?.id]); // Add myQuizzesMode & profile.id deps
+
+  // New function for toggle my quizzes
+  const toggleMyQuizzes = () => {
+    setMyQuizzesMode(!myQuizzesMode);
+    setSelectedCategory("All"); // Reset category when toggle
+    setFavoritesMode(false)
+  };
+
+  const toggleFavorites = () => {
+    setFavoritesMode(!favoritesMode);
+    setMyQuizzesMode(false)
+    setSelectedCategory("All"); // Reset category when toggle
+  };
 
   // Pagination
   const totalPages = Math.ceil(filteredQuestions.length / itemsPerPage)
@@ -257,6 +277,8 @@ export default function QuestionListPage() {
     await handleSelectQuiz(quizId, router);   // panggil yang bikin room + redirect
   };
 
+  if (loading || creating) return <LoadingRetro />
+
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font"> {/* pt-20 untuk ruang burger */}
 
@@ -285,7 +307,7 @@ export default function QuestionListPage() {
         <ArrowLeft size={20} className="text-white" />
       </motion.button>
 
-      <h1 className="absolute top-5 right-20 hidden md:block">
+      <h1 className="absolute top-5 right-5 hidden md:block">
         <Image
           src="/gameforsmartlogo.webp"
           alt="Gameforsmart Logo"
@@ -297,68 +319,6 @@ export default function QuestionListPage() {
       <h1 className="absolute top-6 left-20 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">
         Crazy Race
       </h1>
-
-
-      {/* Burger Menu Button - Fixed Top Right */}
-      <motion.button
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        whileHover={{ scale: 1.05 }}
-        onClick={() => setIsMenuOpen(!isMenuOpen)}
-        className="absolute top-4 right-4 z-40 p-3 bg-[#ff6bff]/20 border-2 border-[#ff6bff]/50 pixel-button hover:bg-[#ff8aff]/40 glow-pink rounded-lg shadow-lg shadow-[#ff6bff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
-        aria-label="Toggle menu"
-      >
-        {isMenuOpen ? <X size={20} /> : <Volume2 size={20} />}
-      </motion.button>
-
-      {/* Menu Dropdown - Muncul saat burger diklik, dari kanan */}
-      {isMenuOpen && (
-        <motion.div
-          initial={{ opacity: 0, x: 300 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 300 }}
-          className="absolute top-20 right-4 z-30 w-64 bg-[#1a0a2a]/20 border border-[#ff6bff]/50 rounded-lg p-3 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm"
-        >
-          <div className="space-y-2">
-            {/* Integrated Mute + Volume: Single row for button + slider, with label above for simplicity */}
-            <div className="p-1.5 bg-[#ff6bff]/10 rounded space-y-1"> {/* Unified bg for the whole section; adjusted to /10 for subtle highlight */}
-              {/* <span className="text-xs text-white pixel-text block">Suara</span> Moved "Suara" label here as section header; changed color to white for better contrast */}
-
-              {/* New flex row: Mute button on left, slider on right; tight spacing */}
-              <div className="flex items-center space-x-2 bg-[#1a0a2a]/60 border border-[#ff6bff]/30 rounded px-2 py-1"> {/* Shared container for row; reduced px-1 to px-2 for button fit, py-0.5 to py-1 */}
-                <button
-                  onClick={handleMuteToggle}
-                  className="p-1.5 bg-[#00ffff] border border-white pixel-button hover:bg-[#33ffff] glow-cyan rounded flex-shrink-0" // Added flex-shrink-0 to prevent button compression
-                  aria-label={isMuted ? "Unmute" : "Mute"}
-                >
-                  {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
-                </button>
-
-                <div className="flex-1"> {/* Wrapper for slider to take remaining space */}
-                  <Slider
-                    value={[volume]}
-                    onValueChange={handleVolumeChange}
-                    max={100}
-                    min={0}
-                    step={1}
-                    className="w-full"
-                    orientation="horizontal"
-                    aria-label="Volume slider"
-                  />
-                </div>
-              </div>
-
-              {/* Volume value below slider for quick glance; optional but keeps info visible without cluttering row */}
-              <span className="text-xs text-[#ff6bff] pixel-text">Volume: {volume}%</span>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-
-      {(loading || creating) && (
-        <LoadingRetro />
-      )}
 
       <div className="relative z-10 container mx-auto px-6 py-8 max-w-6xl">
         {/* Title */}
@@ -376,142 +336,191 @@ export default function QuestionListPage() {
         </div>
 
         {/* Search & Filter Bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-xl p-6 mb-8 pixel-card glow-pink-subtle"
-        >
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#00ffff] h-5 w-5 glow-cyan" />
-              <Input
-                placeholder="Search Quiz..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-[#0a0a0f] border-4 border-[#6a4c93] text-white placeholder:text-gray-400 focus:border-[#00ffff] focus:ring-0 text-lg pixel-text glow-cyan-subtle"
-              />
-            </div>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger
-                className="w-full sm:w-auto bg-[#0a0a0f] border-4 border-[#6a4c93] 
-             text-white focus:border-[#00ffff] focus:ring-0 text-lg pixel-text 
-             glow-cyan-subtle py-4 px-4 h-auto"
-              >
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.5, delay: 0.2 }}
+  className="bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-xl p-4 sm:p-6 mb-8 pixel-card glow-pink-subtle"
+>
+  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center justify-between">
+    {/* Search */}
+    <div className="relative flex-1">
+      <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-[#00ffff] h-4 sm:h-5 w-4 sm:w-5 glow-cyan" />
+      <Input
+        placeholder="Search Quiz..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 bg-[#0a0a0f] border-4 border-[#6a4c93] text-white placeholder:text-gray-400 focus:border-[#00ffff] focus:ring-0 text-base sm:text-lg pixel-text glow-cyan-subtle"
+      />
+    </div>
 
-              <SelectContent className="bg-[#1a0a2a] border-4 border-[#ff6bff]/50 text-white">
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat} className="pixel-text capitalize">
-                    {cat}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </motion.div>
+    {/* Category Select */}
+    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+      <SelectTrigger className="w-full sm:w-63 bg-[#0a0a0f] border-4 border-[#6a4c93] text-white focus:border-[#00ffff] focus:ring-0 text-sm sm:text-lg pixel-text glow-cyan-subtle py-3 px-3 sm:px-4 h-auto capitalize">
+        <SelectValue placeholder="All Categories" className="capitalize" />
+      </SelectTrigger>
+      <SelectContent className="bg-[#1a0a2a] border-4 border-[#ff6bff]/50 text-white capitalize">
+        {categories.map((cat) => (
+          <SelectItem key={cat} value={cat} className="pixel-text capitalize">
+            {cat}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
 
-        {/* Questions Grid */}
-        {paginatedQuestions.length > 0 ? (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {paginatedQuestions.map((quiz, index) => (
-                <motion.div
-                  key={quiz.id}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.98 }}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
-                >
-                  <Card
-                    className="bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 hover:border-[#ff6bff] pixel-card glow-pink-subtle cursor-pointer h-full justify-end gap-3"
-                    onClick={() => handleQuizSelect(quiz.id)}
-                  >
-                    <TooltipProvider>
-                      <Tooltip delayDuration={500}>
-                        <TooltipTrigger asChild>
-                          <div>
-                            <CardHeader>
-                              <CardTitle className="text-base text-[#00ffff] pixel-text glow-cyan md:line-clamp-3 ">
-                                {quiz.title}
-                              </CardTitle>
-                            </CardHeader>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent
-                          side="top"
-                          className="text-xs bg-black/80 text-cyan-300 max-w-xs border border-cyan-500/50"
-                        >
-                          {quiz.title}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <CardFooter className="flex justify-between items-center">
-                      {quiz.category && (
-                        <div className="text-xs text-[#ff6bff] pixel-text glow-pink-subtle capitalize">{quiz.category}</div>
-                      )}
-                      <div className="flex items-center gap-2 text-[#ff6bff] text-sm pixel-text glow-pink-subtle">
-                        <HelpCircle className="h-4 w-4" /> {quiz.questions?.length ?? 0}
-                      </div>
-                    </CardFooter>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-2 mt-8 flex-wrap">
-                <Button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="pixel-button bg-[#ff6bff] border-4 border-white hover:bg-[#ff8aff] glow-pink"
-                  variant="outline"
-                >
-                  Previous
-                </Button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <Button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    variant={page === currentPage ? "default" : "outline"}
-                    className={`pixel-button ${page === currentPage ? 'bg-[#00ffff] border-4 border-white hover:bg-[#33ffff] glow-cyan' : 'bg-[#ff6bff] border-4 border-white hover:bg-[#ff8aff] glow-pink'}`}
-                  >
-                    {page}
-                  </Button>
-                ))}
-                <Button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="pixel-button bg-[#ff6bff] border-4 border-white hover:bg-[#ff8aff] glow-pink"
-                  variant="outline"
-                >
-                  Next
-                </Button>
-              </div>
-            )}
-          </>
-        ) : (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="text-center text-gray-400 pixel-text glow-pink-subtle"
+    {/* Favorites & My Quizzes Buttons (stack on mobile, row on sm+) */}
+    <div className="flex flex-row gap-2 sm:gap-2 mt-2 sm:mt-0">
+      {/* Favorites Heart Button */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={toggleFavorites}
+            className={`flex items-center justify-center w-full sm:w-10 h-10 rounded-full border-2 transition-all duration-300 ${
+              favoritesMode
+                ? 'bg-[#ff6bff] border-[#ff6bff] text-white hover:bg-[#ff6bff]/90'
+                : 'bg-transparent border-[#ff6bff] text-[#ff6bff] hover:bg-[#ff6bff]/10'
+            }`}
+            aria-label={favoritesMode ? "Show all quizzes" : "Show favorites"}
           >
-            NO QUIZZES FOUND
-          </motion.p>
-        )}
+            <Heart className={`h-5 w-5 ${favoritesMode ? 'fill-current' : ''}`} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="bg-[#1a0a2a] text-white border-[#ff6bff]/50">
+          Favorites
+        </TooltipContent>
+      </Tooltip>
+
+      {/* My Quizzes Button */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={toggleMyQuizzes}
+            className={`flex items-center justify-center w-full sm:w-10 h-10 rounded-full border-2 transition-all duration-300 ${
+              myQuizzesMode
+                ? 'bg-[#00ffff] border-[#00ffff] text-black hover:bg-[#33ffff]'
+                : 'bg-transparent border-[#00ffff] text-[#00ffff] hover:bg-[#00ffff]/10'
+            }`}
+            aria-label={myQuizzesMode ? "Show all quizzes" : "Show my quizzes"}
+          >
+            <User className={`h-5 w-5 ${myQuizzesMode ? 'fill-filled' : ''}`} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="bg-[#1a0a2a] text-white border-[#00ffff]/50">
+          My Quizzes
+        </TooltipContent>
+      </Tooltip>
+    </div>
+  </div>
+</motion.div>
+
+        {/* Questions Grid with Pagination in AnimatePresence */}
+<AnimatePresence mode="wait">
+  {paginatedQuestions.length > 0 ? (
+    <motion.div
+      key={`filter-${selectedCategory}-${favoritesMode}-${myQuizzesMode}-${searchQuery}-${currentPage}`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.1 }}
+    >
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {paginatedQuestions.map((quiz, index) => (
+          <motion.div
+            key={quiz.id}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.98 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2, delay: index * 0.05 }} // Stagger per item
+          >
+            <Card
+              className="bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 hover:border-[#ff6bff] pixel-card glow-pink-subtle cursor-pointer h-full justify-end gap-3"
+              onClick={() => handleQuizSelect(quiz.id)}
+            >
+              <TooltipProvider>
+                <Tooltip delayDuration={500}>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <CardHeader>
+                        <CardTitle className="text-base text-[#00ffff] pixel-text glow-cyan md:line-clamp-3">
+                          {quiz.title}
+                        </CardTitle>
+                      </CardHeader>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="top"
+                    className="text-xs bg-black/80 text-cyan-300 max-w-xs border border-cyan-500/50"
+                  >
+                    {quiz.title}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <CardFooter className="flex justify-between items-center">
+                {quiz.category && (
+                  <div className="text-xs text-[#ff6bff] pixel-text glow-pink-subtle capitalize">{quiz.category}</div>
+                )}
+                <div className="flex items-center gap-2 text-[#ff6bff] text-sm pixel-text glow-pink-subtle">
+                  <HelpCircle className="h-4 w-4" /> {quiz.questions?.length ?? 0}
+                </div>
+              </CardFooter>
+            </Card>
+          </motion.div>
+        ))}
       </div>
 
-      {/* Audio Element untuk Background Music */}
-      {/* <audio
-        ref={audioRef}
-        src="/assets/music/resonance.mp3"
-        loop
-        preload="auto"
-        className="hidden"
-      /> */}
+      {/* Pagination inside AnimatePresence for smooth transition */}
+      {totalPages > 1 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+          className="flex justify-center items-center gap-2 mt-8 flex-wrap"
+        >
+          <Button
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="pixel-button bg-[#ff6bff] border-4 border-white hover:bg-[#ff8aff] glow-pink"
+            variant="outline"
+          >
+            Previous
+          </Button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <Button
+              key={page}
+              onClick={() => setCurrentPage(page)}
+              variant={page === currentPage ? "default" : "outline"}
+              className={`pixel-button ${page === currentPage ? 'bg-[#00ffff] border-4 border-white hover:bg-[#33ffff] glow-cyan' : 'bg-[#ff6bff] border-4 border-white hover:bg-[#ff8aff] glow-pink'}`}
+            >
+              {page}
+            </Button>
+          ))}
+          <Button
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="pixel-button bg-[#ff6bff] border-4 border-white hover:bg-[#ff8aff] glow-pink"
+            variant="outline"
+          >
+            Next
+          </Button>
+        </motion.div>
+      )}
+    </motion.div>
+  ) : (
+    <motion.div
+      key="empty" // Key for empty state animation
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.2 }}
+      className="col-span-full text-center py-12"
+    >
+      <Search className="h-12 w-12 mx-auto mb-4 text-[#ff6bff] opacity-50" />
+      <p className="text-[#ff6bff] pixel-text glow-pink-subtle">No quizzes found</p>
+    </motion.div>
+  )}
+</AnimatePresence>
+      </div>
 
       <style jsx>{`
         .pixel-font {

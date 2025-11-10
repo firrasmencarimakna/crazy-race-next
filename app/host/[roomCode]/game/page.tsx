@@ -441,7 +441,7 @@ export default function HostMonitorPage() {
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
       <audio
         ref={audioRef}
-        src="/assets/music/racingprogress.mp3"
+        src="/assets/music/racingprogress-1.mp3"
         loop
         preload="auto"
         className="hidden"
