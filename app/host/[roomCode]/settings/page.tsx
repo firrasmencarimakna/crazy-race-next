@@ -34,12 +34,11 @@ export default function HostSettingsPage() {
   const roomCode = params.roomCode as string
 
   const [duration, setDuration] = useState("300") // Default: 5 minutes (300 seconds)
-  const [questionCount, setQuestionCount] = useState("10") // Default: 10 questions
+  const [questionCount, setQuestionCount] = useState("5") // Default: 10 questions
   const [quiz, setQuiz] = useState<any>(null); // Full quiz untuk questions
   const [quizDetail, setQuizDetail] = useState<any>(null); // Parsed dari game_sessions.quiz_detail
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [isMenuOpen, setIsMenuOpen] = useState(false) // State untuk toggle menu burger
   const audioRef = useRef<HTMLAudioElement>(null)
   const [selectedDifficulty, setSelectedDifficulty] = useState("easy");
 
@@ -47,7 +46,7 @@ export default function HostSettingsPage() {
 
   // Generate dynamic question count options
   const totalQuestions = quiz?.questions?.length || 0;
-  const baseOptions = [5, 10, 15, 20];
+  const baseOptions = [5, 10, 20];
   const questionCountOptions =
     totalQuestions > 0
       ? baseOptions.filter((count) => count <= totalQuestions)
@@ -157,6 +156,8 @@ export default function HostSettingsPage() {
     setSaving(false);
   };
 
+  if (saving || loading) return <LoadingRetro />
+
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
 
@@ -181,7 +182,7 @@ export default function HostSettingsPage() {
         <ArrowLeft size={20} className="text-white" />
       </motion.button>
 
-      <h1 className="absolute top-5 right-20 hidden md:block display-flex">
+      <h1 className="absolute top-5 right-5 hidden md:block display-flex">
         <Image
           src="/gameforsmartlogo.webp"
           alt="Gameforsmart Logo"
@@ -196,7 +197,7 @@ export default function HostSettingsPage() {
       </h1>
 
       {saving && <LoadingRetro />}
-
+      
       <div className="relative z-10 container mx-auto px-4 sm:px-6 py-6 max-w-4xl">
         {/* Title */}
         <motion.div
@@ -213,9 +214,7 @@ export default function HostSettingsPage() {
         </motion.div>
 
         {/* Loading State */}
-        {loading ? (
-          <LoadingRetro />
-        ) : !quizDetail ? (
+        {!quizDetail ? (
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
