@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
-import { Flag, Volume2, VolumeX, Settings, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight, Play, LogOut, Globe } from "lucide-react"
+import { Flag, Volume2, VolumeX, Settings, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight, Play, LogOut, Globe, Camera } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -65,6 +65,8 @@ export default function HomePage() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const { t, i18n } = useTranslation()
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { user, loading: authLoading } = useAuth()
 
@@ -679,23 +681,16 @@ export default function HomePage() {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden space-y-2"
+                    className="overflow-hidden grid grid-cols-2 gap-2"
                   >
                     {languages.map((lang) => (
                       <motion.button
                         key={lang.code}
                         onClick={() => handleLanguageSelect(lang.code, lang.name)}
-                        whileHover={{ scale: 1.02, x: 2 }}
-                        className={`w-full flex items-center gap-3 p-3 bg-[#1a0a2a]/80 border border-[#00ffff]/30 rounded-lg transition-all duration-200 hover:bg-[#00ffff]/20 hover:border-[#00ffff] ${currentLanguage === lang.code ? 'border-[#00ffff] bg-[#00ffff]/10' : ''}`}
+                        whileHover={{ scale: 1.02 }}
+                        className={`flex items-center justify-center p-3 bg-[#1a0a2a]/80 border border-[#00ffff]/30 rounded-lg transition-all duration-200 hover:bg-[#00ffff]/20 hover:border-[#00ffff] ${currentLanguage === lang.code ? 'border-[#00ffff] bg-[#00ffff]/10' : ''}`}
                       >
-                        <span className="text-lg">{lang.flag}</span>
-                        <div className="flex-1 text-left">
-                          <p className="text-sm font-medium text-white pixel-text">{lang.name}</p>
-                          <p className="text-xs text-[#00ffff]/70 pixel-text">{lang.code.toUpperCase()}</p>
-                        </div>
-                        {currentLanguage === lang.code && (
-                          <div className="w-2 h-2 bg-[#00ffff] rounded-full glow-cyan-subtle" />
-                        )}
+                        <span className="text-3xl">{lang.flag}</span>
                       </motion.button>
                     ))}
                   </motion.div>
@@ -933,18 +928,28 @@ export default function HomePage() {
               </CardHeader>
 
               <CardContent className="space-y-2">
-                {/* Room Code Input */}
-                <Input
-                  placeholder={t('joinRace.roomCodePlaceholder')}
-                  value={roomCode}
-                  maxLength={6}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()
-                    setRoomCode(value)
-                  }}
-                  className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30"
-                  aria-label="Room Code"
-                />
+                {/* Room Code Input with scan button */}
+                <div className="relative">
+                  <Input
+                    placeholder={t('joinRace.roomCodePlaceholder')}
+                    value={roomCode}
+                    maxLength={6}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()
+                      setRoomCode(value)
+                    }}
+                    className="bg-[#1a0a2a]/50 border-[#00ffff]/50 text-[#00ffff] placeholder:text-[#00ffff]/50 text-center text-sm pixel-text h-10 rounded-xl focus:border-[#00ffff] focus:ring-[#00ffff]/30 pr-10"
+                    aria-label="Room Code"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute right-3 top-2/8 text-[#00ffff] hover:bg-[#00ffff]/20 hover:border-[#00ffff] transition-all duration-200 glow-cyan-subtle"
+                    aria-label="Scan QR Code with Camera"
+                  >
+                    <Camera className="w-4 h-4" />
+                  </button>
+                </div>
                 {/* Nickname Input dengan generate button */}
                 <div className="relative">
                   <Input
@@ -1216,6 +1221,47 @@ export default function HomePage() {
             max-w-full max-h-[95vh];
           }
         }
+
+
+        <input
+        type="file"
+        ref={fileInputRef}
+        accept="image/*"
+        capture="environment"
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                if (code) {
+                  // Assuming the QR code contains the room code
+                  const extractedCode = code.data.toUpperCase().replace(/[^a-zA-Z0-9]/g, "").slice(0, 6); // Clean and limit to 6 chars
+                  setRoomCode(extractedCode);
+                  // Optional: Show success feedback
+                  console.log('QR Code scanned:', extractedCode);
+                } else {
+                  // Optional: Show error, e.g., toast "No QR code found"
+                  console.error('No QR code detected');
+                }
+              }
+              // Cleanup
+              URL.revokeObjectURL(URL.createObjectURL(file));
+              e.target.value = '';
+            };
+            img.src = URL.createObjectURL(file);
+          }
+        }}
+        aria-hidden="true"
+      />
       `}</style>
     </div>
   )
