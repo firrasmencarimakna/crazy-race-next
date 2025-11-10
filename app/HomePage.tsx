@@ -60,12 +60,10 @@ function LogoutDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (op
 }
 
 export default function HomePage() {
-  // Hooks untuk navigasi dan query params
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const { t, i18n } = useTranslation()
-
   const { user, loading: authLoading } = useAuth()
 
   // State untuk loading dan joining process
@@ -689,23 +687,16 @@ export default function HomePage() {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden space-y-2"
+                    className="overflow-hidden grid grid-cols-2 gap-2"
                   >
                     {languages.map((lang) => (
                       <motion.button
                         key={lang.code}
                         onClick={() => handleLanguageSelect(lang.code, lang.name)}
-                        whileHover={{ scale: 1.02, x: 2 }}
-                        className={`w-full flex items-center gap-3 p-3 bg-[#1a0a2a]/80 border border-[#00ffff]/30 rounded-lg transition-all duration-200 hover:bg-[#00ffff]/20 hover:border-[#00ffff] ${currentLanguage === lang.code ? 'border-[#00ffff] bg-[#00ffff]/10' : ''}`}
+                        whileHover={{ scale: 1.02 }}
+                        className={`flex items-center justify-center p-3 bg-[#1a0a2a]/80 border border-[#00ffff]/30 rounded-lg transition-all duration-200 hover:bg-[#00ffff]/20 hover:border-[#00ffff] ${currentLanguage === lang.code ? 'border-[#00ffff] bg-[#00ffff]/10' : ''}`}
                       >
-                        <span className="text-lg">{lang.flag}</span>
-                        <div className="flex-1 text-left">
-                          <p className="text-sm font-medium text-white pixel-text">{lang.name}</p>
-                          <p className="text-xs text-[#00ffff]/70 pixel-text">{lang.code.toUpperCase()}</p>
-                        </div>
-                        {currentLanguage === lang.code && (
-                          <div className="w-2 h-2 bg-[#00ffff] rounded-full glow-cyan-subtle" />
-                        )}
+                        <span className="text-3xl">{lang.flag}</span>
                       </motion.button>
                     ))}
                   </motion.div>
@@ -962,7 +953,6 @@ export default function HomePage() {
                     <ScanLine className="w-5 h-5" />
                   </button>
                 </div>
-
                 <div className="relative flex items-center">
                   <Input
                     placeholder={t('joinRace.nicknamePlaceholder')}

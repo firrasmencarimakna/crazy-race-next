@@ -14,6 +14,7 @@ import { HomeIcon, RotateCwIcon } from "lucide-react"
 import { generateGamePin } from "../../page"
 import { shuffleArray } from "../settings/page"
 import { useAuth } from "@/contexts/authContext"
+import { t } from "i18next"
 
 type PlayerStats = {
   nickname: string
@@ -346,7 +347,7 @@ export default function HostLeaderboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <span className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#ffefff] pixel-text glow-pink">Leaderboard</span>
+            <span className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#ffefff] pixel-text glow-pink">{t('resulthost.title')}</span>
           </motion.h1>
         </div>
 

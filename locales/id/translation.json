@@ -88,8 +88,8 @@
     "title2": "RACE",
     "subtitle": "JAWAB • BALAPAN • MENANG"
   },
-   "hostSettings": {
-    "title": "Pengaturan Permainan",
+   "settings": {
+    "title": "Pengaturan",
     "quizTitle": "Kuis Terpilih",
     "duration": "Menit",
     "questions": "Jumlah Soal",
@@ -99,7 +99,7 @@
       "Medium": "Sedang",
       "Hard": "Sulit"
     },
-    "continueButton": "Lanjutkan",
+    "start": "Lanjutkan",
     "errorQuizNotFound": "Kesalahan: Kuis Tidak Ditemukan",
     "backButton": "Kembali ke Host",
     "sound": "Suara",
@@ -115,7 +115,7 @@
    "soal": {
     "title": "Pilih Kuis",
     "search": "Cari Kuis...",
-    "allCategories": "Semua Kategori",
+    "categories": "Semua Kategori",
     "previous": "Sebelumnya",
     "next": "Selanjutnya",
     "initializing": "MEMUAT...",
@@ -127,49 +127,26 @@
     "unmute": "Bunyikan",
     "language": "Bahasa"
   },
-    "hostRoom": {
+    "hostroom": {
     "title": "Ruang Host",
     "start": "Mulai",
-    "players": "{{count}} Pemain",  "hostRoom": {
-    "title": "Ruangan Host",
-    "start": "Mulai",
-    "players": "{{count}} Pemain{{#if (gt count 1)}}s{{/if}}",
     "waiting": "Menunggu pemain bergabung...",
-    "kickConfirmation": "Kick {{name}}?",
+    "kickconfirmation": "Keluarkan {{name}}?",
     "cancel": "Batal",
-    "kick": "Kick",
+    "kick": "Keluar",
     "backToSettings": "Kembali ke Host",
     "sound": "Suara",
     "volume": "Volume",
     "mute": "Senyap",
     "unmute": "Bunyikan",
-    "language": "Bahasa",
-    "languages": {
-      "en": "Inggris",
-      "id": "Bahasa Indonesia"
-    }
-  },
-    "waiting": "Menunggu pemain bergabung...",
-    "kickConfirmation": "Kick {{name}}?",
-    "cancel": "Batal",
-    "kick": "Kick",
-    "backToSettings": "Kembali ke Host",
-    "sound": "Suara",
-    "volume": "Volume",
-    "mute": "Senyap",
-    "unmute": "Bunyikan",
-    "language": "Bahasa",
-    "languages": {
-      "en": "Inggris",
-      "id": "Bahasa Indonesia"
-    }
+    "language": "Bahasa"
   },
    "lobby": {
     "title": "Ruang Tunggu",
     "chooseCar": "PILIH MOBIL",
     "exit": "Keluar",
-    "exitRoom": "Keluar Ruangan?",
-    "goToHomepage": "Anda akan kembali ke Beranda.",
+    "keluar": "Keluar Ruangan?",
+    "homepage": "Anda akan kembali ke Beranda.",
     "cancel": "Batal",
     "you": "ANDA",
     "languages": {

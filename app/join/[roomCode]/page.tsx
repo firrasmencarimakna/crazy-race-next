@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogOverlay, 
 import Image from "next/image"
 import { breakOnCaps } from "@/utils/game"
 import { getSyncedServerTime, syncServerTime } from "@/utils/serverTime"
+import { t } from "i18next"
 
 // Background GIFs
 const backgroundGifs = [
@@ -414,7 +415,7 @@ export default function LobbyPage() {
         {/* Judul Utama */}
         <div className="text-center md:m-8 mb-8">
           <h1 className="sm:max-w-none text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#00ffff] pixel-text glow-cyan mb-4 tracking-wider">
-            Waiting Room
+            {t('lobby.title')}
           </h1>
         </div>
 
@@ -509,7 +510,7 @@ export default function LobbyPage() {
             transition={{ duration: 0.3 }}
           >
             <DialogHeader>
-              <DialogTitle className="text-cyan-400 pixel-text glow-cyan text-center"> Exit Room?</DialogTitle>
+              <DialogTitle className="text-cyan-400 pixel-text glow-cyan text-center"> {t('lobby.keluar')} </DialogTitle>
             </DialogHeader>
 
             {/* Car GIF */}
@@ -521,7 +522,7 @@ export default function LobbyPage() {
               />
             </div>
             <DialogDescription className="text-cyan-400 text-center">
-              You will Go to the Homepage.
+              {t('lobby.homepage')}
             </DialogDescription>
 
             <div className="flex justify-end space-x-3 pt-4">
@@ -530,14 +531,14 @@ export default function LobbyPage() {
                 onClick={() => setShowExitDialog(false)}
                 className="text-[#00ffff] border-1 border-[#00ffff] hover:bg-[#00ffff] "
               >
-                Cancel
+                {t('lobby.cancel')}
               </Button>
 
               <Button
                 onClick={handleExit}
                 className="bg-[#000] border-1 text-[#00ffff] border-[#00ffff] hover:bg-red-500 hover:text-white"
               >
-                Exit
+                {t('lobby.exit')}
               </Button>
             </div>
           </motion.div>

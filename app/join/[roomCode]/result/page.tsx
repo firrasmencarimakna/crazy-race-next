@@ -1,13 +1,3 @@
-// Updated results page: join/[roomCode]/results/page.tsx
-// Key changes for compactness:
-// - Reduced font sizes, paddings, and margins throughout to fit within viewport
-// - Main card: Smaller icons, tighter spacing
-// - Stats grid: Smaller cards with compact content
-// - Breakdown: Inline layout for scores
-// - Actions: Horizontal on all sizes, smaller buttons
-// - Overall: Removed excessive mb-8, used mb-4; max-w-4xl retained but content squeezed
-// - Retained theme, animations, and functionality
-
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -22,6 +12,8 @@ import { supabase } from "@/lib/supabase"
 import LoadingRetro from "@/components/loadingRetro"
 import { breakOnCaps } from "@/utils/game"
 import Image from "next/image"
+import { t } from "i18next"
+
 
 // Background GIFs
 const backgroundGifs = [
@@ -221,7 +213,7 @@ export default function PlayerResultsPage() {
         >
           <div className="inline-block p-4 md:pt-14">
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#ffefff] pixel-text glow-pink">
-              Result
+              {t('joinresult.title')}
             </h1>
           </div>
         </motion.div>
@@ -251,21 +243,21 @@ export default function PlayerResultsPage() {
             <div className="text-xl font-bold text-[#00ffff] mb-1 pixel-text glow-cyan">
               {correctAnswers}/{totalQuestions}
             </div>
-            <div className="text-xs text-[#ff6bff] pixel-text">Correct</div>
+            <div className="text-xs text-[#ff6bff] pixel-text">{t('joinresult.correct')}</div>
           </Card>
           <Card className="p-5 text-center bg-[#1a0a2a]/10 border-[#00ffff]/70 backdrop-blur-xs pixel-card">
             <div className="text-xl font-bold text-[#00ffff] mb-1 pixel-text glow-cyan">
               {finalScore}
             </div>
-            <div className="text-xs text-[#ff6bff] pixel-text">Score</div>
+            <div className="text-xs text-[#ff6bff] pixel-text">{t('joinresult.score')}</div>
           </Card>
           <Card className="p-5 text-center bg-[#1a0a2a]/10 border-[#00ffff]/70 backdrop-blur-xs pixel-card">
             <div className="text-xl font-bold text-[#00ffff] mb-1 pixel-text glow-cyan">{totalTime}</div>
-            <div className="text-xs text-[#ff6bff] pixel-text">Time</div>
+            <div className="text-xs text-[#ff6bff] pixel-text">{t('joinresult.time')}</div>
           </Card>
           <Card className="p-5 text-center bg-[#1a0a2a]/10 border-[#00ffff]/70 backdrop-blur-xs pixel-card">
             <div className="text-xl font-bold text-[#00ffff] mb-1 pixel-text glow-cyan">{formatAccuracy(accuracy)}%</div>
-            <div className="text-xs text-[#ff6bff] pixel-text">Accuracy</div>
+            <div className="text-xs text-[#ff6bff] pixel-text">{t('joinresult.accuracy')}</div>
           </Card>
         </motion.div>
 
@@ -283,7 +275,6 @@ export default function PlayerResultsPage() {
             onClick={() => router.push('/')}
           >
             <Home className="mr-1 h-4 w-4" />
-            Home
           </Button>
         </motion.div>
       </div>

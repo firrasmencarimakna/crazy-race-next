@@ -15,6 +15,8 @@ import LoadingRetro from "@/components/loadingRetro"
 import Image from "next/image"
 import { useAuth } from "@/contexts/authContext"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useTranslation } from "react-i18next"
+import { t } from "i18next"
 
 
 // List of background GIFs in filename order
@@ -32,7 +34,6 @@ export default function QuestionListPage() {
   const router = useRouter()
   const { user } = useAuth();
   const [isMuted, setIsMuted] = useState(false)
-  const [volume, setVolume] = useState(50) // 0-100, default 50%
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [currentPage, setCurrentPage] = useState(1)
@@ -98,36 +99,7 @@ export default function QuestionListPage() {
     }
   }, [user]);
 
-  // Inisialisasi audio: play otomatis dengan volume default
-  useEffect(() => {
-    if (audioRef.current) {
-      const initialVolume = volume / 100
-      audioRef.current.volume = isMuted ? 0 : initialVolume
-      audioRef.current.play().catch((e) => {
-        console.log("Autoplay dicegah oleh browser:", e)
-      })
-    }
-  }, [])
 
-  // Update audio volume berdasarkan state volume dan isMuted
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : (volume / 100)
-    }
-  }, [volume, isMuted])
-
-  // Handle toggle mute/unmute
-  const handleMuteToggle = () => {
-    setIsMuted(!isMuted)
-  }
-
-  // Handle volume change
-  const handleVolumeChange = (value: number[]) => {
-    setVolume(value[0])
-    if (isMuted && value[0] > 0) {
-      setIsMuted(false) // Auto unmute jika volume dinaikkan
-    }
-  }
 
   useEffect(() => {
     const fetchQuizzes = async () => {
@@ -225,7 +197,7 @@ export default function QuestionListPage() {
       total_time_minutes: 5, // Default dari contoh
       question_limit: 10, // Default
       difficulty: null,
-      game_end_mode: "manual", // Default
+      game_end_mode: "manual", // Default 
       allow_join_after_start: false, // Default
       participants: [], // Mulai kosong
       responses: [], // Kosong
@@ -320,6 +292,10 @@ export default function QuestionListPage() {
         Crazy Race
       </h1>
 
+      {(loading || creating) && (
+        <LoadingRetro />
+      )}
+
       <div className="relative z-10 container mx-auto px-6 py-8 max-w-6xl">
         {/* Title */}
         <div className="text-center m-7">
@@ -330,7 +306,7 @@ export default function QuestionListPage() {
             className="pixel-border-large inline-block p-6"
           >
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#ffefff] pixel-text glow-pink">
-              Select Quiz
+             {t('soal.title')}
             </h1>
           </motion.div>
         </div>
