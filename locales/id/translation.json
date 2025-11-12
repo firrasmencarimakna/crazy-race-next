@@ -20,6 +20,10 @@
     "joining": "SEDANG BERGABUNG..."
   },
   "alert": {
+    "pwaInstallUnavailable": {
+      "title": "Aplikasi Tidak Tersedia",
+      "message": "Aplikasi sudah terpasang atau belum siap diinstal."
+    },
     "roomCode": {
       "title": "Oops! Kode Ruangan!",
       "message": "Kode ruangan harus 6 huruf."

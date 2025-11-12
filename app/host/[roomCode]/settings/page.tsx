@@ -1,13 +1,17 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+<<<<<<< HEAD
 import { Slider } from "@/components/ui/slider"
 import { ArrowLeft, Clock, Hash, Play, Menu, X, Settings } from "lucide-react"
 import Link from "next/link"
+=======
+import { ArrowLeft, Clock, Hash, Play, Settings } from "lucide-react"
+>>>>>>> a066909 (pnpm, pwa, hapus import an yang gak di pakai, icon fc google bermasalah selesai, menyesuaikan skor sesuai jumlah soal, implementasi pwa, penambahan variable score di kolom jsonb: participants, perbaikan fitur search(harus enter/button untuk hasil), reconnect player jika keluar dengan cara join lagi)
 import { useRouter, useParams } from "next/navigation"
 import { motion } from "framer-motion" // HAPUS: AnimatePresence, karena nggak ada transisi lagi
 import { supabase } from "@/lib/supabase"
@@ -34,16 +38,18 @@ export default function HostSettingsPage() {
   const roomCode = params.roomCode as string
 
   const [duration, setDuration] = useState("300") // Default: 5 minutes (300 seconds)
-  const [questionCount, setQuestionCount] = useState("5") // Default: 10 questions
+  const [questionCount, setQuestionCount] = useState("5") // Default: 5 questions
   const [quiz, setQuiz] = useState<any>(null); // Full quiz untuk questions
   const [quizDetail, setQuizDetail] = useState<any>(null); // Parsed dari game_sessions.quiz_detail
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const audioRef = useRef<HTMLAudioElement>(null)
   const [selectedDifficulty, setSelectedDifficulty] = useState("easy");
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> a066909 (pnpm, pwa, hapus import an yang gak di pakai, icon fc google bermasalah selesai, menyesuaikan skor sesuai jumlah soal, implementasi pwa, penambahan variable score di kolom jsonb: participants, perbaikan fitur search(harus enter/button untuk hasil), reconnect player jika keluar dengan cara join lagi)
   // Generate dynamic question count options
   const totalQuestions = quiz?.questions?.length || 0;
   const baseOptions = [5, 10, 20];
@@ -52,14 +58,25 @@ export default function HostSettingsPage() {
       ? baseOptions.filter((count) => count <= totalQuestions)
       : baseOptions;
 
-
   // Set default question count to 10 or closest valid option
+  // useEffect(() => {
+  //   if (totalQuestions > 0) {
+  //     const closest = questionCountOptions.reduce((prev, curr) =>
+  //       Math.abs(curr - 10) < Math.abs(prev - 10) ? curr : prev
+  //     );
+  //     setQuestionCount(closest.toString());
+  //   }
+  // }, [totalQuestions]);
+
+  // Set default question count → 5 (atau nilai terdekat yang mungkin)
   useEffect(() => {
     if (totalQuestions > 0) {
-      const closest = questionCountOptions.reduce((prev, curr) =>
-        Math.abs(curr - 10) < Math.abs(prev - 10) ? curr : prev
-      );
-      setQuestionCount(closest.toString());
+      if (questionCountOptions.includes(5)) {
+        setQuestionCount("5");
+      } else {
+        const smallest = Math.min(...questionCountOptions);
+        setQuestionCount(smallest.toString());
+      }
     }
   }, [totalQuestions]);
 
@@ -122,7 +139,7 @@ export default function HostSettingsPage() {
   }, [roomCode]);
 
   const handleCreateRoom = async () => {
-    if (!quiz || saving) return;
+    if (saving || loading || !quiz) return;
     setSaving(true);
 
     const settings = {
@@ -153,7 +170,6 @@ export default function HostSettingsPage() {
     localStorage.setItem("hostroomCode", roomCode);
 
     router.push(`/host/${roomCode}`); // Path sama, adjust kalau perlu
-    setSaving(false);
   };
 
   if (saving || loading) return <LoadingRetro />

@@ -20,6 +20,10 @@
     "joining": "JOINING..."
   },
   "alert": {
+    "pwaInstallUnavailable": {
+      "title": "App Not Available",
+      "message": "App already installed or not available yet."
+    },
     "roomCode": {
       "title": "Oops! Your Room Code!",
       "message": "The room code must be 6 letters."

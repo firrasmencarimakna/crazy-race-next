@@ -1,12 +1,10 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Slider } from "@/components/ui/slider"
-import { Search, ArrowLeft, Clock, Star, Zap, Volume2, VolumeX, HelpCircle, Menu, X, Settings, Heart, User } from "lucide-react"
-import Link from "next/link"
+import { Search, ArrowLeft, HelpCircle, Heart, User } from "lucide-react"
 import { useEffect, useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
@@ -17,7 +15,6 @@ import { useAuth } from "@/contexts/authContext"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useTranslation } from "react-i18next"
 import { t } from "i18next"
-
 
 // List of background GIFs in filename order
 const backgroundGifs = [
@@ -35,6 +32,7 @@ export default function QuestionListPage() {
   const { user } = useAuth();
   const [isMuted, setIsMuted] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [searchInput, setSearchInput] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [currentPage, setCurrentPage] = useState(1)
   const [quizzes, setQuizzes] = useState<any[]>([])
@@ -131,8 +129,8 @@ export default function QuestionListPage() {
   }, [profile?.id]);
 
   useEffect(() => {
-  setCurrentPage(1); // Reset to 1 on filter change
-}, [searchQuery, selectedCategory, favoritesMode, myQuizzesMode]); // Add all filter deps
+    setCurrentPage(1); // Reset to 1 on filter change
+  }, [searchQuery, selectedCategory, favoritesMode, myQuizzesMode]); // Add all filter deps
 
   // UPDATE: Compute categories - tambah "Favorites" sebagai opsi
   const categories = [
@@ -195,9 +193,9 @@ export default function QuestionListPage() {
       game_pin: gamePin,
       status: "waiting",
       total_time_minutes: 5, // Default dari contoh
-      question_limit: 10, // Default
-      difficulty: null,
-      game_end_mode: "manual", // Default 
+      question_limit: 5, // Default
+      difficulty: "easy",
+      game_end_mode: "manual", // Default
       allow_join_after_start: false, // Default
       participants: [], // Mulai kosong
       responses: [], // Kosong
@@ -205,7 +203,7 @@ export default function QuestionListPage() {
       application: "crazyrace"
     };
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("game_sessions")
       .insert(newSession)
       .select("game_pin")
@@ -220,8 +218,7 @@ export default function QuestionListPage() {
     // Simpan pin untuk host session
     localStorage.setItem("hostGamePin", gamePin);
 
-    router.push(`/host/${data.game_pin}/settings`); // Path sama, adjust kalau perlu
-    setCreating(false);
+    router.replace(`/host/${gamePin}/settings`); // Path sama, adjust kalau perlu
   }
 
   // Background image cycling with smooth transition
@@ -298,7 +295,7 @@ export default function QuestionListPage() {
 
       <div className="relative z-10 container mx-auto px-6 py-8 max-w-6xl">
         {/* Title */}
-        <div className="text-center m-7">
+        <div className="text-center sm:m-7">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -312,190 +309,207 @@ export default function QuestionListPage() {
         </div>
 
         {/* Search & Filter Bar */}
-<motion.div
-  initial={{ opacity: 0, y: 20 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.5, delay: 0.2 }}
-  className="bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-xl p-4 sm:p-6 mb-8 pixel-card glow-pink-subtle"
->
-  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center justify-between">
-    {/* Search */}
-    <div className="relative flex-1">
-      <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-[#00ffff] h-4 sm:h-5 w-4 sm:w-5 glow-cyan" />
-      <Input
-        placeholder="Search Quiz..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 bg-[#0a0a0f] border-4 border-[#6a4c93] text-white placeholder:text-gray-400 focus:border-[#00ffff] focus:ring-0 text-base sm:text-lg pixel-text glow-cyan-subtle"
-      />
-    </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-xl p-4 sm:p-6 mb-8 pixel-card glow-pink-subtle"
+        >
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center justify-between">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Input
+                placeholder="Search Quiz..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") setSearchQuery(searchInput);
+                }}
+                className="w-full pr-12 py-3 sm:py-4 bg-[#0a0a0f] border-4 border-[#6a4c93] text-white placeholder:text-gray-400 focus:border-[#00ffff] focus:ring-0 text-base sm:text-lg pixel-text glow-cyan-subtle"
+              />
 
-    {/* Category Select */}
-    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-      <SelectTrigger className="w-full sm:w-63 bg-[#0a0a0f] border-4 border-[#6a4c93] text-white focus:border-[#00ffff] focus:ring-0 text-sm sm:text-lg pixel-text glow-cyan-subtle py-3 px-3 sm:px-4 h-auto capitalize">
-        <SelectValue placeholder="All Categories" className="capitalize" />
-      </SelectTrigger>
-      <SelectContent className="bg-[#1a0a2a] border-4 border-[#ff6bff]/50 text-white capitalize">
-        {categories.map((cat) => (
-          <SelectItem key={cat} value={cat} className="pixel-text capitalize">
-            {cat}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+              {/* Tombol Search diperbesar area kliknya */}
+              <button
+                type="button"
+                onClick={() => setSearchQuery(searchInput)}
+                className="absolute right-0 inset-y-0 flex items-center justify-center px-2 sm:px-3 text-[#00ffff] hover:text-[#33ffff] transition-all cursor-pointer rounded-r-sm"
+                aria-label="Cari Quiz"
+              >
+                <Search className="h-5 w-5" />
+              </button>
+            </div>
 
-    {/* Favorites & My Quizzes Buttons (stack on mobile, row on sm+) */}
-    <div className="flex flex-row gap-2 sm:gap-2 mt-2 sm:mt-0">
-      {/* Favorites Heart Button */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            onClick={toggleFavorites}
-            className={`flex items-center justify-center w-full sm:w-10 h-10 rounded-full border-2 transition-all duration-300 ${
-              favoritesMode
-                ? 'bg-[#ff6bff] border-[#ff6bff] text-white hover:bg-[#ff6bff]/90'
-                : 'bg-transparent border-[#ff6bff] text-[#ff6bff] hover:bg-[#ff6bff]/10'
-            }`}
-            aria-label={favoritesMode ? "Show all quizzes" : "Show favorites"}
-          >
-            <Heart className={`h-5 w-5 ${favoritesMode ? 'fill-current' : ''}`} />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom" className="bg-[#1a0a2a] text-white border-[#ff6bff]/50">
-          Favorites
-        </TooltipContent>
-      </Tooltip>
+            {/* Category Select */}
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-full sm:w-40 lg:w-63 bg-[#0a0a0f] border-4 border-[#6a4c93] text-white focus:border-[#00ffff] cursor-pointer focus:ring-0 text-sm sm:text-lg pixel-text glow-cyan-subtle py-3 px-3 sm:px-4 h-auto capitalize">
+                <SelectValue placeholder="All Categories" className="capitalize" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#1a0a2a] border-4 border-[#ff6bff]/50 text-white capitalize">
+                {categories.map((cat) => (
+                  <SelectItem key={cat} value={cat} className="pixel-text capitalize cursor-pointer">
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-      {/* My Quizzes Button */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            onClick={toggleMyQuizzes}
-            className={`flex items-center justify-center w-full sm:w-10 h-10 rounded-full border-2 transition-all duration-300 ${
-              myQuizzesMode
-                ? 'bg-[#00ffff] border-[#00ffff] text-black hover:bg-[#33ffff]'
-                : 'bg-transparent border-[#00ffff] text-[#00ffff] hover:bg-[#00ffff]/10'
-            }`}
-            aria-label={myQuizzesMode ? "Show all quizzes" : "Show my quizzes"}
-          >
-            <User className={`h-5 w-5 ${myQuizzesMode ? 'fill-filled' : ''}`} />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom" className="bg-[#1a0a2a] text-white border-[#00ffff]/50">
-          My Quizzes
-        </TooltipContent>
-      </Tooltip>
-    </div>
-  </div>
-</motion.div>
+            {/* Favorites & My Quizzes Buttons (stack on mobile, row on sm+) */}
+            <div className="flex flex-row gap-2 sm:gap-2">
+              {/* Favorites Heart Button */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={toggleFavorites}
+                    className={`flex items-center justify-center w-full sm:w-10 h-10 rounded-full border-2 transition-all duration-300 cursor-pointer ${favoritesMode
+                      ? 'bg-[#ff6bff] border-[#ff6bff] text-white hover:bg-[#ff6bff]/90'
+                      : 'bg-transparent border-[#ff6bff] text-[#ff6bff] hover:bg-[#ff6bff]/10'
+                      }`}
+                    aria-label={favoritesMode ? "Show all quizzes" : "Show favorites"}
+                  >
+                    <Heart className={`h-5 w-5 ${favoritesMode ? 'fill-current' : ''}`} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="bg-[#1a0a2a] text-white border-[#ff6bff]/50">
+                  Favorites
+                </TooltipContent>
+              </Tooltip>
+
+              {/* My Quizzes Button */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={toggleMyQuizzes}
+                    className={`flex items-center justify-center w-full sm:w-10 h-10 rounded-full border-2 transition-all duration-300 cursor-pointer ${myQuizzesMode
+                      ? 'bg-[#00ffff] border-[#00ffff] text-black hover:bg-[#33ffff]'
+                      : 'bg-transparent border-[#00ffff] text-[#00ffff] hover:bg-[#00ffff]/10'
+                      }`}
+                    aria-label={myQuizzesMode ? "Show all quizzes" : "Show my quizzes"}
+                  >
+                    <User className={`h-5 w-5 ${myQuizzesMode ? 'fill-filled' : ''}`} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="bg-[#1a0a2a] text-white border-[#00ffff]/50">
+                  My Quizzes
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        </motion.div>
 
         {/* Questions Grid with Pagination in AnimatePresence */}
-<AnimatePresence mode="wait">
-  {paginatedQuestions.length > 0 ? (
-    <motion.div
-      key={`filter-${selectedCategory}-${favoritesMode}-${myQuizzesMode}-${searchQuery}-${currentPage}`}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.1 }}
-    >
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {paginatedQuestions.map((quiz, index) => (
-          <motion.div
-            key={quiz.id}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.98 }}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2, delay: index * 0.05 }} // Stagger per item
-          >
-            <Card
-              className="bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 hover:border-[#ff6bff] pixel-card glow-pink-subtle cursor-pointer h-full justify-end gap-3"
-              onClick={() => handleQuizSelect(quiz.id)}
+        <AnimatePresence mode="wait">
+          {paginatedQuestions.length > 0 ? (
+            <motion.div
+              key={`filter-${selectedCategory}-${favoritesMode}-${myQuizzesMode}-${searchQuery}-${currentPage}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.1 }}
             >
-              <TooltipProvider>
-                <Tooltip delayDuration={500}>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <CardHeader>
-                        <CardTitle className="text-base text-[#00ffff] pixel-text glow-cyan md:line-clamp-3">
-                          {quiz.title}
-                        </CardTitle>
-                      </CardHeader>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="top"
-                    className="text-xs bg-black/80 text-cyan-300 max-w-xs border border-cyan-500/50"
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {paginatedQuestions.map((quiz, index) => (
+                  <motion.div
+                    key={quiz.id}
+                    whileHover={!creating ? { scale: 1.03 } : {}}
+                    whileTap={!creating ? { scale: 0.98 } : {}}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2, delay: index * 0.05 }} // Stagger per item
                   >
-                    {quiz.title}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <CardFooter className="flex justify-between items-center">
-                {quiz.category && (
-                  <div className="text-xs text-[#ff6bff] pixel-text glow-pink-subtle capitalize">{quiz.category}</div>
-                )}
-                <div className="flex items-center gap-2 text-[#ff6bff] text-sm pixel-text glow-pink-subtle">
-                  <HelpCircle className="h-4 w-4" /> {quiz.questions?.length ?? 0}
-                </div>
-              </CardFooter>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
+                    <Card
+                      className={`relative bg-[#1a0a2a]/60 border-4 pixel-card h-full justify-end gap-3 cursor-pointer transition-all duration-200
+                        ${creating
+                          ? "opacity-50 cursor-not-allowed border-[#888]/40"
+                          : "border-[#ff6bff]/50 hover:border-[#ff6bff] glow-pink-subtle"
+                        }`}
 
-      {/* Pagination inside AnimatePresence for smooth transition */}
-      {totalPages > 1 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.2 }}
-          className="flex justify-center items-center gap-2 mt-8 flex-wrap"
-        >
-          <Button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className="pixel-button bg-[#ff6bff] border-4 border-white hover:bg-[#ff8aff] glow-pink"
-            variant="outline"
-          >
-            Previous
-          </Button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-            <Button
-              key={page}
-              onClick={() => setCurrentPage(page)}
-              variant={page === currentPage ? "default" : "outline"}
-              className={`pixel-button ${page === currentPage ? 'bg-[#00ffff] border-4 border-white hover:bg-[#33ffff] glow-cyan' : 'bg-[#ff6bff] border-4 border-white hover:bg-[#ff8aff] glow-pink'}`}
+                      onClick={() => {
+                        if (!creating) handleQuizSelect(quiz.id);
+                      }}
+                    >
+                      <TooltipProvider>
+                        <Tooltip delayDuration={500}>
+                          <TooltipTrigger asChild>
+                            <div>
+                              <CardHeader>
+                                <CardTitle className="text-base text-[#00ffff] pixel-text glow-cyan md:line-clamp-3">
+                                  {quiz.title}
+                                </CardTitle>
+                              </CardHeader>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="top"
+                            className="text-xs bg-black/80 text-cyan-300 max-w-xs border border-cyan-500/50"
+                          >
+                            {quiz.title}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <CardFooter className="flex justify-between items-center">
+                        {quiz.category && (
+                          <div className="text-xs text-[#ff6bff] pixel-text glow-pink-subtle capitalize">{quiz.category}</div>
+                        )}
+                        <div className="flex items-center gap-2 text-[#ff6bff] text-sm pixel-text glow-pink-subtle">
+                          <HelpCircle className="h-4 w-4" /> {quiz.questions?.length ?? 0}
+                        </div>
+                      </CardFooter>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Pagination inside AnimatePresence for smooth transition */}
+              {totalPages > 1 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.2 }}
+                  className="flex justify-center items-center gap-2 mt-8 flex-wrap"
+                >
+                  <Button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="pixel-button bg-[#ff6bff] border-4 border-white hover:bg-[#ff8aff] glow-pink"
+                    variant="outline"
+                  >
+                    Previous
+                  </Button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <Button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      variant={page === currentPage ? "default" : "outline"}
+                      className={`pixel-button ${page === currentPage ? 'bg-[#00ffff] border-4 border-white hover:bg-[#33ffff] glow-cyan' : 'bg-[#ff6bff] border-4 border-white hover:bg-[#ff8aff] glow-pink'}`}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                  <Button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="pixel-button bg-[#ff6bff] border-4 border-white hover:bg-[#ff8aff] glow-pink"
+                    variant="outline"
+                  >
+                    Next
+                  </Button>
+                </motion.div>
+              )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="empty" // Key for empty state animation
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2 }}
+              className="col-span-full text-center py-12"
             >
-              {page}
-            </Button>
-          ))}
-          <Button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-            className="pixel-button bg-[#ff6bff] border-4 border-white hover:bg-[#ff8aff] glow-pink"
-            variant="outline"
-          >
-            Next
-          </Button>
-        </motion.div>
-      )}
-    </motion.div>
-  ) : (
-    <motion.div
-      key="empty" // Key for empty state animation
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.2 }}
-      className="col-span-full text-center py-12"
-    >
-      <Search className="h-12 w-12 mx-auto mb-4 text-[#ff6bff] opacity-50" />
-      <p className="text-[#ff6bff] pixel-text glow-pink-subtle">No quizzes found</p>
-    </motion.div>
-  )}
-</AnimatePresence>
+              <Search className="h-12 w-12 mx-auto mb-4 text-[#ff6bff] opacity-50" />
+              <p className="text-[#ff6bff] pixel-text glow-pink-subtle">No quizzes found</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <style jsx>{`

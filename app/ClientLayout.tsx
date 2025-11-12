@@ -1,13 +1,12 @@
 "use client";
 
 import type { ReactNode } from 'react';
-import { Analytics } from '@vercel/analytics/next';
 import { AuthProvider } from '@/contexts/authContext';
 import { useEffect, useState } from "react";
 import AuthGate from '@/components/authGate';
 import ClientProviders from './ClientProvider';
-import './globals.css';
 import { getI18nInstance } from "@/lib/i18n";
+import './globals.css';
 
 interface ClientLayoutProps {
   children: ReactNode;
@@ -38,10 +37,14 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
     return <div className="bg-black min-h-screen" />;
   }
 
+  
+
   return (
     <AuthProvider>
       <ClientProviders>
-        <AuthGate>{children}</AuthGate>
+        <AuthGate>
+          {children}
+        </AuthGate>
       </ClientProviders>
     </AuthProvider>
   );

@@ -86,7 +86,7 @@ export default function QuizGamePage() {
       console.log("Querying game_sessions...");
       const { data: sessionData, error: sessionError } = await supabase
         .from("game_sessions")
-        .select("id, started_at, status, total_time_minutes, current_questions, responses")
+        .select("id, started_at, status, total_time_minutes, current_questions, responses, participants")
         .eq("game_pin", roomCode)
         .single()
 
@@ -257,10 +257,12 @@ export default function QuizGamePage() {
       console.error("Error parsing responses:", e);
     }
 
+    const pointsPerQuestion = Math.floor(100 / totalQuestions);
+
     // Update myResponse dengan final summary
     let myResponse = currentResponses.find((r: any) => r.participant === participantId);
     if (myResponse) {
-      myResponse.score = correctAnswers * 10;
+      myResponse.score = correctAnswers * pointsPerQuestion;
       myResponse.correct = correctAnswers;
       myResponse.accuracy = accuracy;
       myResponse.duration = elapsedSeconds;
@@ -270,13 +272,39 @@ export default function QuizGamePage() {
       myResponse.completion = true
     }
 
-    const { error } = await supabase
+    // TAMBAHAN: Update participants dengan score final
+    let currentParticipants: any[] = [];
+    try {
+      currentParticipants = typeof session.participants === 'string'
+        ? JSON.parse(session.participants)
+        : session.participants || [];
+      console.log(currentParticipants)
+      console.log(session.participants)
+    } catch (e) {
+      console.error("Error parsing participants:", e);
+      currentParticipants = [];
+    }
+
+    // Cari participant berdasarkan ID, tambahin score
+    const participantIndex = currentParticipants.findIndex((p: any) => p.id === participantId);
+    if (participantIndex !== -1) {
+      currentParticipants[participantIndex].score = myResponse.score; // Tambah score di sini
+    } else {
+      console.warn("Participant not found in participants array");
+    }
+
+    // Update supabase dengan responses DAN participants
+    const { error: finalError } = await supabase
       .from("game_sessions")
-      .update({ responses: currentResponses })
+      .update({
+        responses: currentResponses,
+        participants: currentParticipants // Pass array langsung
+      })
       .eq("id", session.id);
 
-    if (error) {
-      console.error("Error finalizing progress:", error)
+    if (finalError) {
+      console.error("Error updating final session:", finalError);
+      return;
     }
 
     router.push(`/join/${roomCode}/result`)
@@ -346,7 +374,7 @@ export default function QuizGamePage() {
           console.log('Game session update:', payload.new.status)
           if (payload.new.status === "finished") {
             saveProgressAndRedirect()
-          } 
+          }
         }
       )
       .subscribe()
@@ -386,13 +414,15 @@ export default function QuizGamePage() {
     const elapsedSeconds = gameStartTime ? Math.floor((now - gameStartTime) / 1000) : 0;
     const accuracy = totalQuestions > 0 ? ((newCorrectAnswers / totalQuestions) * 100).toFixed(2) : "0.00";
 
+    const pointsPerQuestion = Math.floor(100 / totalQuestions);
+
     // Answer obj (mirip contoh DB)
     const answerObj = {
       id: generateXID(),
       answer_id: answerIndex.toString(),
       question_id: currentQuestion.id,
       is_correct: isCorrect,
-      points_earned: isCorrect ? 10 : 0,
+      points_earned: isCorrect ? pointsPerQuestion : 0,
       created_at: new Date().toISOString()
     };
 
@@ -425,7 +455,7 @@ export default function QuizGamePage() {
 
     myResponse.answers.push(answerObj);
     myResponse.correct = newCorrectAnswers;
-    myResponse.score = newCorrectAnswers * 10;
+    myResponse.score = newCorrectAnswers * pointsPerQuestion;
     myResponse.accuracy = accuracy;
     myResponse.duration = elapsedSeconds;
     myResponse.current_question = currentQuestionIndex + 1;
@@ -465,10 +495,40 @@ export default function QuizGamePage() {
         myResponse.current_question = totalQuestions;
         myResponse.completion = true
 
-        await supabase
+        // TAMBAHAN: Update participants dengan score final
+        let currentParticipants: any[] = [];
+        try {
+          currentParticipants = typeof session.participants === 'string'
+            ? JSON.parse(session.participants)
+            : session.participants || [];
+          console.log(currentParticipants)
+          console.log(session.participants)
+        } catch (e) {
+          console.error("Error parsing participants:", e);
+          currentParticipants = [];
+        }
+
+        // Cari participant berdasarkan ID, tambahin score
+        const participantIndex = currentParticipants.findIndex((p: any) => p.id === participantId);
+        if (participantIndex !== -1) {
+          currentParticipants[participantIndex].score = myResponse.score; // Tambah score di sini
+        } else {
+          console.warn("Participant not found in participants array");
+        }
+
+        // Update supabase dengan responses DAN participants
+        const { error: finalError } = await supabase
           .from("game_sessions")
-          .update({ responses: currentResponses })
+          .update({
+            responses: currentResponses,
+            participants: currentParticipants // Pass array langsung
+          })
           .eq("id", session.id);
+
+        if (finalError) {
+          console.error("Error updating final session:", finalError);
+          return;
+        }
 
         router.push(`/join/${roomCode}/result`);
       }

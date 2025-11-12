@@ -3,10 +3,9 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Slider } from "@/components/ui/slider"
-import { Flag, Volume2, VolumeX, Settings, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight, Play, LogOut, Globe, Dice1, Dices, ScanLine } from "lucide-react"
+import { Flag, Users, Menu, X, BookOpen, ArrowLeft, ArrowRight, Globe, Dices, ScanLine } from "lucide-react"
 import Link from "next/link"
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
@@ -18,6 +17,7 @@ import { generateXID } from "@/lib/id-generator"
 import { useTranslation } from "react-i18next"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import dynamic from "next/dynamic"
+import PWAInstallPrompt from "@/components/PWAInstallPrompt"
 
 const Scanner = dynamic(
   () => import('@yudiel/react-qr-scanner').then(mod => ({ default: mod.Scanner })),
@@ -86,7 +86,7 @@ export default function HomePage() {
 
   // State untuk modal alert (spesifik berdasarkan reason)
   const [showAlert, setShowAlert] = useState(false)
-  const [alertReason, setAlertReason] = useState<'roomCode' | 'nickname' | 'both' | 'general' | 'duplicate' | 'roomNotFound' | ''>('')
+  const [alertReason, setAlertReason] = useState<'roomCode' | 'nickname' | 'both' | 'general' | 'duplicate' | 'roomNotFound' | 'pwaInstallUnavailable' | ''>('')
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   // Arrays untuk generate random nickname
@@ -97,6 +97,10 @@ export default function HomePage() {
     { code: 'en', name: 'English', flag: '🇺🇸' },
     { code: 'id', name: 'Bahasa Indonesia', flag: '🇮🇩' },
   ]
+
+  const isInstalled =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as any).standalone === true;
 
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null); // State buat error message
@@ -231,7 +235,6 @@ export default function HomePage() {
   // UPDATE: useEffect untuk set nickname (dari profile, bukan user_metadata)
   useEffect(() => {
     localStorage.removeItem("nickname");
-    localStorage.removeItem("playerId"); // Ganti ke participantId kalau perlu
     localStorage.removeItem("nextQuestionIndex");
 
     let defaultNick = generateNickname(); // Fallback random
@@ -315,10 +318,10 @@ export default function HomePage() {
     setJoining(true) // Mulai loading
 
     try {
-      // VERIFY: Ganti ke game_sessions, eq(game_pin), select tambah participants
+      // VERIFY: Ganti ke game_sessions, eq(game_pin), select tambah participants DAN responses
       const { data: sessionData, error: sessionError } = await supabase
         .from("game_sessions")
-        .select("id, status, participants")
+        .select("id, status, participants, responses")
         .eq("game_pin", roomCode)
         .single();
 
@@ -330,26 +333,95 @@ export default function HomePage() {
         return
       }
 
+      // TAMBAHAN: Parse participants dan responses (karena di DB stringified JSON)
+      let parsedParticipants: any[] = [];
+      try {
+        parsedParticipants = typeof sessionData.participants === 'string' 
+          ? JSON.parse(sessionData.participants) 
+          : sessionData.participants || [];
+      } catch (e) {
+        console.error("Error parsing participants:", e);
+        parsedParticipants = [];
+      }
+
+      // TAMBAHAN: Check reconnect berdasarkan localStorage (prioritas utama untuk avoid duplikat)
+      const savedParticipantId = localStorage.getItem("participantId");
+      const savedGamePin = localStorage.getItem("game_pin");
+      let isReconnect = false;
+      let participantId = savedParticipantId;
+
+      if (savedParticipantId && savedGamePin === roomCode) {
+        // Mode reconnect: Cari existing participant by ID
+        const existingParticipantIndex = parsedParticipants.findIndex(
+          (p: any) => p.id === savedParticipantId
+        );
+
+        if (existingParticipantIndex !== -1) {
+          isReconnect = true;
+          console.log("Reconnect detected: Updating existing participant");
+
+          // Update DB dengan participants dan responses yang sudah dimodif
+          const { error: updateError } = await supabase
+            .from("game_sessions")
+            .update({ 
+              participants: parsedParticipants
+            })
+            .eq("id", sessionData.id);
+
+          if (updateError) {
+            console.error("Error updating reconnect session:", updateError);
+            setJoining(false);
+            return;
+          }
+
+          // Update localStorage kalau nickname berubah (tapi keep participantId)
+          localStorage.setItem("nickname", nickname.trim());
+          localStorage.setItem("game_pin", roomCode);
+
+          // Redirect ke lobby
+          // setTimeout(() => {
+            router.push(`/join/${roomCode}`);
+          // }, 500);
+
+          setJoining(false);
+          return; // Keluar dari fungsi, reconnect sukses
+        } else {
+          console.log("Saved participantId not found in session (session mungkin reset?), proceed to new join");
+          // Hapus localStorage invalid
+          localStorage.removeItem("game_pin");
+          localStorage.removeItem("car");
+        }
+      }
+
       if (sessionData.status !== "waiting") {
         console.error("Error: Session is not accepting players");
         setJoining(false);
         return;
       }
 
-      // CHECK: Optional - cek kalau nickname udah ada di participants (hindari duplicate)
-      const existingParticipant = sessionData.participants?.find(
-        (p: any) => p.nickname.toLowerCase() === nickname.trim().toLowerCase()
+      // KALAU BUKAN RECONNECT: Normal join (buat baru)
+      console.log("New join detected");
+
+      // CHECK: Cek duplicate berdasarkan user_id (prioritas kalau logged in) atau fallback nickname
+      let existingByUser = null;
+      if (profile?.id) {
+        existingByUser = parsedParticipants.find(
+          (p: any) => p.user_id === profile.id
+        );
+      }
+      const existingByNickname = parsedParticipants.find(
+        (p: any) => !existingByUser && p.nickname.toLowerCase() === nickname.trim().toLowerCase()
       );
-      if (existingParticipant) {
-        console.error("Nickname already in session");
+      if (existingByUser || existingByNickname) {
+        console.error("Duplicate user/nickname already in session");
         setJoining(false);
-        setAlertReason('general'); // Atau custom 'duplicateNickname'
+        setAlertReason('duplicate');
         setShowAlert(true);
         return;
       }
 
       // BARU: Generate participant object
-      const participantId = generateXID() // Atau generateXID() kalau mau
+      participantId = participantId || generateXID(); // Gunakan yang baru kalau bukan reconnect
       const randomCar = ["purple", "white", "black", "aqua", "blue"][Math.floor(Math.random() * 5)];
       const newParticipant = {
         id: participantId,
@@ -359,7 +431,7 @@ export default function HomePage() {
       };
 
       // UPDATE: Append ke array participants
-      const updatedParticipants = [...(sessionData.participants || []), newParticipant];
+      const updatedParticipants = [...parsedParticipants, newParticipant];
       const { error: updateError } = await supabase
         .from("game_sessions")
         .update({ participants: updatedParticipants })
@@ -384,6 +456,8 @@ export default function HomePage() {
     } catch (error) {
       console.error("Unexpected error:", error)
       setJoining(false)
+    } finally {
+      setJoining(false);
     }
   }
 
@@ -461,6 +535,8 @@ export default function HomePage() {
       <h1 className="absolute top-6 md:top-4 left-4 w-42 md:w-50 lg:w-100">
         <Image src="/gameforsmartlogo.webp" alt="Gameforsmart Logo" width="256" height="64" priority />
       </h1>
+
+      <PWAInstallPrompt />
 
       {/* Modal Alert: Tampil jika showAlert true, dengan pesan dinamis berdasarkan alertReason */}
       <AnimatePresence>
@@ -668,6 +744,33 @@ export default function HomePage() {
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              <button
+                disabled={isInstalled}
+                onClick={async () => {
+                  const promptEvent = (window as any).deferredPWAInstallPrompt;
+                  if (promptEvent) {
+                    promptEvent.prompt();
+                    const { outcome } = await promptEvent.userChoice;
+                    console.log("User response:", outcome);
+
+                    if (outcome === "accepted") {
+                      localStorage.setItem("pwaDismissed", "true");
+                    }
+                  } else {
+                    setAlertReason('pwaInstallUnavailable');
+                    setShowAlert(true);
+                    return;
+                  }
+                }}
+                className="w-full p-2 bg-[#1a0a2a]/60 border-2 border-[#00ffff]/50 hover:border-[#00ffff] pixel-button hover:bg-[#00ffff]/20 glow-cyan-subtle rounded text-center"
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-sm text-[#00ffff] pixel-text glow-cyan">
+                    {isInstalled ? "Installed!" : "Install App"}
+                  </span>
+                </div>
+              </button>
 
               {/* Settings Button (placeholder, bisa di-expand) */}
               <button
