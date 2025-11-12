@@ -386,8 +386,8 @@ export default function HostMonitorPage() {
         correct: 0,
         accuracy: "0.00",
         duration: 0,
-        total_question: 0,
-        current_question: totalQ,
+        total_question: totalQ,
+        current_question: 0,
         completion: true,
       };
 
@@ -399,17 +399,30 @@ export default function HostMonitorPage() {
         } else {
           parsedResponses.push(afkResult);
         }
+
+        // TAMBAHAN: Update score di participants untuk AFK (set 0)
+        const participantIndex = parsedParticipants.findIndex((part: any) => part.id === p.id);
+        if (participantIndex !== -1) {
+          parsedParticipants[participantIndex].score = 0;
+          console.log(`AFK Score updated in participants: ${p.nickname} = 0`);
+        } else {
+          console.warn(`AFK Participant not found in participants: ${p.id}`);
+        }
       });
 
       // Deep clone & update
       const deepResponses = JSON.parse(JSON.stringify(parsedResponses));
+      const deepParticipants = JSON.parse(JSON.stringify(parsedParticipants));
       const { error: afkError } = await supabase
         .from("game_sessions")
-        .update({ responses: deepResponses })
+        .update({
+          responses: deepResponses,
+          participants: deepParticipants
+        })
         .eq("game_pin", roomCode);
 
       if (afkError) console.error("Error updating AFK:", afkError);
-      else console.log(`✅ ${afkParticipants.length} AFK marked.`);
+      else console.log(`✅ ${afkParticipants.length} AFK marked with score 0 in responses & participants.`);
     }
 
     router.push(`/host/${roomCode}/leaderboard`);

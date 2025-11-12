@@ -28,10 +28,14 @@ export function usePreloaderScreen() {
             "/assets/background/host/4.webp",
             "/assets/background/host/7.webp",
         ]
+        const racingAssets = [
+            "/racing-game/images/sprites.png"
+        ]
 
         const allImages = [
             ...globalAssets,
             ...assetsImages,
+            ...racingAssets
         ]
 
         let loadedCount = 0
