@@ -452,8 +452,6 @@ export default function HomePage() {
     } catch (error) {
       console.error("Unexpected error:", error)
       setJoining(false)
-    } finally {
-      setJoining(false);
     }
   }
 
