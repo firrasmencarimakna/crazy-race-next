@@ -267,12 +267,12 @@ export default function PlayerResultsPage() {
           transition={{ duration: 0.8, delay: 0.8 }}
         >
           <Button
-            size="sm"
+            size="lg"
             variant="outline"
-            className="bg-[#1a0a2a]/50 border-[#00ffff] text-[#00ffff] pixel-button glow-cyan hover:bg-[#00ffff]/70"
+            className="bg-[#1a0a2a]/80 border-[#00ffff] text-[#00ffff] pixel-button glow-cyan hover:bg-[#00ffff]/70"
             onClick={() => router.push('/')}
           >
-            <Home className="mr-1 h-4 w-4" />
+            <Home size={70} className="h-10 w-10" />
           </Button>
         </motion.div>
       </div>

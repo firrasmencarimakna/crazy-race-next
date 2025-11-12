@@ -336,8 +336,8 @@ export default function HomePage() {
       // TAMBAHAN: Parse participants dan responses (karena di DB stringified JSON)
       let parsedParticipants: any[] = [];
       try {
-        parsedParticipants = typeof sessionData.participants === 'string' 
-          ? JSON.parse(sessionData.participants) 
+        parsedParticipants = typeof sessionData.participants === 'string'
+          ? JSON.parse(sessionData.participants)
           : sessionData.participants || [];
       } catch (e) {
         console.error("Error parsing participants:", e);
@@ -363,7 +363,7 @@ export default function HomePage() {
           // Update DB dengan participants dan responses yang sudah dimodif
           const { error: updateError } = await supabase
             .from("game_sessions")
-            .update({ 
+            .update({
               participants: parsedParticipants
             })
             .eq("id", sessionData.id);
@@ -378,12 +378,8 @@ export default function HomePage() {
           localStorage.setItem("nickname", nickname.trim());
           localStorage.setItem("game_pin", roomCode);
 
-          // Redirect ke lobby
-          // setTimeout(() => {
-            router.push(`/join/${roomCode}`);
-          // }, 500);
+          router.push(`/join/${roomCode}`);
 
-          setJoining(false);
           return; // Keluar dari fungsi, reconnect sukses
         } else {
           console.log("Saved participantId not found in session (session mungkin reset?), proceed to new join");
