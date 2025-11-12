@@ -5,13 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-<<<<<<< HEAD
-import { Slider } from "@/components/ui/slider"
-import { ArrowLeft, Clock, Hash, Play, Menu, X, Settings } from "lucide-react"
-import Link from "next/link"
-=======
 import { ArrowLeft, Clock, Hash, Play, Settings } from "lucide-react"
->>>>>>> a066909 (pnpm, pwa, hapus import an yang gak di pakai, icon fc google bermasalah selesai, menyesuaikan skor sesuai jumlah soal, implementasi pwa, penambahan variable score di kolom jsonb: participants, perbaikan fitur search(harus enter/button untuk hasil), reconnect player jika keluar dengan cara join lagi)
 import { useRouter, useParams } from "next/navigation"
 import { motion } from "framer-motion" // HAPUS: AnimatePresence, karena nggak ada transisi lagi
 import { supabase } from "@/lib/supabase"
@@ -45,11 +39,6 @@ export default function HostSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [selectedDifficulty, setSelectedDifficulty] = useState("easy");
 
-<<<<<<< HEAD
-
-
-=======
->>>>>>> a066909 (pnpm, pwa, hapus import an yang gak di pakai, icon fc google bermasalah selesai, menyesuaikan skor sesuai jumlah soal, implementasi pwa, penambahan variable score di kolom jsonb: participants, perbaikan fitur search(harus enter/button untuk hasil), reconnect player jika keluar dengan cara join lagi)
   // Generate dynamic question count options
   const totalQuestions = quiz?.questions?.length || 0;
   const baseOptions = [5, 10, 20];
