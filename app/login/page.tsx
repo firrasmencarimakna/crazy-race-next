@@ -3,14 +3,12 @@
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { motion, AnimatePresence } from "framer-motion"
-import { ArrowRight, Mail, Lock } from "lucide-react"
 import { useRouter } from "next/navigation"
-import Image from "next/image"
 import { supabase } from "@/lib/supabase"
-import { FcGoogle } from "react-icons/fc";
 import { useAuth } from "@/contexts/authContext"
+import { FcGoogle } from 'react-icons/fc';
 
 // Background GIFs - Sesuai tema retro neon, optimized for mobile (smaller files if possible)
 const backgroundGifs = [

@@ -51,7 +51,7 @@ export default function RacingGame() {
       console.log(`Fetching mini game data (attempt ${retryCount + 1})`);
       const { data: sessionData, error: sessionError } = await supabase
         .from("game_sessions")
-        .select("id, started_at, total_time_minutes, difficulty, responses, current_questions")
+        .select("id, started_at, total_time_minutes, difficulty, responses, current_questions, participants")
         .eq("game_pin", roomCode)
         .single();
 
@@ -190,21 +190,41 @@ export default function RacingGame() {
       myResponse.total_question = totalQ;
       myResponse.racing = false;
       myResponse.completion = true;
-      console.log('Saved myResponse:', myResponse.current_question, 'totalQ', totalQ, 'completion', myResponse.completion);
     }
 
-    // Await update
-    console.log('Saving to DB with id:', session.id);
-    const { data, error } = await supabase
-      .from("game_sessions")
-      .update({ responses: currentResponses })
-      .eq("id", session.id)
-      .select("responses"); // Return to confirm
+    // TAMBAHAN: Update participants dengan score final
+    let currentParticipants: any[] = [];
+    try {
+      currentParticipants = typeof session.participants === 'string'
+        ? JSON.parse(session.participants)
+        : session.participants || [];
+      console.log(currentParticipants)
+      console.log(session.participants)
+    } catch (e) {
+      console.error("Error parsing participants:", e);
+      currentParticipants = [];
+    }
 
-    if (error) {
-      console.error("Error saving progress in mini:", error);
+    // Cari participant berdasarkan ID, tambahin score
+    const participantIndex = currentParticipants.findIndex((p: any) => p.id === participantId);
+    if (participantIndex !== -1) {
+      currentParticipants[participantIndex].score = myResponse.score; // Tambah score di sini
     } else {
-      console.log('✅ Progress saved, updated responses:', data ? data[0].responses : 'No data returned');
+      console.warn("Participant not found in participants array");
+    }
+
+    // Update supabase dengan responses DAN participants
+    const { error: finalError } = await supabase
+      .from("game_sessions")
+      .update({
+        responses: currentResponses,
+        participants: currentParticipants // Pass array langsung
+      })
+      .eq("id", session.id);
+
+    if (finalError) {
+      console.error("Error updating final session:", finalError);
+      return;
     }
 
     isSavingRef.current = false;

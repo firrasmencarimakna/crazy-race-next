@@ -3,8 +3,6 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Users, Activity, Trophy, Clock as ClockIcon, Zap, Star } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"

@@ -7,6 +7,12 @@ export function usePreloaderScreen() {
     const [progress, setProgress] = useState(0)
 
     useEffect(() => {
+        // const lastPreload = localStorage.getItem("lastPreload");
+        // if (lastPreload && Date.now() - parseInt(lastPreload) < 7 * 24 * 60 * 60 * 1000) {
+        //     setIsLoaded(true);
+        //     return;
+        // }
+
         const globalAssets = [
             "/assets/car/car1_v2.webp",
             "/assets/car/car2_v2.webp",
@@ -34,7 +40,10 @@ export function usePreloaderScreen() {
         const checkDone = () => {
             loadedCount++
             setProgress((loadedCount / total) * 100)
-            if (loadedCount >= total) setIsLoaded(true)
+            if (loadedCount >= total) {
+                // localStorage.setItem("lastPreload", Date.now().toString());
+                setIsLoaded(true);
+            }
         }
 
         allImages.forEach((src) => {

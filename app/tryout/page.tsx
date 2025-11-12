@@ -5,7 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
-import { Search, ArrowLeft, Clock, Star, Zap, Volume2, VolumeX, HelpCircle, Menu, X, Settings } from "lucide-react"
+import { Search, ArrowLeft, Volume2, VolumeX, HelpCircle, Menu, X, Settings } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"

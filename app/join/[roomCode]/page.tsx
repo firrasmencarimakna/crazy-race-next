@@ -5,13 +5,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Users, ArrowLeft } from "lucide-react"
-import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
 import LoadingRetro from "@/components/loadingRetro"
-import { calculateCountdown } from "@/utils/countdown"
-import { DoorOpen } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogOverlay, DialogTitle } from "@/components/ui/dialog"
 
 import Image from "next/image"
@@ -369,14 +366,14 @@ export default function LobbyPage() {
   if (countdown > 0) {
     return (
       <div className="absolute inset-0 flex items-center justify-center bg-[#1a0a2a] z-[9999]">
-          <motion.div
-            className="text-8xl md:text-9xl lg:text-[10rem] xl:text-[12rem] leading-none font-bold text-[#00ffff] pixel-text glow-cyan race-pulse"
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ repeat: Infinity, duration: 0.5 }}
-          >
-            {countdown}
-          </motion.div>
-        </div>
+        <motion.div
+          className="text-8xl md:text-9xl lg:text-[10rem] xl:text-[12rem] leading-none font-bold text-[#00ffff] pixel-text glow-cyan race-pulse"
+          animate={{ scale: [1, 1.1, 1] }}
+          transition={{ repeat: Infinity, duration: 0.5 }}
+        >
+          {countdown}
+        </motion.div>
+      </div>
     )
   }
 

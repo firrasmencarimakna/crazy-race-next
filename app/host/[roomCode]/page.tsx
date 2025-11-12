@@ -3,33 +3,21 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Copy, Users, Play, ArrowLeft, VolumeX, Volume2, Maximize2, Check, Menu, X } from "lucide-react"
-import Link from "next/link"
+import { Copy, Users, Play, ArrowLeft, VolumeX, Volume2, Maximize2, Check, X } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
 import QRCode from "react-qr-code"
 import { Dialog, DialogContent, DialogOverlay } from "@/components/ui/dialog"
 import LoadingRetro from "@/components/loadingRetro"
-import { Slider } from "@/components/ui/slider"
 import { breakOnCaps, formatUrlBreakable } from "@/utils/game"
-import { calculateCountdown } from "@/utils/countdown"  // Tambah ini
 import Image from "next/image"
-import { getSyncedServerTime, syncServerTime } from "@/utils/serverTime"
+import { syncServerTime } from "@/utils/serverTime"
 import { useTranslation } from "react-i18next"
 import { t } from "i18next"
 
-/**
- * Konstanta untuk background GIFs, digunakan untuk cycling background.
- * Konsisten dengan halaman lain untuk tema visual.
- */
 const backgroundGifs = ["/assets/background/4_v2.webp"]
 
-/**
- * Mapping GIF mobil berdasarkan warna mobil player.
- * Digunakan untuk menampilkan animasi mobil di daftar player.
- */
 const carGifMap: Record<string, string> = {
   purple: "/assets/car/car1_v2.webp",
   white: "/assets/car/car2_v2.webp",
@@ -40,26 +28,14 @@ const carGifMap: Record<string, string> = {
 
 
 
-/**
- * Komponen utama HostRoomPage.
- * Halaman ini menampilkan room host, daftar player real-time via Supabase,
- * QR code untuk join, tombol start game dengan countdown, dan fitur kick player.
- * Audio background dikelola dengan persist rendering untuk autoplay konsisten.
- * 
- */
 export default function HostRoomPage() {
-  // Hooks navigasi dan params
-  
-  
   const params = useParams()
   const router = useRouter()
   const roomCode = params.roomCode as string
 
-  // Ref buat interval countdown (stabil, gak cause re-render)
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const countdownAudioRef = useRef<HTMLAudioElement>(null);
 
-  // State untuk data room dan player
   const [isCountdownPlaying, setIsCountdownPlaying] = useState(false);
   const [participants, setParticipants] = useState<any[]>([]); // Daftar participants real-time
   const [session, setSession] = useState<any>(null); // Data game_sessions dari Supabase
@@ -67,7 +43,7 @@ export default function HostRoomPage() {
   const [gameStarted, setGameStarted] = useState(false) // Flag apakah game sudah dimulai
   const [countdown, setCountdown] = useState(0); // Timer countdown (0 = tidak aktif)
 
-  // State untuk audio controls
+  const audioRef = useRef<HTMLAudioElement>(null)
   const [isMuted, setIsMuted] = useState(false) // Status mute audio
   const [hasInteracted, setHasInteracted] = useState(false);
 
@@ -87,9 +63,7 @@ export default function HostRoomPage() {
   const [selectedPlayerName, setSelectedPlayerName] = useState<string>('') // Nama player yang dipilih untuk kick
   const [selectedPlayerCar, setSelectedPlayerCar] = useState<string>('') // Warna mobil player yang dipilih untuk kick
   const { t } = useTranslation();
-  // Ref untuk audio element
-  const audioRef = useRef<HTMLAudioElement>(null)
-
+  
   // Channel Supabase global untuk presence (bisa dihapus jika tidak digunakan)
   const channel = supabase.channel('game_session');
   channel.on('presence', { event: 'sync' }, () => {
@@ -137,6 +111,7 @@ export default function HostRoomPage() {
     countdownIntervalRef.current = setInterval(() => {
       remaining = calculateCountdown(startTimestamp, duration);
       setCountdown(remaining);
+      setLoading(true);
 
       console.log('Countdown tick:', remaining);
 
@@ -162,7 +137,6 @@ export default function HostRoomPage() {
               console.error('End countdown error:', error);
             } else {
               console.log('Host updated to active status');
-              setLoading(true);
               router.push(`/host/${roomCode}/game`);
             }
           } catch (err: unknown) {
@@ -381,7 +355,7 @@ export default function HostRoomPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setJoinLink(`${window.location.origin}/?code=${roomCode}`)
+      setJoinLink(`${window.location.origin}/${roomCode}`)
     }
   }, [roomCode])
 
@@ -398,9 +372,6 @@ export default function HostRoomPage() {
     return () => clearInterval(bgInterval)
   }, [])
 
-  /**
-   * Handler: Copy room code ke clipboard dengan feedback toast-like.
-   */
   const copyRoomCode = async () => {
     try {
       await navigator.clipboard.writeText(roomCode)
@@ -411,9 +382,6 @@ export default function HostRoomPage() {
     }
   }
 
-  /**
-   * Handler: Copy join link ke clipboard dengan feedback.
-   */
   const copyJoinLink = async () => {
     try {
       await navigator.clipboard.writeText(joinLink)
@@ -473,10 +441,6 @@ export default function HostRoomPage() {
     }, 1000);
   };
 
-  /**
-   * Handler: Kick player dengan konfirmasi.
-   * Hapus player dari Supabase, subscription akan handle UI update.
-   */
   const handleKickPlayer = (playerId: string, playerName: string, playerCar: string) => {
     setSelectedPlayerId(playerId)
     setSelectedPlayerName(playerName)
@@ -484,10 +448,6 @@ export default function HostRoomPage() {
     setKickDialogOpen(true)
   }
 
-  /**
-   * Handler: Konfirmasi kick player.
-   * Eksekusi delete dari tabel players.
-   */
   const confirmKick = async () => {
     if (!selectedPlayerId || !session) return;
 
@@ -546,7 +506,6 @@ export default function HostRoomPage() {
 
   if (loading) return <LoadingRetro />
 
-  // Render utama: Semua conditional inline untuk persist audio dan background
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
       {/* Audio Element: Selalu render untuk autoplay konsisten */}
@@ -603,7 +562,7 @@ export default function HostRoomPage() {
         whileHover={{ scale: 1.05 }}
         onClick={handleMuteToggle}
         className={`absolute top-4 right-4 z-40 p-3 border-2 pixel-button rounded-lg shadow-lg min-w-[48px] min-h-[48px] flex items-center justify-center transition-all cursor-pointer
-    ${isMuted
+          ${isMuted
             ? "bg-[#ff6bff]/30 border-[#ff6bff] glow-pink shadow-[#ff6bff]/30 hover:bg-[#ff8aff]/50"
             : "bg-[#00ffff]/30 border-[#00ffff] glow-cyan shadow-[#00ffff]/30 hover:bg-[#33ffff]/50"
           }`}
@@ -630,65 +589,65 @@ export default function HostRoomPage() {
             </div>
           </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-2">
-            {/* Room Info & QR Code Card */}
-            <Card className="bg-[#1a0a2a]/60 border-2 sm:border-3 border-[#ff6bff]/50 pixel-card glow-pink-subtle p-4 sm:p-6 md:p-8 lg:col-span-2 order-1 lg:order-1">
-              <div className="text-center space-y-3">
-                {/* Room Code Display */}
-                <div className="relative p-3 sm:p-4 md:p-5 bg-[#0a0a0f] rounded-lg">
-                  <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#00ffff] pixel-text glow-cyan">{roomCode}</div>
-                  <Button
-                    onClick={copyRoomCode}
-                    className="absolute top-1 right-1 bg-transparent pixel-button hover:bg-gray-500/20 transition-colors p-1 sm:p-2"
-                    size="sm"
-                  >
-                    {copiedRoom ? <Check className="h-3 w-3 sm:h-4 sm:w-4 text-green-400" /> : <Copy className="h-3 w-3 sm:h-4 sm:w-4 text-white" />}
-                  </Button>
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-2">
+          {/* Room Info & QR Code Card */}
+          <Card className="bg-[#1a0a2a]/60 border-2 sm:border-3 border-[#ff6bff]/50 pixel-card glow-pink-subtle p-2 sm:p-4 lg:col-span-2 order-1 lg:order-1">
+            <div className="text-center space-y-2">
+              {/* Room Code Display */}
+              <div className="relative p-3 sm:p-4 md:p-5 bg-[#0a0a0f] rounded-lg">
+                <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#00ffff] pixel-text glow-cyan">{roomCode}</div>
+                <Button
+                  onClick={copyRoomCode}
+                  className="absolute top-1 right-1 bg-transparent pixel-button hover:bg-gray-500/20 transition-colors p-1 sm:p-2"
+                  size="sm"
+                >
+                  {copiedRoom ? <Check className="h-3 w-3 sm:h-4 sm:w-4 text-green-400" /> : <Copy className="h-3 w-3 sm:h-4 sm:w-4 text-white" />}
+                </Button>
+              </div>
 
-                {/* QR Code */}
-                <div className="relative p-3 sm:p-4 md:p-5 bg-[#0a0a0f] rounded-lg">
-                  <QRCode
-                    value={joinLink}
-                    size={300}
-                    className="mx-auto w-fit rounded p-2 bg-white"
-                  />
-                  <Button
-                    onClick={() => setOpen(true)}
-                    className="absolute top-1 right-1 bg-transparent hover:bg-gray-500/20 transition-colors p-1 sm:p-2"
-                    size="sm"
-                  >
-                    <Maximize2 className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-                  </Button>
+              {/* QR Code */}
+              <div className="relative p-3 sm:p-4 md:p-5 bg-[#0a0a0f] rounded-lg">
+                <QRCode
+                  value={joinLink}
+                  size={300}
+                  className="mx-auto w-fit rounded p-2 bg-white"
+                />
+                <Button
+                  onClick={() => setOpen(true)}
+                  className="absolute top-1 right-1 bg-transparent hover:bg-gray-500/20 transition-colors p-1 sm:p-2"
+                  size="sm"
+                >
+                  <Maximize2 className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                </Button>
 
-                  {/* QR Dialog untuk maximize */}
-                  <Dialog open={open} onOpenChange={setOpen}>
-                    <DialogOverlay className="bg-[#1a0a2a]/80 backdrop-blur-sm fixed inset-0 z-50" />
-                    <DialogContent className="backdrop-blur-sm border-none rounded-lg max-w-[100vw] sm:max-w-3xl p-4 sm:p-6">
-                      <div className="flex justify-center">
-                        <QRCode
-                          value={joinLink}
-                          size={Math.min(625, window.innerWidth * 0.8)}
-                          className="rounded w-fit bg-white p-2"
-                        />
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
+                {/* QR Dialog untuk maximize */}
+                <Dialog open={open} onOpenChange={setOpen}>
+                  <DialogOverlay className="bg-[#1a0a2a]/80 backdrop-blur-sm fixed inset-0 z-50" />
+                  <DialogContent className="backdrop-blur-sm border-none rounded-lg max-w-[100vw] sm:max-w-3xl p-4 sm:p-6">
+                    <div className="flex justify-center">
+                      <QRCode
+                        value={joinLink}
+                        size={Math.min(625, window.innerWidth * 0.8)}
+                        className="rounded w-fit bg-white p-2"
+                      />
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
 
-                {/* Join Link Display */}
-                <div className="relative py-4 px-7 bg-[#0a0a0f] rounded-lg">
-                  <div className="text-xs sm:text-sm text-[#00ffff] pixel-text glow-cyan break-words">
-                    {formatUrlBreakable(joinLink)}
-                  </div>
-                  <Button
-                    onClick={copyJoinLink}
-                    className="absolute top-1 right-1 bg-transparent pixel-button hover:bg-gray-500/20 transition-colors p-1 sm:p-2"
-                    size="sm"
-                  >
-                    {copiedJoin ? <Check className="h-3 w-3 sm:h-4 sm:w-4 text-green-400" /> : <Copy className="h-3 w-3 sm:h-4 sm:w-4 text-white" />}
-                  </Button>
+              {/* Join Link Display */}
+              <div className="relative py-4 px-7 bg-[#0a0a0f] rounded-lg">
+                <div className="text-xs sm:text-sm text-[#00ffff] pixel-text glow-cyan break-words">
+                  {formatUrlBreakable(joinLink)}
                 </div>
+                <Button
+                  onClick={copyJoinLink}
+                  className="absolute top-1 right-1 bg-transparent pixel-button hover:bg-gray-500/20 transition-colors p-1 sm:p-2"
+                  size="sm"
+                >
+                  {copiedJoin ? <Check className="h-3 w-3 sm:h-4 sm:w-4 text-green-400" /> : <Copy className="h-3 w-3 sm:h-4 sm:w-4 text-white" />}
+                </Button>
+              </div>
 
                 {/* Start Game Button */}
                 <Button
@@ -702,50 +661,50 @@ export default function HostRoomPage() {
               </div>
             </Card>
 
-            {/* Players List Card */}
-            <Card className="bg-[#1a0a2a]/60 border-2 sm:border-3 border-[#ff6bff]/50 pixel-card glow-pink-subtle p-4 sm:p-6 md:p-8 lg:col-span-3 order-1 lg:order-2">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
-                <h2 className="text-xl sm:text-2xl font-bold text-[#00ffff] pixel-text glow-cyan text-center sm:text-left">
-                  {participants.length} Player{participants.length <= 1 ? "" : "s"}
-                </h2>
-              </div>
+          {/* Players List Card */}
+          <Card className="bg-[#1a0a2a]/60 border-2 sm:border-3 border-[#ff6bff]/50 pixel-card glow-pink-subtle p-4 sm:p-6 md:p-8 lg:col-span-3 order-1 lg:order-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
+              <h2 className="text-xl sm:text-2xl font-bold text-[#00ffff] pixel-text glow-cyan text-center sm:text-left">
+                {participants.length} Player{participants.length <= 1 ? "" : "s"}
+              </h2>
+            </div>
 
-              <div className="space-y-4 mb-6 sm:mb-8">
-                {participants.length === 0 ? (
-                  <div className="text-center py-6 sm:py-8 text-gray-400 pixel-text">
-                    <Users className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-50" />
-                    <p className="text-sm sm:text-base">Waiting for players to join...</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-                    {participants.map((player) => (
-                      <motion.div
-                        key={player.id}
-                        className="relative group glow-pink-subtle"
-                        whileHover={{ scale: 1.05 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <div
-                          className="p-2 rounded-lg sm:rounded-xl border-2 sm:border-3 border-double transition-all duration-300 
+            <div className="space-y-4 mb-6 sm:mb-8">
+              {participants.length === 0 ? (
+                <div className="text-center py-6 sm:py-8 text-gray-400 pixel-text">
+                  <Users className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-50" />
+                  <p className="text-sm sm:text-base">Waiting for players to join...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+                  {participants.map((player) => (
+                    <motion.div
+                      key={player.id}
+                      className="relative group glow-pink-subtle"
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div
+                        className="p-2 rounded-lg sm:rounded-xl border-2 sm:border-3 border-double transition-all duration-300 
                    bg-transparent backdrop-blur-sm 
                    border-[#ff6bff]/70 hover:border-[#ff6bff]"
-                        >
-                          {/* Car GIF */}
-                          <div className="relative mb-2 sm:mb-3">
-                            <img
-                              src={carGifMap[player.car] || '/assets/car/car5_v2.webp'}
-                              alt={`${player.car} car`}
-                              className="h-16 sm:h-20 md:h-24 lg:h-28 w-20 sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce
+                      >
+                        {/* Car GIF */}
+                        <div className="relative mb-2 sm:mb-3">
+                          <img
+                            src={carGifMap[player.car] || '/assets/car/car5_v2.webp'}
+                            alt={`${player.car} car`}
+                            className="h-16 sm:h-20 md:h-24 lg:h-28 w-20 sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce
                        filter brightness-125 contrast-150"
-                            />
-                          </div>
+                          />
+                        </div>
 
-                          {/* Player Nickname */}
-                          <div className="text-center">
-                            <p className="text-white text-xs leading-tight glow-text line-clamp-2 break-words">
-                              {breakOnCaps(player.nickname)}
-                            </p>
-                          </div>
+                        {/* Player Nickname */}
+                        <div className="text-center">
+                          <p className="text-white text-xs leading-tight glow-text line-clamp-2 break-words">
+                            {breakOnCaps(player.nickname)}
+                          </p>
+                        </div>
 
                           {/* Kick Button - Selalu tampil, posisi disesuaikan untuk tidak overlap */}
                           <div className="absolute top-1 right-1 opacity-100 transition-all duration-200 hover:scale-110">
