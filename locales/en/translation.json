@@ -56,6 +56,10 @@
     "tryoutButton": "TRYOUT",
     "starting": "STARTING...",
     "language": "Language",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit Fullscreen",
+    "installApp": "Install",
+    "appInstalled": "Installed",
     "logout": "Logout"
   },
   "howToPlay": {

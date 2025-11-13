@@ -64,17 +64,15 @@ export default function HomePage() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const { t, i18n } = useTranslation()
-  const { user, loading: authLoading } = useAuth()
+  const { user, profile, loading: authLoading } = useAuth()
 
   // State untuk loading dan joining process
   const [joining, setJoining] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // State untuk input fields
   const [roomCode, setRoomCode] = useState("")
   const [nickname, setNickname] = useState("")
-
-  const [profile, setProfile] = useState<any>(null);
-  const [profileLoading, setProfileLoading] = useState(false);
 
   // State untuk UI modals dan menu
   const [isMenuOpen, setIsMenuOpen] = useState(false) // Toggle menu burger
@@ -204,33 +202,6 @@ export default function HomePage() {
     setShowLanguageMenu(false)
     console.log(`Language changed to: ${name} (${code})`)
   }
-
-  // TAMBAH: Fetch profile setelah auth ready
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user?.id || profileLoading) return;
-      setProfileLoading(true);
-      const { data: profileData, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('auth_user_id', user.id)
-        .single();
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-      } else {
-        setProfile(profileData);
-      }
-      setProfileLoading(false);
-    };
-
-    if (user) {
-      fetchProfile();
-    } else {
-      setProfile(null);
-      setProfileLoading(false);
-    }
-  }, [user]);
 
   // UPDATE: useEffect untuk set nickname (dari profile, bukan user_metadata)
   useEffect(() => {
@@ -455,6 +426,28 @@ export default function HomePage() {
     }
   }
 
+  // Effect to listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    // Initial check
+    setIsFullscreen(!!document.fullscreenElement);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, []);
+
   const handleTryout = () => {
     if (!nickname.trim() || joining) {
       console.log("Trigger tryout alert: nickname empty")
@@ -481,16 +474,19 @@ export default function HomePage() {
   // Handle toggle fullscreen
   const handleToggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch((err) => {
+      document.documentElement.requestFullscreen().then(() => {
+        setIsFullscreen(true);
+      }).catch((err) => {
         console.warn(`Error attempting to enable full-screen mode: ${err.message}`);
       });
     } else {
-      document.exitFullscreen().catch((err) => {
+      document.exitFullscreen().then(() => {
+        setIsFullscreen(false);
+      }).catch((err) => {
         console.warn(`Error attempting to disable full-screen mode: ${err.message}`);
       });
     }
   };
-
 
   // Functions untuk modal How to Play
   const closeHowToPlay = () => {
@@ -620,10 +616,10 @@ export default function HomePage() {
             className="absolute top-20 right-4 z-30 w-64 bg-[#1a0a2a]/60 border-4 border-[#ff6bff]/50 rounded-lg p-4 shadow-xl shadow-[#ff6bff]/30 backdrop-blur-sm scrollbar-themed max-h-[70vh] overflow-y-auto"
           >
             <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-[#1a0a2a]/80 border border-[#00ffff]/30 rounded-lg">
+              <div className="flex items-center gap-3 p-3 bg-[#1a0a2a]/80 border border-[#00ffff]/30 rounded-lg mb-5">
                 {/* Avatar */}
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center overflow-hidden">
-                  {profileLoading ? (
+                  {authLoading ? (
                     <div className="flex items-center justify-center w-full h-full text-gray-400">
                       Loading...
                     </div>
@@ -649,11 +645,6 @@ export default function HomePage() {
                   </p>
                 </div>
               </div>
-              {/* Mute Toggle */}
-              <div className="flex items-center justify-between">
-                {/* <span className="text-sm text-white pixel-text">Audio</span> */}
-
-              </div>
 
               {/* Fullscreen Button */}
               <button
@@ -662,8 +653,9 @@ export default function HomePage() {
                 aria-label="Toggle Fullscreen"
               >
                 <div className="flex items-center justify-center gap-2">
-                  {/* <Maximize2 size={16} /> atau <Minimize2 /> kalau mau dinamis */}
-                  <span className="text-sm text-[#00ffff] pixel-text glow-cyan">Fullscreen</span>
+                  <span className="text-xs text-[#00ffff] pixel-text glow-cyan">
+                    {isFullscreen ? t('menu.exitFullscreen') : t('menu.fullscreen')}
+                  </span>
                 </div>
               </button>
 
@@ -678,8 +670,7 @@ export default function HomePage() {
                 aria-label="How to Play"
               >
                 <div className="flex items-center justify-center gap-2">
-                  {/* <BookOpen size={16} /> */}
-                  <span className="text-sm text-[#00ffff] pixel-text glow-cyan">{t('menu.howToPlay')}</span>
+                  <span className="text-xs text-[#00ffff] pixel-text glow-cyan">{t('menu.howToPlay')}</span>
                 </div>
               </button>
 
@@ -690,8 +681,7 @@ export default function HomePage() {
                 aria-label="Solo Tryout"
               >
                 <div className="flex items-center justify-center gap-2">
-                  {/* <Play size={16} /> */}
-                  <span className="text-sm text-[#ff6bff] pixel-text glow-pink">{t('menu.soloTryout')}</span>
+                  <span className="text-xs text-[#ff6bff] pixel-text glow-pink">{t('menu.soloTryout')}</span>
                 </div>
               </button>
 
@@ -760,8 +750,8 @@ export default function HomePage() {
                 className="w-full p-2 bg-[#1a0a2a]/60 border-2 border-[#00ffff]/50 hover:border-[#00ffff] pixel-button hover:bg-[#00ffff]/20 glow-cyan-subtle rounded text-center"
               >
                 <div className="flex items-center justify-center gap-2">
-                  <span className="text-sm text-[#00ffff] pixel-text glow-cyan">
-                    {isInstalled ? "Installed!" : "Install App"}
+                  <span className="text-xs text-[#00ffff] pixel-text glow-cyan">
+                    {isInstalled ? t('menu.appInstalled') : t('menu.installApp')}
                   </span>
                 </div>
               </button>
@@ -773,8 +763,7 @@ export default function HomePage() {
                 aria-label="Language"
               >
                 <div className="flex items-center justify-center gap-2">
-                  <Globe size={16} />
-                  <span className="text-sm text-[#00ffff] pixel-text glow-cyan">{t('menu.language')}</span>
+                  <span className="text-xs text-[#00ffff] pixel-text glow-cyan">{t('menu.language')}</span>
                 </div>
               </button>
 
@@ -807,8 +796,7 @@ export default function HomePage() {
                 aria-label="Logout"
               >
                 <div className="flex items-center justify-center gap-2">
-                  {/* <LogOut size={16} /> */}
-                  <span className="text-sm text-[#ff0000] pixel-text glow-pink">{t('menu.logout')}</span>
+                  <span className="text-xs text-[#ff0000] pixel-text glow-pink">{t('menu.logout')}</span>
                 </div>
               </button>
             </div>
@@ -1074,7 +1062,7 @@ export default function HomePage() {
               <CardFooter>
                 <Button
                   onClick={handleJoin}
-                  disabled={joining || profileLoading}
+                  disabled={joining || authLoading}
                   className={`w-full transition-all duration-300 ease-in-out pixel-button-large retro-button ${joining
                     ? 'opacity-50 cursor-not-allowed'
                     : `bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white border-[#0070f3]/80 hover:border-[#0ea5e9]/80 glow-cyan cursor-pointer`

@@ -17,7 +17,7 @@ const backgroundGifs = [
 
 export default function LoginPage() {
   const router = useRouter()
-  const { user, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -25,10 +25,10 @@ export default function LoginPage() {
   const [error, setError] = useState("")
 
   useEffect(() => {
-    if (user && !loading) {
+    if ((user || profile) && !loading) { // Cek user ATAU profile (biar tunggu profile ready)
       router.replace('/')
     }
-  }, [user, loading, router])
+  }, [user, profile, loading, router])
 
   // Cycling background setiap 5 detik, dengan smoother transition untuk mobile
   useEffect(() => {
@@ -57,13 +57,12 @@ export default function LoginPage() {
       if (error) throw error
 
       if (data.user) {
-        // Redirect ke dashboard atau home setelah login
-        router.push("/")  // Sesuaikan route
+        // Tunggu profile create/update via onAuthStateChange, lalu redirect
+        // Gak langsung push, biar auth context handle
+        console.log("Login sukses, waiting for profile...")
       }
     } catch (err: any) {
       setError(err.message || "Terjadi kesalahan, coba lagi!")
-    } finally {
-      setIsLoading(false)
     }
   }
 
