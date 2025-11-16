@@ -10,7 +10,6 @@ interface Profile {
   fullname?: string
   avatar_url?: string
   auth_user_id: string
-  // Tambah field lain kalau ada, e.g. role?: string
 }
 
 interface AuthContextType {
@@ -26,95 +25,86 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Fetch profile dari Supabase
-  const fetchProfile = async (userId: string) => {
+  // Create or update profile (non-blocking, fire-and-forget)
+  const ensureProfile = async (currentUser: any) => {
     try {
-      const { data, error } = await supabase
+      // First, check if exists (quick select)
+      const { data: existing } = await supabase
         .from('profiles')
         .select('*')
-        .eq('auth_user_id', userId)
+        .eq('auth_user_id', currentUser.id)
         .single()
 
-      if (error) {
-        if (error.code === 'PGRST116') { // No rows returned
-          return null
-        }
-        console.error('Error fetching profile:', error)
-        return null
+      if (existing) {
+        setProfile(existing)
+        return // Done, update if needed later
       }
 
-      return data
-    } catch (error) {
-      console.error('Error fetching profile:', error)
-      return null
-    }
-  }
-
-  // Create or update profile
-  const createOrUpdateProfile = async (user: any) => {
-    try {
+      // Create new if not exists
       const profileData = {
-        auth_user_id: user.id,
-        username: user.user_metadata?.username || user.email?.split('@')[0] || 'user',
-        email: user.email || '',
-        fullname: user.user_metadata?.full_name || user.user_metadata?.name || '',
-        avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
-        // Tambah default lain kalau perlu, e.g. role: 'student'
+        auth_user_id: currentUser.id,
+        username: currentUser.user_metadata?.username || currentUser.email?.split('@')[0] || 'user',
+        email: currentUser.email || '',
+        fullname: currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '',
+        avatar_url: currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || '',
         updated_at: new Date().toISOString()
       }
 
-      // Cek existing profile
-      const existingProfile = await fetchProfile(user.id)
-      if (existingProfile) {
-        // Update
-        const { data, error } = await supabase
-          .from('profiles')
-          .update(profileData)
-          .eq('auth_user_id', user.id)
-          .select()
-          .single()
+      const { data } = await supabase
+        .from('profiles')
+        .insert(profileData)
+        .select()
+        .single()
 
-        if (error) throw error
-        setProfile(data)
-      } else {
-        // Insert new
-        const { data, error } = await supabase
-          .from('profiles')
-          .insert(profileData)
-          .select()
-          .single()
-
-        if (error) throw error
-        setProfile(data)
-      }
+      setProfile(data)
     } catch (error) {
-      console.error('Error creating/updating profile:', error)
+      console.error('Profile creation error:', error)
+      // Fallback: Set minimal profile from user data (biar bisa main)
+      setProfile({
+        id: 'fallback-' + currentUser.id,
+        username: currentUser.email?.split('@')[0] || 'user',
+        email: currentUser.email || '',
+        fullname: '',
+        avatar_url: '',
+        auth_user_id: currentUser.id
+      })
     }
   }
 
   useEffect(() => {
     const getUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
-      setLoading(false)
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const currentUser = session?.user ?? null
+        setUser(currentUser)
+        setLoading(false) // Always fast, profile async below
 
-      // Kalau ada user, fetch/create profile
-      if (session?.user) {
-        await createOrUpdateProfile(session.user)
+        // Lazy profile ensure after user set
+        if (currentUser) {
+          ensureProfile(currentUser) // No await, non-blocking
+        } else {
+          setProfile(null)
+        }
+      } catch (error) {
+        console.error('Session error:', error)
+        setUser(null)
+        setProfile(null)
+        setLoading(false)
       }
     }
     getUser()
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (session?.user) {
-          setUser(session.user)
-          await createOrUpdateProfile(session.user) // Auto create/update profile pas sign in
-        } else {
-          setUser(null)
+      async (event, session) => {
+        const currentUser = session?.user ?? null
+        setUser(currentUser)
+
+        if (event === 'SIGNED_IN' && currentUser) {
+          // Only ensure profile on sign in (like temanmu)
+          ensureProfile(currentUser) // Non-blocking
+        } else if (!currentUser) {
           setProfile(null)
         }
-        setLoading(false)
       }
     )
 

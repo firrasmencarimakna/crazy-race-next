@@ -16,6 +16,8 @@ import { breakOnCaps } from "@/utils/game"
 import { getSyncedServerTime, syncServerTime } from "@/utils/serverTime"
 import { t } from "i18next"
 
+const APP_NAME = "crazyrace"; // Safety check for multi-tenant DB
+
 // Background GIFs
 const backgroundGifs = [
   "/assets/background/1.webp",
@@ -52,7 +54,6 @@ export default function LobbyPage() {
   const router = useRouter()
   const roomCode = params.roomCode as string
 
-  // Ref buat interval (stabil, gak cause re-render)
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const [currentPlayer, setCurrentPlayer] = useState<Player>({
@@ -61,27 +62,19 @@ export default function LobbyPage() {
     car: null,
   });
 
-  const [participants, setParticipants] = useState<any[]>([]); // Ganti dari players → participants
-  const [session, setSession] = useState<any>(null); // Ganti dari room → session
+  const [participants, setParticipants] = useState<any[]>([]);
+  const [session, setSession] = useState<any>(null);
   const [gamePhase, setGamePhase] = useState("waiting")
   const [countdown, setCountdown] = useState(0)
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [showCarDialog, setShowCarDialog] = useState(false)
   const [showExitDialog, setShowExitDialog] = useState(false)
-  const hasBootstrapped = useRef(false); // Prevent double bootstrap
+  const hasBootstrapped = useRef(false);
 
   useEffect(() => {
-    syncServerTime() // sync offset waktu sekali
+    syncServerTime()
   }, [])
-
-  // UPDATE: calculateCountdown inline (sama seperti host)
-  // const calculateCountdown = (startTimestamp: string, durationSeconds: number = 10): number => {
-  //   const start = new Date(startTimestamp).getTime()
-  //   const now = getSyncedServerTime() // pakai waktu server, bukan client
-  //   const elapsed = (now - start) / 1000
-  //   return Math.max(0, Math.min(durationSeconds, Math.ceil(durationSeconds - elapsed)));
-  // }
 
   const calculateCountdown = (startTimestamp: string, durationSeconds: number = 10): number => {
     const start = new Date(startTimestamp).getTime();
@@ -90,31 +83,20 @@ export default function LobbyPage() {
     return Math.max(0, Math.min(durationSeconds, Math.ceil(durationSeconds - elapsed)));
   };
 
-  // Fungsi sync countdown (pakai ref, no dependency loop)
   const startCountdownSync = useCallback((startTimestamp: string, duration: number = 10) => {
     if (countdownIntervalRef.current) {
       clearInterval(countdownIntervalRef.current);
-      countdownIntervalRef.current = null;
     }
-
     let remaining = calculateCountdown(startTimestamp, duration);
     setCountdown(remaining);
-
-    if (remaining <= 0) {
-      console.log('Countdown already finished on start');
-      return;
-    }
+    if (remaining <= 0) return;
 
     countdownIntervalRef.current = setInterval(() => {
       remaining = calculateCountdown(startTimestamp, duration);
       setCountdown(remaining);
-
-      console.log('Countdown tick:', remaining);
-
       if (remaining <= 0) {
         clearInterval(countdownIntervalRef.current!);
         countdownIntervalRef.current = null;
-        setCountdown(0);
       }
     }, 1000);
   }, []);
@@ -122,12 +104,10 @@ export default function LobbyPage() {
   const stopCountdownSync = useCallback(() => {
     if (countdownIntervalRef.current) {
       clearInterval(countdownIntervalRef.current);
-      countdownIntervalRef.current = null;
     }
     setCountdown(0);
   }, []);
 
-  // UPDATE: Monitor status & auto-redirect
   useEffect(() => {
     if (session?.status === 'active' && !loading) {
       router.replace(`/join/${roomCode}/game`);
@@ -136,76 +116,83 @@ export default function LobbyPage() {
     }
   }, [session?.status, loading, roomCode, router]);
 
-  // UPDATE: handleExit - remove dari participants array
+  // REFACTORED: Use the 'remove_participant_from_session' RPC for a safe, atomic update.
   const handleExit = async () => {
     if (!currentPlayer.id || !session) return;
 
-    // Get current participants & remove by id
-    let currentParticipants = [];
-    try {
-      currentParticipants = typeof session.participants === 'string'
-        ? JSON.parse(session.participants)
-        : session.participants || [];
-    } catch (e) {
-      console.error("Error parsing participants for exit:", e);
-      return;
-    }
-
-    const updatedParticipants = currentParticipants.filter((p: any) => p.id !== currentPlayer.id);
-
-    const { error } = await supabase
-      .from('game_sessions')
-      .update({ participants: updatedParticipants })
-      .eq('game_pin', roomCode);
+    const { error } = await supabase.rpc('remove_participant_from_session', {
+      p_session_id: session.id,
+      p_participant_id: currentPlayer.id,
+      p_app_name: APP_NAME
+    });
 
     if (error) {
-      console.error('Error exiting session:', error);
+      console.error('Error exiting session via RPC:', error);
     } else {
-      console.log('Player exited session successfully, localstorage participant dan gamepin dihapus');
-      localStorage.removeItem('participantId'); // UPDATE: playerId → participantId
-      localStorage.removeItem('game_pin'); // Tambah: Clear pin
+      console.log('Player exited session successfully via RPC.');
+      localStorage.removeItem('participantId');
+      localStorage.removeItem('game_pin');
       router.push('/');
     }
     setShowExitDialog(false);
   };
 
-  // UPDATE: Main bootstrap + subscriptions - pakai game_sessions
-  useEffect(() => {
-    if (hasBootstrapped.current) return;
-    hasBootstrapped.current = true;
+  // REFACTORED: Use the 'update_participant_car' RPC for a safe, atomic update.
+  const handleSelectCar = async (selectedCar: string) => {
+    if (!currentPlayer.id || !session) return;
 
-    if (!roomCode) return;
+    // Optimistic UI update
+    setCurrentPlayer(prev => ({ ...prev, car: selectedCar }));
+    setParticipants(prev => prev.map(p => p.id === currentPlayer.id ? { ...p, car: selectedCar } : p));
+    setShowCarDialog(false);
+
+    const { error } = await supabase.rpc('update_participant_car', {
+      p_session_id: session.id,
+      p_participant_id: currentPlayer.id,
+      p_new_car: selectedCar,
+      p_app_name: APP_NAME
+    });
+
+    if (error) {
+      console.error('Error updating car via RPC:', error);
+      // Revert optimistic update on error if needed
+    } else {
+      console.log('Car updated successfully via RPC');
+    }
+  };
+
+  useEffect(() => {
+    if (hasBootstrapped.current || !roomCode) return;
+    hasBootstrapped.current = true;
 
     let sessionChannel: any = null;
 
     const bootstrap = async () => {
       setLoading(true);
 
-      // 1. Fetch session
+      // REFACTORED: Added application filter for security.
       const { data: fetchedSession, error: sessionErr } = await supabase
         .from('game_sessions')
-        .select('id, status, countdown_started_at, started_at, participants, quiz_detail') // Tambah participants & quiz_detail
+        .select('id, status, countdown_started_at, started_at, participants, quiz_detail, application')
         .eq('game_pin', roomCode)
+        .eq('application', APP_NAME)
         .single();
 
       if (sessionErr || !fetchedSession) {
-        console.log('Session not found', sessionErr);
+        console.log('Session not found or invalid app', sessionErr);
         router.replace('/');
         return;
       }
 
-      console.log("============== hanya untuk debug ===============");
-      console.log('Session data loaded', fetchedSession);
       setSession(fetchedSession);
       setGamePhase(fetchedSession.status);
 
-      if (fetchedSession.countdown_started_at) {  // Gak cek status, cukup field ini
+      if (fetchedSession.countdown_started_at) {
         startCountdownSync(fetchedSession.countdown_started_at, 10);
       } else {
         stopCountdownSync();
       }
 
-      // Immediate redirects
       if (fetchedSession.status === 'active') {
         router.replace(`/join/${roomCode}/game`);
         return;
@@ -214,24 +201,19 @@ export default function LobbyPage() {
         return;
       }
 
-      // 3. Parse participants untuk players
       let parsedParticipants = [];
       try {
         parsedParticipants = typeof fetchedSession.participants === 'string'
           ? JSON.parse(fetchedSession.participants)
           : fetchedSession.participants || [];
-      } catch (e) {
-        console.error("Error parsing participants:", e);
-      }
-      setParticipants(parsedParticipants.map((p: any) => ({ ...p, isReady: true })));
+      } catch (e) { console.error("Error parsing participants:", e); }
+      setParticipants(parsedParticipants);
 
-      // 4. Set current player - cari berdasarkan nickname atau participantId dari localStorage
-      const myNick = localStorage.getItem('nickname') || '';
       const myParticipantId = localStorage.getItem('participantId') || '';
-      const me = parsedParticipants.find((p: any) => p.nickname === myNick || p.id === myParticipantId);
+      const me = parsedParticipants.find((p: any) => p.id === myParticipantId);
 
       if (!me) {
-        console.log("keluar karena tidak ada participant diriku");
+        console.log("Participant not found in session, redirecting.");
         router.replace('/');
         localStorage.removeItem('participantId');
         localStorage.removeItem('game_pin');
@@ -239,9 +221,7 @@ export default function LobbyPage() {
       }
 
       setCurrentPlayer({ id: me.id, nickname: me.nickname, car: me.car || 'blue' });
-      localStorage.setItem('participantId', me.id); // Pastikan saved
 
-      // 5. Session subscription (cover participants changes via UPDATE)
       sessionChannel = supabase
         .channel(`session:${roomCode}`)
         .on('postgres_changes', {
@@ -251,55 +231,34 @@ export default function LobbyPage() {
           filter: `game_pin=eq.${roomCode}`
         }, (payload) => {
           const newSessionData = payload.new;
-          console.log('Session update:', newSessionData.status);
           setGamePhase(newSessionData.status);
           setSession(newSessionData);
 
-          // Parse updated participants
           let updatedParticipants = [];
           try {
             updatedParticipants = typeof newSessionData.participants === 'string'
               ? JSON.parse(newSessionData.participants)
               : newSessionData.participants || [];
-          } catch (e) {
-            console.error("Error parsing updated participants:", e);
-          }
-          setParticipants(updatedParticipants.map((p: any) => ({ ...p, isReady: true })));
+          } catch (e) { console.error("Error parsing updated participants:", e); }
+          setParticipants(updatedParticipants);
 
-          // Auto-redirect
-          if (newSessionData.status === 'active') {
-            router.replace(`/join/${roomCode}/game`);
-          } else if (newSessionData.status === 'finished') {
-            router.replace(`/join/${roomCode}/result`);
-          }
+          if (newSessionData.status === 'active') router.replace(`/join/${roomCode}/game`);
+          else if (newSessionData.status === 'finished') router.replace(`/join/${roomCode}/result`);
 
-          // Sync countdown - cek field saja
           if (newSessionData.countdown_started_at) {
             startCountdownSync(newSessionData.countdown_started_at, 10);
           } else {
             stopCountdownSync();
           }
 
-          // 🧠 Hanya cek kick kalau currentPlayer.id sudah terisi
-          // Ganti blok kick check kamu jadi:
           const localId = localStorage.getItem('participantId');
-
-          if (!updatedParticipants.find((p: any) => p.id === (currentPlayer?.id || localId))) {
-            console.warn("🚪 Kicked from session (verified via fallback)");
+          if (!updatedParticipants.find((p: any) => p.id === localId)) {
+            console.warn("Kicked from session.");
             localStorage.removeItem('participantId');
             router.push('/');
-            return;
           }
-
-          console.log('Realtime payload participants:', updatedParticipants);
-          console.log('Current player id:', currentPlayer.id);
         })
-        .subscribe((status) => {
-          if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-            console.warn('Session sub dropped, retrying...');
-            setTimeout(bootstrap, 3000);
-          }
-        });
+        .subscribe();
 
       setLoading(false);
     };
@@ -312,7 +271,6 @@ export default function LobbyPage() {
     };
   }, [roomCode, router, startCountdownSync, stopCountdownSync]);
 
-  // Background cycling
   useEffect(() => {
     const bgInterval = setInterval(() => {
       setCurrentBgIndex((prev) => (prev + 1) % backgroundGifs.length)
@@ -330,39 +288,6 @@ export default function LobbyPage() {
     return <LoadingRetro />;
   }
 
-  const handleSelectCar = async (selectedCar: string) => {
-    if (!currentPlayer.id || !session) return;
-
-    // Get current participants & update car
-    let currentParticipants = [];
-    try {
-      currentParticipants = typeof session.participants === 'string'
-        ? JSON.parse(session.participants)
-        : session.participants || [];
-    } catch (e) {
-      console.error("Error parsing participants for car update:", e);
-      return;
-    }
-
-    const updatedParticipants = currentParticipants.map((p: any) =>
-      p.id === currentPlayer.id ? { ...p, car: selectedCar } : p
-    );
-
-    const { error } = await supabase
-      .from('game_sessions')
-      .update({ participants: updatedParticipants })
-      .eq('game_pin', roomCode);
-
-    if (error) {
-      console.error('Error updating car:', error);
-    } else {
-      setCurrentPlayer(prev => ({ ...prev, car: selectedCar }));
-      setParticipants(prev => prev.map(p => p.id === currentPlayer.id ? { ...p, car: selectedCar } : p));
-      setShowCarDialog(false);
-      console.log('Car updated successfully');
-    }
-  };
-
   if (countdown > 0) {
     return (
       <div className="absolute inset-0 flex items-center justify-center bg-[#1a0a2a] z-[9999]">
@@ -379,8 +304,6 @@ export default function LobbyPage() {
 
   return (
     <div className={`min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font p-4`}>
-
-      {/* Background */}
       <AnimatePresence mode="wait">
         <motion.div
           key={currentBgIndex}
@@ -393,84 +316,48 @@ export default function LobbyPage() {
         />
       </AnimatePresence>
 
-      {/* Header */}
       <div className="relative z-10 max-w-7xl mx-auto pt-8 px-4">
-
         <h1 className="fixed top-5 right-10 hidden md:block">
-          <Image
-            src="/gameforsmartlogo.webp"
-            alt="Gameforsmart Logo"
-            width={256}
-            height={64}
-          />
+          <Image src="/gameforsmartlogo.webp" alt="Gameforsmart Logo" width={256} height={64} />
         </h1>
-
         <h1 className="fixed top-7 left-10 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">
           Crazy Race
         </h1>
-
-        {/* Judul Utama */}
         <div className="text-center md:m-8 mb-8">
           <h1 className="sm:max-w-none text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#00ffff] pixel-text glow-cyan mb-4 tracking-wider">
             {t('lobby.title')}
           </h1>
         </div>
 
-        {/* Players Grid - 5 per baris */}
-        <motion.div
-          initial={{ y: 50 }}
-          animate={{ y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
+        <motion.div initial={{ y: 50 }} animate={{ y: 0 }} transition={{ duration: 0.8 }}>
           <Card className="bg-[#1a0a2a]/40 backdrop-blur-sm border-[#ff6bff]/50 pixel-card py-5 gap-3 mb-10">
             <CardHeader className="text-center px-5 mb-5">
-
-              <motion.div
-                className="relative flex items-center justify-center"
-              >
+              <motion.div className="relative flex items-center justify-center">
                 <Badge className="absolute bg-[#1a0a2a]/50 border-[#00ffff] text-[#00ffff] p-2 md:text-lg pixel-text glow-cyan top-0 left-0 gap-1 md:gap-3">
                   <Users className="!w-3 !h-3 md:!w-5 md:!h-5" />
                   {participants.length}
                 </Badge>
-
               </motion.div>
             </CardHeader>
-
             <CardContent className="p-6">
-              {/* Players Grid - 5 columns */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                 {sortedParticipants.map((player) => (
                   <motion.div
                     key={player.id}
-                    className={`relative group ${player.id === currentPlayer.id ? 'glow-cyan' : 'glow-pink-subtle'
-                      }`}
+                    className={`relative group ${player.id === currentPlayer.id ? 'glow-cyan' : 'glow-pink-subtle'}`}
                     whileHover={{ scale: 1.05 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <div
-                      className={`p-4 rounded-xl border-4 border-double transition-all duration-300 bg-transparent backdrop-blur-sm ${player.id === currentPlayer.id
-                        ? 'border-[#00ffff] animate-neon-pulse'
-                        : 'border-[#ff6bff]/70 hover:border-[#ff6bff]'
-                        }`}
-                    >
-                      {/* Car GIF - Enhanced visuals */}
+                    <div className={`p-4 rounded-xl border-4 border-double transition-all duration-300 bg-transparent backdrop-blur-sm ${player.id === currentPlayer.id ? 'border-[#00ffff] animate-neon-pulse' : 'border-[#ff6bff]/70 hover:border-[#ff6bff]'}`}>
                       <div className="relative mb-3">
-                        <img
-                          src={carGifMap[player.car] || '/assets/car/car5_v2.webp'}
-                          alt={`${player.car} car`}
-                          className="h-28 w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
-                        />
+                        <img src={carGifMap[player.car] || '/assets/car/car5_v2.webp'} alt={`${player.car} car`} className="h-28 w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150" />
                       </div>
-
-                      {/* Player Info */}
                       <div className="text-center">
                         <div className="flex items-center justify-center space-x-2 mb-1">
                           <h3 className="text-white pixel-text text-sm leading-tight line-clamp-2 break-words">
                             {breakOnCaps(player.nickname)}
                           </h3>
                         </div>
-
-                        {/* ME or NOT Badge */}
                         {player.id === currentPlayer.id && (
                           <Badge className="bg-transparent text-[#00ffff] border-[#00ffff]/70 text-xs pixel-text glow-cyan-subtle">
                             YOU
@@ -485,7 +372,6 @@ export default function LobbyPage() {
           </Card>
         </motion.div>
 
-        {/* Button Pilih Car */}
         <div className="bg-[#1a0a2a]/50 sm:bg-transparent backdrop-blur-sm sm:backdrop-blur-none w-full text-center py-3 fixed bottom-0 left-1/2 transform -translate-x-1/2 z-10 space-x-2 items-center justify-center flex">
           <Button className="bg-red-500 border-2 border-white pixel-button-large hover:bg-red-800 px-8 py-3" onClick={() => setShowExitDialog(true)}>
             <ArrowLeft />
@@ -496,45 +382,24 @@ export default function LobbyPage() {
         </div>
       </div>
 
-      {/* Modal Dialog Verifikasi Exit */}
       <Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
         <DialogOverlay className="bg-[#000ffff] backdrop-blur-sm" />
         <DialogContent className="bg-[#1a0a2a]/65 border-[#ff6bff]/50 backdrop-blur-md text-[#00ffff] max-w-lg mx-auto">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.3 }}
-          >
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.3 }}>
             <DialogHeader>
               <DialogTitle className="text-cyan-400 pixel-text glow-cyan text-center"> {t('lobby.keluar')} </DialogTitle>
             </DialogHeader>
-
-            {/* Car GIF */}
             <div className="flex justify-center mb-4">
-              <img
-                src={carGifMap[currentPlayer.car || 'blue']}
-                alt="Your Car"
-                className="h-24 w-32 object-contain filter brightness-125 glow-cyan"  // Fix w-42 ke w-32
-              />
+              <img src={carGifMap[currentPlayer.car || 'blue']} alt="Your Car" className="h-24 w-32 object-contain filter brightness-125 glow-cyan" />
             </div>
             <DialogDescription className="text-cyan-400 text-center">
               {t('lobby.homepage')}
             </DialogDescription>
-
             <div className="flex justify-end space-x-3 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setShowExitDialog(false)}
-                className="text-[#00ffff] border-1 border-[#00ffff] hover:bg-[#00ffff] "
-              >
+              <Button variant="outline" onClick={() => setShowExitDialog(false)} className="text-[#00ffff] border-1 border-[#00ffff] hover:bg-[#00ffff] ">
                 {t('lobby.cancel')}
               </Button>
-
-              <Button
-                onClick={handleExit}
-                className="bg-[#000] border-1 text-[#00ffff] border-[#00ffff] hover:bg-red-500 hover:text-white"
-              >
+              <Button onClick={handleExit} className="bg-[#000] border-1 text-[#00ffff] border-[#00ffff] hover:bg-red-500 hover:text-white">
                 {t('lobby.exit')}
               </Button>
             </div>
@@ -542,7 +407,6 @@ export default function LobbyPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog/Modal Pilih Car */}
       <Dialog open={showCarDialog} onOpenChange={setShowCarDialog}>
         <DialogOverlay className="bg-[#8B00FF]/60 backdrop-blur-sm" />
         <DialogContent className="bg-[#1a0a2a]/90 border-[#ff6bff]/50 backdrop-blur-sm sm:max-w-md sm:h-auto overflow-auto p-0">
@@ -554,18 +418,11 @@ export default function LobbyPage() {
               <motion.button
                 key={car.key}
                 onClick={() => handleSelectCar(car.key)}
-                className={`p-4 mt-1 rounded-xl border-2 border-double transition-all duration-200 hover:scale-105 flex flex-col items-center ${currentPlayer.car === car.key
-                  ? 'border-[#00ffff] bg-[#00ffff]/10 animate-neon-pulse'
-                  : 'border-[#ff6bff]/70 hover:border-[#ff6bff] hover:bg-[#ff6bff]/10'
-                  }`}
+                className={`p-4 mt-1 rounded-xl border-2 border-double transition-all duration-200 hover:scale-105 flex flex-col items-center ${currentPlayer.car === car.key ? 'border-[#00ffff] bg-[#00ffff]/10 animate-neon-pulse' : 'border-[#ff6bff]/70 hover:border-[#ff6bff] hover:bg-[#ff6bff]/10'}`}
                 whileHover={{ scale: 0.97 }}
                 whileTap={{ scale: 0.95 }}
               >
-                <img
-                  src={carGifMap[car.key]}
-                  alt={car.label}
-                  className="h-24 w-32 mx-auto object-contain filter brightness-125 contrast-150 mb-2"
-                />
+                <img src={carGifMap[car.key]} alt={car.label} className="h-24 w-32 mx-auto object-contain filter brightness-125 contrast-150 mb-2" />
                 <p className="text-xs text-white mt-1 pixel-text text-center">{car.label}</p>
               </motion.button>
             ))}
@@ -574,94 +431,19 @@ export default function LobbyPage() {
       </Dialog>
 
       <style jsx>{`
-        .pixel-font {
-          font-family: 'Press Start 2P', cursive, monospace;
-          image-rendering: pixelated;
-        }
-        .pixel-text {
-          image-rendering: pixelated;
-          text-shadow: 2px 2px 0px #000;
-        }
-        .pixel-button-large {
-          image-rendering: pixelated;
-          box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.8);
-          transition: all 0.1s ease;
-        }
-        .pixel-button-large:hover {
-          transform: translate(3px, 3px);
-          box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.8);
-        }
-        .pixel-border-large {
-          border: 4px solid #00ffff;
-          background: linear-gradient(45deg, #1a0a2a, #2d1b69);
-          box-shadow: 0 0 20px rgba(255, 107, 255, 0.3);
-        }
-        .pixel-border-small {
-          border: 2px solid #00ffff;
-          background: #1a0a2a;
-          box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
-        }
-        .pixel-card {
-          box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 107, 255, 0.3);
-        }
-        .crt-effect {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-          background-size: 100% 4px;
-          z-index: 5;
-          pointer-events: none;
-          animation: scanline 8s linear infinite;
-        }
-        .noise-effect {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background-image: url("data:image/svg+xml,%3Csvg%20viewBox%3D%270%200%20200%20200%27%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%3E%3Cfilter%20id%3D%27noiseFilter%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.65%27%20numOctaves%3D%273%27%20stitchTiles%3D%27stitch%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27100%25%27%20height%3D%27100%25%27%20filter%3D%27url(%23noiseFilter)%27%20opacity%3D%270.1%27%2F%3E%3C%2Fsvg%3E");
-          z-index: 4;
-          pointer-events: none;
-        }
-        .glow-cyan {
-          filter: drop-shadow(0 0 10px #00ffff);
-        }
-        .glow-pink-subtle {
-          filter: drop-shadow(0 0 5px rgba(255, 107, 255, 0.5));
-        }
-        @keyframes scanline {
-          0% { background-position: 0 0; }
-          100% { background-position: 0 100%; }
-        }
-        @keyframes neon-bounce {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-8px); }
-        }
-
-        /* Neon pulse animation for borders */
-        @keyframes neon-pulse {
-          0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 255, 0.7), 0 0 20px rgba(0, 255, 255, 0.5); }
-          50% { box-shadow: 0 0 15px rgba(0, 255, 255, 1), 0 0 30px rgba(0, 255, 255, 0.8); }
-        }
-        @keyframes neon-pulse-pink {
-          0%, 100% { box-shadow: 0 0 10px rgba(255, 107, 255, 0.7), 0 0 20px rgba(255, 107, 255, 0.5); }
-          50% { box-shadow: 0 0 15px rgba(255, 107, 255, 1), 0 0 30px rgba(255, 107, 255, 0.8); }
-        }
-        .glow-text {
-          filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));
-        }
-        .glow-green {
-          filter: drop-shadow(0 0 10px rgba(0, 255, 0, 0.8));
-        }
-        .animate-neon-pulse {
-          animation: neon-pulse 1.5s ease-in-out infinite;
-        }
-        .glow-pink-subtle {
-          animation: neon-pulse-pink 1.5s ease-in-out infinite;
-        }
+        .pixel-font { font-family: 'Press Start 2P', cursive, monospace; image-rendering: pixelated; }
+        .pixel-text { image-rendering: pixelated; text-shadow: 2px 2px 0px #000; }
+        .pixel-button-large { image-rendering: pixelated; box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.8); transition: all 0.1s ease; }
+        .pixel-button-large:hover { transform: translate(3px, 3px); box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.8); }
+        .pixel-card { box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 107, 255, 0.3); }
+        .glow-cyan { filter: drop-shadow(0 0 10px #00ffff); }
+        .glow-pink-subtle { filter: drop-shadow(0 0 5px rgba(255, 107, 255, 0.5)); }
+        @keyframes neon-bounce { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
+        @keyframes neon-pulse { 0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 255, 0.7), 0 0 20px rgba(0, 255, 255, 0.5); } 50% { box-shadow: 0 0 15px rgba(0, 255, 255, 1), 0 0 30px rgba(0, 255, 255, 0.8); } }
+        @keyframes neon-pulse-pink { 0%, 100% { box-shadow: 0 0 10px rgba(255, 107, 255, 0.7), 0 0 20px rgba(255, 107, 255, 0.5); } 50% { box-shadow: 0 0 15px rgba(255, 107, 255, 1), 0 0 30px rgba(255, 107, 255, 0.8); } }
+        .glow-text { filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8)); }
+        .animate-neon-pulse { animation: neon-pulse 1.5s ease-in-out infinite; }
+        .glow-pink-subtle { animation: neon-pulse-pink 1.5s ease-in-out infinite; }
       `}</style>
       <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
     </div>

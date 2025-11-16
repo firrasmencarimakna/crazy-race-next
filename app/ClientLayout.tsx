@@ -40,12 +40,12 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
   
 
   return (
-    <AuthProvider>
-      <ClientProviders>
+    <ClientProviders>
+      <AuthProvider>
         <AuthGate>
           {children}
         </AuthGate>
-      </ClientProviders>
-    </AuthProvider>
+      </AuthProvider>
+    </ClientProviders>
   );
 }
