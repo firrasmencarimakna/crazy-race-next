@@ -35,16 +35,16 @@ type PlayerStats = {
   totalQuestions: number
   accuracy: string
   totalTime: string
-  rank: number
-  totalPlayers: number
   participantId: string
 }
+
+const APP_NAME = "crazyrace"; // Safety check for multi-tenant DB
 
 export default function PlayerResultsPage() {
   const params = useParams()
   const router = useRouter()
   const roomCode = params.roomCode as string
-  const [participantId, setParticipantId] = useState<string>(""); // Ganti dari playerId
+  const [participantId, setParticipantId] = useState<string>("");
 
   const [loading, setLoading] = useState(true)
   const [currentPlayerStats, setCurrentPlayerStats] = useState<PlayerStats | null>(null)
@@ -53,7 +53,7 @@ export default function PlayerResultsPage() {
   const hasBootstrapped = useRef(false);
 
   useEffect(() => {
-    const pid = localStorage.getItem("participantId") || ""; // Ganti dari playerId
+    const pid = localStorage.getItem("participantId") || "";
     if (!pid) {
       router.replace(`/`);
       return;
@@ -65,23 +65,21 @@ export default function PlayerResultsPage() {
     if (!roomCode || !participantId || hasBootstrapped.current) return;
     hasBootstrapped.current = true;
 
-    let channel: any = null;
-    let responsesCache: Record<string, { score: number; duration: number }> = {}; // Cache from responses
-
     const setupInitialData = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Fetch game_sessions
+        // Fetch game_sessions with application filter
         const { data: sessionData, error: sessionError } = await supabase
           .from("game_sessions")
-          .select("id, total_time_minutes, participants, responses")
+          .select("id, total_time_minutes, participants, responses, application")
           .eq("game_pin", roomCode)
+          .eq("application", APP_NAME) // Added application filter
           .single();
 
-        if (sessionError || !sessionData) {
-          throw new Error(`Session not found: ${sessionError?.message || 'No data'}`);
+        if (sessionError || !sessionData || sessionData.application !== APP_NAME) {
+          throw new Error(`Session not found or invalid app: ${sessionError?.message || 'No data'}`);
         }
 
         const gameDuration = sessionData.total_time_minutes * 60; // Convert to seconds
@@ -118,12 +116,6 @@ export default function PlayerResultsPage() {
           throw new Error("Player participant not found");
         }
 
-        // Hitung rank awal
-        const sorted = Object.entries(responsesCache)
-          .sort(([, a], [, b]) => b.score - a.score || a.duration - b.duration)
-          .map(([pid]) => pid);
-        const rank = sorted.findIndex((pid) => pid === participantId) + 1;
-
         setCurrentPlayerStats({
           nickname: currentParticipant.nickname,
           car: currentParticipant.car || "blue",
@@ -132,8 +124,6 @@ export default function PlayerResultsPage() {
           totalQuestions: result.total_question || 0,
           accuracy: result.accuracy || "0.00",
           totalTime,
-          rank,
-          totalPlayers: sorted.length,
           participantId,
         });
 
@@ -148,7 +138,6 @@ export default function PlayerResultsPage() {
 
     return () => {
       hasBootstrapped.current = false;
-      if (channel) supabase.removeChannel(channel);
     };
   }, [roomCode, participantId]);
 
@@ -171,7 +160,7 @@ export default function PlayerResultsPage() {
     parseFloat(Number(value).toFixed(2)).toString();
 
 
-  const { finalScore, correctAnswers, totalQuestions, accuracy, totalTime, rank, nickname, car } = currentPlayerStats
+  const { finalScore, correctAnswers, totalQuestions, accuracy, totalTime, nickname, car } = currentPlayerStats
 
   return (
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">

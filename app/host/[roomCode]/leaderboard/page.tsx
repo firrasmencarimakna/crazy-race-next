@@ -14,6 +14,8 @@ import { shuffleArray } from "../settings/page"
 import { useAuth } from "@/contexts/authContext"
 import { t } from "i18next"
 
+const APP_NAME = "crazyrace"; // Safety check for multi-tenant DB
+
 type PlayerStats = {
   nickname: string
   car: string
@@ -73,6 +75,7 @@ export default function HostLeaderboardPage() {
         .from('game_sessions')
         .select('participants, responses')
         .eq('game_pin', roomCode)
+        .eq('application', APP_NAME) // Added application filter
         .single();
 
       if (sessionError || !sessionData) {
@@ -193,6 +196,7 @@ export default function HostLeaderboardPage() {
         .from("game_sessions")
         .select("quiz_id, host_id, total_time_minutes, question_limit, difficulty, game_end_mode, allow_join_after_start, application, difficulty")
         .eq("game_pin", roomCode)
+        .eq("application", APP_NAME) // Added application filter
         .single();
 
       if (fetchError || !currentSession) throw fetchError || new Error('Current session not found');
@@ -226,7 +230,7 @@ export default function HostLeaderboardPage() {
         participants: [], // Empty
         responses: [], // Empty
         current_questions: slicedQuestions, // Shuffled slice
-        application: currentSession.application || 'crazyrace',
+        application: currentSession.application || APP_NAME, // Ensure application is set
         created_at: new Date().toISOString(),
         difficulty: currentSession.difficulty
       };

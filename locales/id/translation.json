@@ -56,6 +56,10 @@
     "tryoutButton": "COBA",
     "starting": "MEMULAI...",
     "language": "Bahasa",
+    "fullscreen": "Layar Penuh",
+    "exitFullscreen": "Keluar Layar Penuh",
+    "installApp": "Unduh",
+    "appInstalled": "Terunduh!",
     "logout": "Keluar"
   },
   "howToPlay": {

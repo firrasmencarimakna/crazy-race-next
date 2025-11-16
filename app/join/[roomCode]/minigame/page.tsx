@@ -1,37 +1,28 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useRouter, useParams } from 'next/navigation'; // Asumsi Next.js
-import { supabase } from '@/lib/supabase'; // Sesuaikan path-mu
+import { useRouter, useParams } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 import LoadingRetro from '@/components/loadingRetro';
 import { formatTime } from '@/utils/game';
-import { generateXID } from '@/lib/id-generator';
+
+const APP_NAME = "crazyrace"; // Safety check for multi-tenant DB
 
 export default function RacingGame() {
   const router = useRouter();
   const { roomCode } = useParams();
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  
   const [participantId, setParticipantId] = useState<string>("");
   const [gameSrc, setGameSrc] = useState('/racing-game/v4.final.html');
-
-  const [gameStartTime, setGameStartTime] = useState<number | null>(null);
-  const [gameDuration, setGameDuration] = useState(0);
-  const [totalQuestions, setTotalQuestions] = useState(0);
-  const [correctAnswers, setCorrectAnswers] = useState(0);
-  const [answers, setAnswers] = useState<(number | null)[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [session, setSession] = useState<any>(null);
+  
   const [totalTimeRemaining, setTotalTimeRemaining] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [session, setSession] = useState<any>(null);
 
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const sessionRef = useRef<any>(null);
-  const isSavingRef = useRef(false); // Flag to prevent double save
-
-  useEffect(() => {
-    sessionRef.current = session;
-  }, [session]);
+  const isSavingRef = useRef(false);
 
   useEffect(() => {
     const pid = localStorage.getItem("participantId") || "";
@@ -40,211 +31,89 @@ export default function RacingGame() {
       return;
     }
     setParticipantId(pid);
-  }, []);
+  }, [router]);
 
-  // Fetch data
   const fetchMiniGameData = useCallback(async (retryCount = 0) => {
-    if (!roomCode || !participantId) return;
+    if (!roomCode) return;
     setLoading(true);
     setError(null);
     try {
-      console.log(`Fetching mini game data (attempt ${retryCount + 1})`);
       const { data: sessionData, error: sessionError } = await supabase
         .from("game_sessions")
-        .select("id, started_at, total_time_minutes, difficulty, responses, current_questions, participants")
+        .select("id, started_at, total_time_minutes, difficulty, application")
         .eq("game_pin", roomCode)
         .single();
 
-      if (sessionError || !sessionData) {
-        throw new Error(`Session error: ${sessionError?.message || 'No data'}`);
+      if (sessionError || !sessionData || sessionData.application !== APP_NAME) {
+        throw new Error(`Session error: ${sessionError?.message || 'Invalid session or app'}`);
       }
-
+      
       setSession(sessionData);
-      console.log('Session in mini:', sessionData); // Log full
 
-      const startTime = sessionData.started_at ? new Date(sessionData.started_at).getTime() : null;
-      if (!startTime) throw new Error('Game start time missing');
-
-      setGameStartTime(startTime);
-      const duration = sessionData.total_time_minutes * 60;
-      setGameDuration(duration);
-
-      // Set src
-      if (sessionData.difficulty) {
-        let src = '/racing-game/v4.final.html';
-        switch (sessionData.difficulty) {
-          case 'easy':
-            src = '/racing-game/v1.straight.html';
-            break;
-          case 'normal':
-            src = '/racing-game/v2.curves.html';
-            break;
-          case 'hard':
-            src = '/racing-game/v4.final.html';
-            break;
-        }
-        setGameSrc(src);
+      let src = '/racing-game/v4.final.html';
+      switch (sessionData.difficulty) {
+        case 'easy':
+          src = '/racing-game/v1.straight.html';
+          break;
+        case 'normal':
+          src = '/racing-game/v2.curves.html';
+          break;
+        case 'hard':
+          src = '/racing-game/v4.final.html';
+          break;
       }
-
-      // Parse questions for totalQ
-      let parsedQuestions = [];
-      try {
-        parsedQuestions = typeof sessionData.current_questions === 'string' ? JSON.parse(sessionData.current_questions) : sessionData.current_questions || [];
-        console.log('Parsed questions in mini:', parsedQuestions.length);
-      } catch (e) {
-        console.error('Parse questions error in mini:', e);
-      }
-      const totalQ = parsedQuestions.length || 10;
-      console.log('TotalQ in mini:', totalQ);
-
-      // Parse responses
-      const parsedResponses = sessionData.responses || [];
-      let myResponse = parsedResponses.find((r: any) => r.participant === participantId);
-
-      if (!myResponse) {
-        console.log('No response found in mini, creating initial...');
-        myResponse = {
-          id: generateXID(),
-          participant: participantId,
-          score: 0,
-          racing: false,
-          answers: [],
-          correct: 0,
-          accuracy: "0.00",
-          duration: 0,
-          total_question: totalQ,
-          current_question: 0,
-        };
-      } else {
-        // Ensure total_question set
-        if (myResponse.total_question === undefined || myResponse.total_question === 0) myResponse.total_question = totalQ;
-      }
-
-      const savedAnswers = myResponse.answers.map((a: any) => parseInt(a.answer_id)) || [];
-      const savedCorrect = myResponse.correct || 0;
-      const savedCurrent = myResponse.current_question || 0;
-
-      setAnswers(savedAnswers);
-      setCorrectAnswers(savedCorrect);
-      setTotalQuestions(myResponse.total_question || totalQ);
-      setCurrentQuestionIndex(savedCurrent - 1);
-
+      setGameSrc(src);
       setLoading(false);
-      console.log('Mini game data loaded, totalQ:', myResponse.total_question);
+
     } catch (err: any) {
       console.error("Error fetching mini game data:", err);
       setError(err.message);
-      if (retryCount < 3) setTimeout(() => fetchMiniGameData(retryCount + 1), 1000 * (retryCount + 1));
-      else router.replace(`/join/${roomCode}/game`);
-      setLoading(false);
+      if (retryCount < 3) {
+        setTimeout(() => fetchMiniGameData(retryCount + 1), 1000 * (retryCount + 1));
+      } else {
+        router.replace(`/join/${roomCode}/game`);
+      }
     }
-  }, [roomCode, participantId, router]);
+  }, [roomCode, router]);
 
   useEffect(() => {
-    if (roomCode && participantId) fetchMiniGameData();
-  }, [roomCode, participantId, fetchMiniGameData]);
+    if (roomCode) fetchMiniGameData();
+  }, [roomCode, fetchMiniGameData]);
 
-  // Save progress
+  // REFACTORED: Use the 'finalize_player_session' RPC for a safe, atomic update.
   const saveAndRedirectToResult = useCallback(async () => {
-    if (isSavingRef.current) return; // Prevent double
+    if (isSavingRef.current || !participantId || !session) return;
     isSavingRef.current = true;
 
-    if (!gameStartTime || !participantId || !session || !session.id) {
-      console.error('Missing session.id for save');
-      isSavingRef.current = false;
-      return;
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+
+    console.log("Finalizing session from minigame via RPC...");
+    const { error: rpcError } = await supabase.rpc('finalize_player_session', {
+      p_session_id: session.id,
+      p_participant_id: participantId,
+      p_app_name: APP_NAME
+    });
+
+    if (rpcError) {
+      console.error("Error finalizing session from minigame:", rpcError);
     }
 
-    const now = Date.now();
-    const elapsedSeconds = Math.floor((now - gameStartTime) / 1000);
-    const accuracy = totalQuestions > 0 ? ((correctAnswers / totalQuestions) * 100).toFixed(2) : "0.00";
-
-    // Parse responses
-    let currentResponses = [];
-    try {
-      currentResponses = typeof session.responses === 'string' ? JSON.parse(session.responses) : session.responses || [];
-    } catch (e) {
-      console.error("Error parsing responses:", e);
-      isSavingRef.current = false;
-      return;
-    }
-
-    // Parse questions for totalQ
-    let parsedQuestions = [];
-    try {
-      parsedQuestions = typeof session.current_questions === 'string' ? JSON.parse(session.current_questions) : session.current_questions || [];
-    } catch (e) {
-      console.error('Parse questions error in save:', e);
-    }
-    const totalQ = parsedQuestions.length || totalQuestions || 10;
-    console.log('Save totalQ:', totalQ);
-
-    // Update myResponse
-    let myResponse = currentResponses.find((r: any) => r.participant === participantId);
-    if (myResponse) {
-      myResponse.score = correctAnswers * 10;
-      myResponse.correct = correctAnswers;
-      myResponse.accuracy = accuracy;
-      myResponse.duration = elapsedSeconds;
-      myResponse.current_question = currentQuestionIndex;
-      myResponse.total_question = totalQ;
-      myResponse.racing = false;
-      myResponse.completion = true;
-    }
-
-    // TAMBAHAN: Update participants dengan score final
-    let currentParticipants: any[] = [];
-    try {
-      currentParticipants = typeof session.participants === 'string'
-        ? JSON.parse(session.participants)
-        : session.participants || [];
-      console.log(currentParticipants)
-      console.log(session.participants)
-    } catch (e) {
-      console.error("Error parsing participants:", e);
-      currentParticipants = [];
-    }
-
-    // Cari participant berdasarkan ID, tambahin score
-    const participantIndex = currentParticipants.findIndex((p: any) => p.id === participantId);
-    if (participantIndex !== -1) {
-      currentParticipants[participantIndex].score = myResponse.score; // Tambah score di sini
-    } else {
-      console.warn("Participant not found in participants array");
-    }
-
-    // Update supabase dengan responses DAN participants
-    const { error: finalError } = await supabase
-      .from("game_sessions")
-      .update({
-        responses: currentResponses,
-        participants: currentParticipants // Pass array langsung
-      })
-      .eq("id", session.id);
-
-    if (finalError) {
-      console.error("Error updating final session:", finalError);
-      return;
-    }
-
-    isSavingRef.current = false;
     router.push(`/join/${roomCode}/result`);
-  }, [gameStartTime, participantId, session, correctAnswers, totalQuestions, roomCode, router]);
+  }, [participantId, session, roomCode, router]);
 
-  // Timer
+  // Timer logic
   useEffect(() => {
-    if (loading || gameDuration === 0 || !gameStartTime) {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      return;
-    }
+    if (loading || !session) return;
+
+    const gameStartTime = new Date(session.started_at).getTime();
+    const gameDuration = session.total_time_minutes * 60;
 
     const updateRemaining = () => {
-      const now = Date.now();
-      const elapsed = Math.floor((now - gameStartTime) / 1000);
+      const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
       const remaining = gameDuration - elapsed;
       setTotalTimeRemaining(Math.max(0, remaining));
 
-      if (remaining <= 0 && !isSavingRef.current) {
+      if (remaining <= 0) {
         saveAndRedirectToResult();
       }
     };
@@ -255,99 +124,35 @@ export default function RacingGame() {
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [gameStartTime, loading, gameDuration, saveAndRedirectToResult]);
+  }, [loading, session, saveAndRedirectToResult]);
 
-  // Sub
+  // REFACTORED: Use the 'set_player_racing_status' RPC for a safe, atomic update.
   useEffect(() => {
-    if (!roomCode || !participantId) return;
-
-    const channel = supabase
-      .channel(`session-${roomCode}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'game_sessions',
-          filter: `game_pin=eq.${roomCode}`,
-        },
-        async (payload) => {
-          const newStatus = payload.new?.status;
-          console.log('Session status update:', newStatus);
-
-          if (newStatus === 'finished' && !isSavingRef.current) {
-            await saveAndRedirectToResult();
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel)
-    };
-  }, [roomCode, participantId, saveAndRedirectToResult]);
-
-  iframeRef.current?.contentWindow?.focus();
-
-  useEffect(() => {
-    async function handleMessage(event: any) {
-      if (!event.data || typeof event.data !== 'object') return;
-      if (event.data.type !== 'racing_finished') return;
-
-      const currentSession = sessionRef.current;
-      if (!participantId || !currentSession) {
-        console.warn("⏸️ Skip: belum siap, coba lagi sebentar...");
-        setTimeout(() => handleMessage(event), 300);
+    const handleMessage = async (event: MessageEvent) => {
+      if (!event.data || event.data.type !== 'racing_finished' || !participantId || !session) {
         return;
       }
 
-      let currentResponses = [];
-      try {
-        currentResponses =
-          typeof currentSession.responses === "string"
-            ? JSON.parse(currentSession.responses)
-            : currentSession.responses || [];
-      } catch (e) {
-        console.error("Error parsing responses:", e);
-        return;
-      }
+      console.log("Racing finished message received. Updating status via RPC...");
+      
+      const { error: rpcError } = await supabase.rpc('set_player_racing_status', {
+        p_session_id: session.id,
+        p_participant_id: participantId,
+        p_is_racing: false,
+        p_app_name: APP_NAME
+      });
 
-      const updatedResponses = currentResponses.map((r: any) =>
-        r.participant === participantId ? { ...r, racing: false } : r
-      );
-
-      console.log("🔄 Updating racing=false for participant:", participantId);
-      console.log("🧩 Responses preview:", updatedResponses);
-
-      const { data, error, status } = await supabase
-        .from("game_sessions")
-        .update({ responses: updatedResponses })
-        .eq("game_pin", roomCode)
-        .select();
-
-      if (error) console.error("❌ Supabase update error:", error);
-      else {
-        console.log("✅ Racing updated successfully:", data, "status:", status);
-        setSession((prev: any) => ({ ...prev, responses: updatedResponses }));
+      if (rpcError) {
+        console.error("❌ Supabase update error via RPC:", rpcError);
+      } else {
+        console.log("✅ Racing status updated successfully via RPC.");
         router.replace(`/join/${roomCode}/game`);
       }
-
-    }
+    };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [participantId]);
-
-  // Iframe load
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    if (iframe) console.log('Game loaded');
-  }, []);
-
-  useEffect(() => {
-    const img = new Image();
-    img.src = "/racing-game/images/sprites.png";
-  }, []);
+  }, [participantId, session, roomCode, router]);
 
   if (loading) return <LoadingRetro />;
   if (error) return <div className="w-full h-screen flex justify-center items-center text-red-500">Error: {error}</div>;
@@ -373,7 +178,7 @@ export default function RacingGame() {
         height="100%"
         frameBorder="0"
         allowFullScreen
-        sandbox="allow-scripts allow-same-origin allow-popups"
+        sandbox="allow-scripts allow-same-origin"
         title="Racing Game"
         className="z-0"
       />
