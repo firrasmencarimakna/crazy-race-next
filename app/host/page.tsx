@@ -303,7 +303,7 @@ export default function QuestionListPage() {
             className="pixel-border-large inline-block p-6"
           >
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#ffefff] pixel-text glow-pink">
-             {t('soal.title')}
+              {t('soal.title')}
             </h1>
           </motion.div>
         </div>
@@ -432,7 +432,7 @@ export default function QuestionListPage() {
                           <TooltipTrigger asChild>
                             <div>
                               <CardHeader>
-                                <CardTitle className="text-base text-[#00ffff] pixel-text glow-cyan md:line-clamp-3">
+                                <CardTitle className="text-base text-[#00ffff] pixel-text glow-cyan md:line-clamp-3 ">
                                   {quiz.title}
                                 </CardTitle>
                               </CardHeader>
@@ -440,7 +440,7 @@ export default function QuestionListPage() {
                           </TooltipTrigger>
                           <TooltipContent
                             side="top"
-                            className="text-xs bg-black/80 text-cyan-300 max-w-xs border border-cyan-500/50"
+                            className="text-xs bg-black/80 text-cyan-300 max-w-xs border border-cyan-500/50 whitespace-normal break-words"
                           >
                             {quiz.title}
                           </TooltipContent>

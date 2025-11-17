@@ -340,16 +340,6 @@
       color: #a0aec0;
     }
 
-    #mute {
-      position: fixed;
-      bottom: 1rem;
-      right: 1rem;
-      cursor: pointer;
-      padding: 0.5rem;
-      background: rgba(45, 55, 72, 0.95);
-      border-radius: 0.5rem;
-    }
-
     #finish-screen {
       position: fixed;
       top: 0;
@@ -453,18 +443,18 @@
       <div id="mobile-controls">
         <div id="accel-brake-controls">
           <button id="brake" class="control-btn" title="Brake">
-            <img src="./images/down.png" alt="Brake" width="100%">
+            <img src="./images/down.webp" alt="Brake" width="100%">
           </button>
           <button id="accel" class="control-btn" title="Accelerate">
-            <img src="./images/up.png" alt="Accelerate" width="100%">
+            <img src="./images/up.webp" alt="Accelerate" width="100%">
           </button>
         </div>
         <div id="steering-controls">
           <button id="left" class="control-btn" title="Steer Left">
-            <img src="./images/left.png" alt="Steer Left" width="100%">
+            <img src="./images/left.webp" alt="Steer Left" width="100%">
           </button>
           <button id="right" class="control-btn" title="Steer Right">
-            <img src="./images/right.png" alt="Steer Right" width="100%">
+            <img src="./images/right.webp" alt="Steer Right" width="100%">
           </button>
         </div>
       </div>
@@ -477,11 +467,6 @@
     <p>Finished</p>
   </div>
 
-  <audio id="music" loop>
-    <source src="music/racer.ogg">
-    <source src="music/racer.mp3">
-  </audio>
-  <span id="mute" class="text-sm">🔇</span>
   <script src="stats.js"></script>
   <script src="common.js"></script>
   <script>
@@ -928,13 +913,6 @@
       var toggleButton = Dom.get('controls-toggle');
       controls.classList.toggle('hidden');
       toggleButton.textContent = controls.classList.contains('hidden') ? 'Show Controls' : 'Hide Controls';
-    });
-
-    // Mute/Unmute audio
-    var audio = Dom.get('music');
-    Dom.get('mute').addEventListener('click', function () {
-      audio.muted = !audio.muted;
-      Dom.get('mute').textContent = audio.muted ? '🔊' : '🔇';
     });
 
     // Full-screen canvas resizing - Adjusted for new layout

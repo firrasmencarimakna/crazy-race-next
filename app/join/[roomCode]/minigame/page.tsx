@@ -126,6 +126,35 @@ export default function RacingGame() {
     };
   }, [loading, session, saveAndRedirectToResult]);
 
+  // Listen for game session changes
+  useEffect(() => {
+    if (!roomCode || !saveAndRedirectToResult) return;
+
+    const channel = supabase
+      .channel(`minigame-session-updates-${roomCode}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'game_sessions',
+          filter: `game_pin=eq.${roomCode}`,
+        },
+        (payload) => {
+          const newSession = payload.new as any;
+          if (newSession.status === 'finished') {
+            console.log("Host ended the game. Finalizing player session.");
+            saveAndRedirectToResult();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [roomCode, saveAndRedirectToResult]);
+
   // REFACTORED: Use the 'set_player_racing_status' RPC for a safe, atomic update.
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {

@@ -81,6 +81,7 @@ export default function HostRoomPage() {
     countdownIntervalRef.current = setInterval(() => {
       remaining = calculateCountdown(startTimestamp, duration);
       setCountdown(remaining);
+      setLoading(true)
       if (remaining <= 0) {
         clearInterval(countdownIntervalRef.current!);
         setCountdown(0);
@@ -106,6 +107,23 @@ export default function HostRoomPage() {
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+    const startAudio = async () => {
+      if (!hasInteracted) {
+        try {
+          audio.muted = isMuted;
+          await audio.play();
+          setHasInteracted(true);
+          console.log("🔊 Audio started via interaction!");
+        } catch (err) {
+          console.warn("⚠️ Audio play blocked, waiting for interaction...");
+        } finally {
+          // lepas listener apapun hasilnya
+          document.removeEventListener("click", startAudio);
+          document.removeEventListener("keydown", startAudio);
+          document.removeEventListener("scroll", startAudio);
+        }
+      }
+    };
     const tryAutoplay = async () => {
       try {
         audio.muted = isMuted;
@@ -122,35 +140,56 @@ export default function HostRoomPage() {
           document.removeEventListener("click", startAudio);
         };
         document.addEventListener("click", startAudio);
+        document.addEventListener("keydown", startAudio);
+        document.addEventListener("scroll", startAudio);
       }
     };
     tryAutoplay();
+    return () => {
+      document.removeEventListener("click", startAudio);
+      document.removeEventListener("keydown", startAudio);
+      document.removeEventListener("scroll", startAudio);
+    };
   }, [hasInteracted, isMuted]);
 
   useEffect(() => {
-    const countdownAudio = countdownAudioRef.current;
-    const bgAudio = audioRef.current;
-    if (!countdownAudio || !bgAudio) return;
+  const countdownAudio = countdownAudioRef.current;
+  const bgAudio = audioRef.current;
+  if (!countdownAudio) return;
 
-    if (countdown > 0 && !isCountdownPlaying) {
+  // Separate effect untuk play countdown (depend cuma countdown & muted, gak isCountdownPlaying)
+  if (countdown > 0 && !isCountdownPlaying) {
+      // Baru mulai countdown
       setIsCountdownPlaying(true);
-      if (!bgAudio.paused) bgAudio.pause();
+
+      if (bgAudio && !bgAudio.paused) bgAudio.pause();
+
       countdownAudio.currentTime = 0;
       countdownAudio.muted = isMuted;
-      countdownAudio.play().catch(console.warn);
-    } else if (countdown <= 0 && isCountdownPlaying) {
+      countdownAudio
+        .play()
+        .then(() => console.log("🔊 Countdown sound started"))
+        .catch((err) => console.warn("⚠️ Countdown sound blocked:", err));
+    }
+
+    if (countdown <= 0 && isCountdownPlaying) {
+      // Countdown selesai
       setIsCountdownPlaying(false);
+
       countdownAudio.pause();
       countdownAudio.currentTime = 0;
-      if (hasInteracted) {
+
+      if (bgAudio && hasInteracted) {
         bgAudio.muted = isMuted;
-        bgAudio.play().catch(console.warn);
+        bgAudio.play().catch(() => console.warn("⚠️ BG audio failed resume"));
       }
     }
   }, [countdown, isMuted, hasInteracted, isCountdownPlaying]);
 
   useEffect(() => {
-    if (audioRef.current) audioRef.current.muted = isMuted;
+    if (audioRef.current) {
+      audioRef.current.muted = isMuted;
+    }
   }, [isMuted]);
 
   useEffect(() => {
@@ -254,7 +293,7 @@ export default function HostRoomPage() {
   if (countdown > 0) {
     return (
       <div className={`min-h-screen bg-[#1a0a2a] flex items-center justify-center pixel-font`}>
-        <audio ref={countdownAudioRef} src="/assets/music/countdown.mp3" preload="auto" className="hidden" />
+        <audio ref={countdownAudioRef} src="/assets/music/countdown.mp3" preload="auto" loop className="hidden" />
         <div className="text-center">
           <motion.div className="text-8xl md:text-9xl font-bold text-[#00ffff] pixel-text glow-cyan race-pulse" animate={{ scale: [1, 1.1, 1] }} transition={{ repeat: Infinity, duration: 0.5 }}>
             {countdown}
