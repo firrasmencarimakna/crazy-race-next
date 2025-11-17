@@ -8,7 +8,7 @@ interface PWAInstallBannerProps {
 export default function PWAInstallBanner({ onInstall, onDismiss }: PWAInstallBannerProps) {
   return (
     <div className="fixed bottom-4 right-4 bg-[#1a0a2a] text-white border-2 border-[#00ffff] rounded-lg p-4 z-50 shadow-lg animate-fade-in-up">
-      <p className="mb-2 font-semibold leading-tight">Install Crazy Race for a better experience!</p>
+      <p className="mb-2 font-semibold leading-tight">Install Crazy Race!</p>
       <div className="flex gap-2 justify-end">
         <button
           onClick={onInstall}

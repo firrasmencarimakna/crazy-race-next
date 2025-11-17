@@ -7,11 +7,6 @@ export function usePreloaderScreen() {
     const [progress, setProgress] = useState(0)
 
     useEffect(() => {
-        // const lastPreload = localStorage.getItem("lastPreload");
-        // if (lastPreload && Date.now() - parseInt(lastPreload) < 7 * 24 * 60 * 60 * 1000) {
-        //     setIsLoaded(true);
-        //     return;
-        // }
 
         const globalAssets = [
             "/assets/car/car1_v2.webp",
@@ -26,10 +21,13 @@ export function usePreloaderScreen() {
             "/assets/background/host/1.webp",
             "/assets/background/host/3.webp",
             "/assets/background/host/4.webp",
-            "/assets/background/host/7.webp",
         ]
         const racingAssets = [
-            "/racing-game/images/sprites.png"
+            "/racing-game/images/sprites.png",
+            "/racing-game/images/down.webp",
+            "/racing-game/images/left.webp",
+            "/racing-game/images/right.webp",
+            "/racing-game/images/up.webp"
         ]
 
         const allImages = [
@@ -45,7 +43,6 @@ export function usePreloaderScreen() {
             loadedCount++
             setProgress((loadedCount / total) * 100)
             if (loadedCount >= total) {
-                // localStorage.setItem("lastPreload", Date.now().toString());
                 setIsLoaded(true);
             }
         }

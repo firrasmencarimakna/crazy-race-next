@@ -302,10 +302,12 @@ export default function HostMonitorPage() {
         <DialogOverlay className="bg-[#1a0a2a]/60 backdrop-blur-md fixed inset-0 z-50" />
         <DialogContent className="bg-[#1a0a2a]/80 border-2 border-[#ff6bff] pixel-card">
           <DialogTitle className="text-xl text-[#ffefff] pixel-text glow-pink text-center">End Game</DialogTitle>
-          <DialogDescription className="text-center text-gray-300 pixel-text my-4">Are you sure you want to end the game for all players? This action cannot be undone.</DialogDescription>
+          <DialogDescription className="text-center text-gray-300 pixel-text my-4">Are you sure want to end the game?</DialogDescription>
           <DialogFooter className="flex justify-center gap-4">
-            <Button variant="outline" onClick={() => setEndGameConfirmOpen(false)} className="pixel-button bg-gray-700 hover:bg-gray-600">Cancel</Button>
-            <Button onClick={handleConfirmEndGame} className="pixel-button bg-red-600 hover:bg-red-500 glow-red">Confirm End Game</Button>
+            <Button variant="outline"
+            onClick={() => setEndGameConfirmOpen(false)}
+            className="pixel-button bg-gray-700 hover:bg-gray-600">Cancel</Button>
+            <Button onClick={handleConfirmEndGame} className="pixel-button bg-red-600 hover:bg-red-500 glow-red">Confirm</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

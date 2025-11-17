@@ -46,11 +46,16 @@ export default function QuizGamePage() {
   const [gameStartTime, setGameStartTime] = useState<number | null>(null)
   const [gameDuration, setGameDuration] = useState(0)
   const [session, setSession] = useState<any>(null);
+  const sessionRef = useRef(session);
   const hasBootstrapped = useRef(false);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentQuestion = questions[currentQuestionIndex]
   const totalQuestions = questions.length
+
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
 
   useEffect(() => {
     const pid = localStorage.getItem("participantId") || "";
@@ -129,14 +134,15 @@ export default function QuizGamePage() {
 
   // REFACTORED: Use the new 'finalize_player_session' RPC for a safe, atomic update.
   const saveProgressAndRedirect = useCallback(async () => {
-    if (!participantId || !session) return;
+    const currentSession = sessionRef.current;
+    if (!participantId || !currentSession) return;
 
     // Stop the timer immediately
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
 
     console.log("Finalizing session via RPC...");
     const { error: rpcError } = await supabase.rpc('finalize_player_session', {
-      p_session_id: session.id,
+      p_session_id: currentSession.id,
       p_participant_id: participantId,
       p_app_name: APP_NAME
     });
@@ -146,7 +152,7 @@ export default function QuizGamePage() {
     }
 
     router.push(`/join/${roomCode}/result`);
-  }, [participantId, session, roomCode, router]);
+  }, [participantId, roomCode, router]);
 
   useEffect(() => {
     if (loading || !gameStartTime || gameDuration === 0) {
@@ -174,27 +180,32 @@ export default function QuizGamePage() {
   }, [gameStartTime, loading, gameDuration, saveProgressAndRedirect]);
 
   useEffect(() => {
-    if (!roomCode || !participantId || hasBootstrapped.current) return;
-    hasBootstrapped.current = true;
+    if (!roomCode || !saveProgressAndRedirect) return;
 
-    const channel = supabase.channel(`game-session-updates:${roomCode}`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'game_sessions',
-        filter: `game_pin=eq.${roomCode}`
-      }, payload => {
-        console.log('Game session update received:', payload.new.status);
-        if (payload.new.status === "finished") {
-          saveProgressAndRedirect();
+    const channel = supabase
+      .channel(`minigame-session-updates-${roomCode}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'game_sessions',
+          filter: `game_pin=eq.${roomCode}`,
+        },
+        (payload) => {
+          const newSession = payload.new as any;
+          if (newSession.status === 'finished') {
+            console.log("Host ended the game. Finalizing player session.");
+            saveProgressAndRedirect();
+          }
         }
-      })
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [roomCode, participantId, saveProgressAndRedirect]);
+  }, [roomCode, saveProgressAndRedirect]);
 
   useEffect(() => {
     const bgInterval = setInterval(() => {
