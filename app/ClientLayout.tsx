@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import AuthGate from '@/components/authGate';
 import ClientProviders from './ClientProvider';
 import { getI18nInstance } from "@/lib/i18n";
-import './globals.css';
 
 interface ClientLayoutProps {
   children: ReactNode;
