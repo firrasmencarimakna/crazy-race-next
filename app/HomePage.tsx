@@ -189,16 +189,13 @@ export default function HomePage() {
     const code = searchParams.get("code");
     if (code) {
       setRoomCode(code.toUpperCase());
-      localStorage.removeItem("roomCode")
       router.replace(pathname, undefined);
     } else if (codelink) {
       setRoomCode(codelink.toUpperCase())
-      localStorage.removeItem("roomCode")
     }
     if (typeof window !== "undefined" && window.location.hash.includes("access_token")) {
       const url = new URL(window.location.href);
       url.hash = "";
-      localStorage.removeItem("roomCode")
       window.history.replaceState({}, document.title, url.toString());
     }
   }, [authLoading, user, searchParams, pathname, router]);
