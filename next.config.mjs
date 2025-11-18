@@ -42,20 +42,20 @@ const nextConfig = {
         ],
       },
       {
-        source: "/assets/:path*.webm",
+        source: "/assets/background/host/:path*.webm",
         headers: [
           {
             key: "Cache-Control",
-            value: "public, max-age=604800, immutable",
+            value: "public, max-age=31536000, immutable",
           },
         ],
       },
       {
-        source: "/assets/:path*.mp4",
+        source: "/assets/background/host/:path*.mp4",
         headers: [
           {
             key: "Cache-Control",
-            value: "public, max-age=604800, immutable",
+            value: "public, max-age=31536000, immutable",
           },
         ],
       }
