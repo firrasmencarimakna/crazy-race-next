@@ -263,7 +263,7 @@ export default function HostLeaderboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
+      <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentBgIndex}
@@ -281,7 +281,7 @@ export default function HostLeaderboardPage() {
 
   if (error || playerStats.length === 0) {
     return (
-      <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
+      <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentBgIndex}
@@ -313,7 +313,7 @@ export default function HostLeaderboardPage() {
   const others = playerStats.slice(3);
 
   return (
-    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
+    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden">
 
       {/* Background */}
       <AnimatePresence mode="wait">
@@ -539,10 +539,6 @@ export default function HostLeaderboardPage() {
       </div>
 
       <style jsx>{`
-        .pixel-font {
-          font-family: 'Press Start 2P', cursive, monospace;
-          image-rendering: pixelated;
-        }
         .pixel-text {
           image-rendering: pixelated;
           text-shadow: 2px 2px 0px #000;
@@ -638,7 +634,7 @@ export default function HostLeaderboardPage() {
           animation: neon-glow 2s ease-in-out infinite;
         }
       `}</style>
-      <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+      
     </div>
   )
 }

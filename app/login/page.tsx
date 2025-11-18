@@ -83,7 +83,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
+    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden">
       {/* Background Cycling - Optimized untuk mobile dengan fixed aspect */}
       <AnimatePresence mode="wait">
         <motion.video
@@ -225,17 +225,12 @@ export default function LoginPage() {
 
       {/* Custom Styles - Enhanced untuk mobile dengan smoother glow dan shadows */}
       <style jsx>{`
-        .pixel-font {
-          font-family: 'Press Start 2P', cursive, monospace;
-          image-rendering: pixelated;
-        }
         .pixel-text {
           image-rendering: pixelated;
           text-shadow: 1px 1px 0px #000, 2px 2px 0px #000;
           -webkit-text-stroke: 0.5px rgba(0,0,0,0.5);
         }
         .pixel-input {
-          font-family: 'Press Start 2P', monospace;
           font-size: 0.7rem;
           padding: 0.75rem 1rem;
           border: 2px solid;
@@ -287,7 +282,7 @@ export default function LoginPage() {
           }
         }
       `}</style>
-      <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+      
     </div>
   )
 }

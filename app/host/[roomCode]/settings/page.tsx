@@ -143,7 +143,7 @@ export default function HostSettingsPage() {
   if (saving || loading) return <LoadingRetro />
 
   return (
-    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
+    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden">
       <motion.div
         className="absolute inset-0 w-full h-full bg-cover bg-center"
         style={{ backgroundImage: `url(${backgroundGif})` }}
@@ -222,7 +222,6 @@ export default function HostSettingsPage() {
         )}
       </div>
       <style jsx>{`
-        .pixel-font { font-family: 'Press Start 2P', cursive, monospace; image-rendering: pixelated; }
         .pixel-text { image-rendering: pixelated; text-shadow: 2px 2px 0px #000; }
         .pixel-button { image-rendering: pixelated; box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.8); transition: all 0.1s ease; }
         .pixel-button:hover:not(:disabled) { transform: translate(2px, 2px); box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.8); }
@@ -233,7 +232,7 @@ export default function HostSettingsPage() {
         @keyframes glow-cyan { 0%, 100% { filter: drop-shadow(0 0 5px #00ffff); } 50% { filter: drop-shadow(0 0 15px #00ffff); } }
         @keyframes glow-pink { 0%, 100% { filter: drop-shadow(0 0 5px #ff6bff); } 50% { filter: drop-shadow(0 0 15px #ff6bff); } }
       `}</style>
-      <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+      
     </div>
   )
 }

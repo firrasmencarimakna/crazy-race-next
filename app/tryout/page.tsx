@@ -208,7 +208,7 @@ export default function QuestionListPage() {
   console.log('Settings saved:', { timeLimit: `${timeLimit} menit`, numQuestions: `${numQuestions} soal` }); // Debug log
 
   return (
-    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font"> {/* pt-20 untuk ruang burger */}
+    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden"> {/* pt-20 untuk ruang burger */}
       {/* Preload Background GIFs */}
       {backgroundGifs.map((gif, index) => (
         <link key={index} rel="preload" href={gif} as="image" />
@@ -519,10 +519,6 @@ export default function QuestionListPage() {
       />
 
       <style jsx>{`
-        .pixel-font {
-          font-family: 'Press Start 2P', cursive, monospace;
-          image-rendering: pixelated;
-        }
         .pixel-text {
           image-rendering: pixelated;
           text-shadow: 2px 2px 0px #000;
@@ -616,7 +612,7 @@ export default function QuestionListPage() {
           }
         }
       `}</style>
-      <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+      
     </div>
   )
 }

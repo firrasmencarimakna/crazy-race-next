@@ -11,23 +11,27 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
   const publicRoutes = ["/login"]
+  const isPublic = publicRoutes.includes(pathname)
+  const isOAuthCallback =
+    typeof window !== "undefined" && window.location.hash.includes("access_token")
 
   useEffect(() => {
     if (loading) return
 
-    const isPublic = publicRoutes.includes(pathname)
-
-    // deteksi apakah sedang callback Supabase
-    const isOAuthCallback =
-      typeof window !== "undefined" && window.location.hash.includes("access_token")
-
-    // kalau belum login, langsung arahkan ke login
     if (!isPublic && !user && !isOAuthCallback) {
       router.replace("/login")
     }
-  }, [loading, user, pathname, router])
+  }, [loading, user, pathname, router, isPublic, isOAuthCallback])
 
-  if (loading) return <LoadingRetro />
+  if (loading) {
+    return <LoadingRetro />
+  }
+
+  // While the redirect is in progress for an unauthenticated user on a private route,
+  // keep showing the loading screen to prevent rendering the protected content.
+  if (!isPublic && !user && !isOAuthCallback) {
+    return <LoadingRetro />
+  }
 
   return <>{children}</>
 }

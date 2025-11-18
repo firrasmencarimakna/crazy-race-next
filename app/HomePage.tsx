@@ -297,7 +297,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className={`min-h-[100dvh] w-full relative overflow-hidden pixel-font ${isLoaded ? 'p-2' : ''}`}>
+    <div className={`min-h-[100dvh] w-full relative overflow-hidden pixelated pixel-font ${isLoaded ? 'p-2' : ''}`}>
       <Image src="/assets/background/1.webp" alt="Crazy Race Background" fill className="object-cover" priority />
       <h1 className="absolute top-6 md:top-4 left-4 w-42 md:w-50 lg:w-100">
         <Image src="/gameforsmartlogo.webp" alt="Gameforsmart Logo" width="256" height="64" priority />
@@ -452,7 +452,7 @@ export default function HomePage() {
       </Dialog>
       <LogoutDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog} />
       <style jsx>{`
-        .pixel-font { font-family: 'Press Start 2P', cursive, monospace; image-rendering: pixelated; }
+        // .pixel-font { image-rendering: pixelated; }
         .pixel-text { image-rendering: pixelated; text-shadow: 2px 2px 0px #000; }
         .pixel-text-outline { color: white; text-shadow: 3px 0px 0px #000, -3px 0px 0px #000, 0px 3px 0px #000, 0px -3px 0px #000, 2px 2px 0px #000, -2px -2px 0px #000; }
         .pixel-button { image-rendering: pixelated; box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.8); transition: all 0.1s ease; }
