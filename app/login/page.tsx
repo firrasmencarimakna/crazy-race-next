@@ -63,7 +63,7 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       setError(err.message || "Terjadi kesalahan, coba lagi!")
-      
+
     }
   }
 
@@ -86,15 +86,22 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
       {/* Background Cycling - Optimized untuk mobile dengan fixed aspect */}
       <AnimatePresence mode="wait">
-        <motion.div
-          key={currentBgIndex}
-          className="absolute inset-0 w-full h-full bg-cover bg-center bg-no-repeat object-cover"
-          style={{ backgroundImage: `url(${backgroundGifs[currentBgIndex]})` }}
+        <motion.video
+          key="background-video"
+          className="absolute inset-0 w-full h-full object-cover"
+          autoPlay
+          loop
+          muted
+          playsInline
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 1.2, ease: "easeInOut" }}
-        />
+        >
+          <source src="/assets/background/host/10.webm" type="video/webm" />
+          <source src="/assets/background/host/10.mp4" type="video/mp4" />
+        </motion.video>
+
       </AnimatePresence>
 
       {/* Overlay untuk readability pada mobile */}
