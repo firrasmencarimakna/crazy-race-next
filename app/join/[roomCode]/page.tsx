@@ -74,6 +74,7 @@ export default function LobbyPage() {
 
   useEffect(() => {
     syncServerTime()
+    localStorage.removeItem("roomCode")
   }, [])
 
   const calculateCountdown = (startTimestamp: string, durationSeconds: number = 10): number => {
