@@ -3,57 +3,53 @@
 import { useEffect, useState } from "react"
 
 export function usePreloaderScreen() {
-    const [isLoaded, setIsLoaded] = useState(false)
-    const [progress, setProgress] = useState(0)
+  const [progress, setProgress] = useState(0)
+  const [isLoaded, setIsLoaded] = useState(false)
 
-    useEffect(() => {
+  useEffect(() => {
+    const essentialAssets = [
+      "/racing-game/images/sprites.png",
+    ]
 
-        const globalAssets = [
-            "/assets/car/car1_v2.webp",
-            "/assets/car/car2_v2.webp",
-            "/assets/car/car3_v2.webp",
-            "/assets/car/car4_v2.webp",
-            "/assets/car/car5_v2.webp",
-        ]
-        const assetsImages = [
-            "/assets/background/2_v2.webp",
-            "/assets/background/4_v2.webp",
-            "/assets/background/host/1.webp",
-            "/assets/background/host/3.webp",
-            "/assets/background/host/4.webp",
-        ]
-        const racingAssets = [
-            "/racing-game/images/sprites.png",
-            "/racing-game/images/down.webp",
-            "/racing-game/images/left.webp",
-            "/racing-game/images/right.webp",
-            "/racing-game/images/up.webp"
-        ]
+    // car & console image → load setelah UI tampil (lazy)
+    const secondaryAssets = [
+      "/assets/car/car1_v2.webp",
+      "/assets/car/car2_v2.webp",
+      "/assets/car/car3_v2.webp",
+      "/assets/car/car4_v2.webp",
+      "/assets/car/car5_v2.webp",
+      "/racing-game/images/up.webp",
+      "/racing-game/images/down.webp",
+      "/racing-game/images/left.webp",
+      "/racing-game/images/right.webp"
+    ]
 
-        const allImages = [
-            ...globalAssets,
-            ...assetsImages,
-            ...racingAssets
-        ]
+    let loaded = 0
+    const total = essentialAssets.length
 
-        let loadedCount = 0
-        const total = allImages.length
+    const loadImage = async (src: string) => {
+      const res = await fetch(src)
+      const blob = await res.blob()
+      await createImageBitmap(blob)
+      loaded++
+      setProgress(Math.round((loaded / total) * 100))
+    }
 
-        const checkDone = () => {
-            loadedCount++
-            setProgress((loadedCount / total) * 100)
-            if (loadedCount >= total) {
-                setIsLoaded(true);
-            }
-        }
+    async function startPreload() {
+      await Promise.all(essentialAssets.map(loadImage))
+      setIsLoaded(true)
 
-        allImages.forEach((src) => {
-            const img = new Image()
-            img.src = src
-            img.onload = checkDone
-            img.onerror = checkDone
+      // load sisa asset di background tanpa mempengaruhi performance
+      setTimeout(() => {
+        secondaryAssets.forEach((src) => {
+          const img = new Image()
+          img.src = src
         })
-    }, [])
+      }, 0)
+    }
 
-    return { isLoaded, progress }
+    startPreload()
+  }, [])
+
+  return { progress, isLoaded }
 }

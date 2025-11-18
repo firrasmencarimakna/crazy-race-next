@@ -41,6 +41,24 @@ const nextConfig = {
           },
         ],
       },
+      {
+        source: "/assets/:path*.webm",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=604800, immutable",
+          },
+        ],
+      },
+      {
+        source: "/assets/:path*.mp4",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=604800, immutable",
+          },
+        ],
+      }
     ]
   },
 };
