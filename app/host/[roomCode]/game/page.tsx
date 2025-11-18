@@ -10,6 +10,7 @@ import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
 import { formatTime, breakOnCaps } from "@/utils/game"
+import { syncServerTime, getSyncedServerTime } from "@/utils/serverTime"
 import LoadingRetro from "@/components/loadingRetro"
 import Image from "next/image"
 import { Dialog, DialogContent, DialogOverlay, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -43,9 +44,14 @@ export default function HostMonitorPage() {
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [isEndGameConfirmOpen, setEndGameConfirmOpen] = useState(false);
 
+  useEffect(() => {
+    // Sync time once on component load to get the offset
+    syncServerTime();
+  }, []);
+
   const calculateRemainingTime = (startTimestamp: string, duration: number): number => {
     const start = new Date(startTimestamp).getTime();
-    const now = Date.now();
+    const now = getSyncedServerTime();
     const elapsed = (now - start) / 1000;
     return Math.max(0, Math.floor(duration - elapsed));
   };
@@ -244,15 +250,15 @@ export default function HostMonitorPage() {
       <div className="relative z-10 max-w-7xl mx-auto p-4 sm:p-6 md:p-10">
         <div className="flex flex-col items-center text-center">
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="text-center pb-4 sm:pb-5">
-            <div className="inline-block p-4 sm:p-6"><h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#ffefff] pixel-text glow-pink">Race Progress</h1></div>
+            <div className="inline-block py-4 md:pt-10 max-w-[200px] sm:max-w-none"><h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#ffefff] pixel-text glow-pink">Race Progress</h1></div>
           </motion.div>
           <Card className="bg-[#1a0a2a]/60 border-[#ff6bff]/50 pixel-card px-6 py-4 mb-4 w-full ">
-            <div className="flex flex-col sm:flex-row items-center justify-between space-x-6">
-              <div className="flex items-center space-x-4">
+            <div className="flex flex-col gap-2 sm:flex-row items-center justify-between">
+              <div className="flex items-center space-x-2">
                 <Clock className={`w-8 h-8 ${getTimeColor()}`} />
-                <div><div className={`text-2xl font-bold ${getTimeColor()} pixel-text`}>{formatTime(gameTimeRemaining)}</div></div>
+                <div className={`text-2xl font-bold ${getTimeColor()} pixel-text`}>{formatTime(gameTimeRemaining)}</div>
               </div>
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center">
                 <Button onClick={() => setEndGameConfirmOpen(true)} className="bg-red-500 hover:bg-red-600 pixel-button glow-red flex items-center space-x-2"><SkipForward className="w-4 h-4" /><span>End Game</span></Button>
               </div>
             </div>
@@ -260,7 +266,7 @@ export default function HostMonitorPage() {
         </div>
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.4 }}>
           <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 pixel-card p-4 md:p-6 mb-8">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               <AnimatePresence>
                 {sortedPlayers.map((player) => {
                   const progress = player.currentQuestion;

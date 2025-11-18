@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase"
 import { motion, AnimatePresence } from "framer-motion"
 import LoadingRetro from "@/components/loadingRetro"
 import { formatTime } from "@/utils/game"
+import { syncServerTime, getSyncedServerTime } from "@/utils/serverTime"
 
 // Background GIFs
 const backgroundGifs = [
@@ -42,6 +43,7 @@ export default function QuizGamePage() {
   const [showResult, setShowResult] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isFinalizing, setIsFinalizing] = useState(false);
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [gameStartTime, setGameStartTime] = useState<number | null>(null)
   const [gameDuration, setGameDuration] = useState(0)
@@ -52,6 +54,11 @@ export default function QuizGamePage() {
 
   const currentQuestion = questions[currentQuestionIndex]
   const totalQuestions = questions.length
+
+  useEffect(() => {
+    // Sync time once on component load to get the offset
+    syncServerTime();
+  }, []);
 
   useEffect(() => {
     sessionRef.current = session;
@@ -161,7 +168,7 @@ export default function QuizGamePage() {
     }
 
     const updateRemaining = () => {
-      const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+      const elapsed = Math.floor((getSyncedServerTime() - gameStartTime) / 1000);
       const remaining = gameDuration - elapsed;
       setTotalTimeRemaining(Math.max(0, remaining));
 
@@ -269,7 +276,14 @@ export default function QuizGamePage() {
         }
       } else {
         // Last question answered, finalize and move to results
-        await saveProgressAndRedirect();
+        setIsFinalizing(true);
+        try {
+          await saveProgressAndRedirect();
+        } catch (err) {
+          console.error("Failed to finalize session:", err);
+          setError("Could not finalize your session. Please refresh the page.");
+          setIsFinalizing(false); // Reset on failure
+        }
       }
     }, 500);
   }, [isAnswered, session, currentQuestion, participantId, totalQuestions, currentQuestionIndex, roomCode, router, saveProgressAndRedirect]);
@@ -409,6 +423,12 @@ export default function QuizGamePage() {
         }
       `}</style>
       <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+
+      {isFinalizing && (
+        <div className="absolute inset-0 bg-[#1a0a2a]/80 flex items-center justify-center z-50">
+          <LoadingRetro />
+        </div>
+      )}
     </div>
   )
 }

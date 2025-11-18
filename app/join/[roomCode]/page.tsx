@@ -78,7 +78,7 @@ export default function LobbyPage() {
 
   const calculateCountdown = (startTimestamp: string, durationSeconds: number = 10): number => {
     const start = new Date(startTimestamp).getTime();
-    const now = Date.now();
+    const now = getSyncedServerTime();
     const elapsed = (now - start) / 1000;
     return Math.max(0, Math.min(durationSeconds, Math.ceil(durationSeconds - elapsed)));
   };
@@ -94,6 +94,7 @@ export default function LobbyPage() {
     countdownIntervalRef.current = setInterval(() => {
       remaining = calculateCountdown(startTimestamp, duration);
       setCountdown(remaining);
+      setLoading(true)
       if (remaining <= 0) {
         clearInterval(countdownIntervalRef.current!);
         countdownIntervalRef.current = null;
@@ -284,10 +285,6 @@ export default function LobbyPage() {
     return 0;
   });
 
-  if (loading) {
-    return <LoadingRetro />;
-  }
-
   if (countdown > 0) {
     return (
       <div className="absolute inset-0 flex items-center justify-center bg-[#1a0a2a] z-[9999]">
@@ -300,6 +297,10 @@ export default function LobbyPage() {
         </motion.div>
       </div>
     )
+  }
+
+  if (loading) {
+    return <LoadingRetro />;
   }
 
   return (
