@@ -304,7 +304,7 @@ export default function LobbyPage() {
   }
 
   return (
-    <div className={`min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font p-4`}>
+    <div className={`min-h-screen bg-[#1a0a2a] relative overflow-hidden p-4`}>
       <AnimatePresence mode="wait">
         <motion.div
           key={currentBgIndex}
@@ -432,7 +432,6 @@ export default function LobbyPage() {
       </Dialog>
 
       <style jsx>{`
-        .pixel-font { font-family: 'Press Start 2P', cursive, monospace; image-rendering: pixelated; }
         .pixel-text { image-rendering: pixelated; text-shadow: 2px 2px 0px #000; }
         .pixel-button-large { image-rendering: pixelated; box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.8); transition: all 0.1s ease; }
         .pixel-button-large:hover { transform: translate(3px, 3px); box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.8); }
@@ -446,7 +445,7 @@ export default function LobbyPage() {
         .animate-neon-pulse { animation: neon-pulse 1.5s ease-in-out infinite; }
         .glow-pink-subtle { animation: neon-pulse-pink 1.5s ease-in-out infinite; }
       `}</style>
-      <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+      
     </div>
   )
 }

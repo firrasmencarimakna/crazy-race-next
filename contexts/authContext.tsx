@@ -77,14 +77,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession()
         const currentUser = session?.user ?? null
         setUser(currentUser)
-        setLoading(false) // Always fast, profile async below
 
-        // Lazy profile ensure after user set
         if (currentUser) {
-          ensureProfile(currentUser) // No await, non-blocking
+          await ensureProfile(currentUser) // Await this to ensure profile is ready
         } else {
           setProfile(null)
         }
+        setLoading(false) // Set loading to false after user and profile are determined
       } catch (error) {
         console.error('Session error:', error)
         setUser(null)

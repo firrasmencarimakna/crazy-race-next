@@ -293,7 +293,7 @@ export default function QuizGamePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
+    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden">
       {/* Preload GIFs */}
       {backgroundGifs.map((gif, index) => (
         <link key={index} rel="preload" href={gif} as="image" />
@@ -412,10 +412,6 @@ export default function QuizGamePage() {
       </div>
 
       <style jsx>{`
-        .pixel-font {
-          font-family: 'Press Start 2P', cursive, monospace;
-          image-rendering: pixelated;
-        }
         .pixel-text {
           image-rendering: pixelated;
           text-shadow: 2px 2px 0px #000;
@@ -496,7 +492,7 @@ export default function QuizGamePage() {
           50% { transform: translateY(-8px); }
         }
       `}</style>
-      <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+      
     </div>
   )
 }

@@ -292,7 +292,7 @@ export default function HostRoomPage() {
 
   if (countdown > 0) {
     return (
-      <div className={`min-h-screen bg-[#1a0a2a] flex items-center justify-center pixel-font`}>
+      <div className={`min-h-screen bg-[#1a0a2a] flex items-center justify-center`}>
         <audio ref={countdownAudioRef} src="/assets/music/countdown.mp3" preload="auto" loop className="hidden" />
         <div className="text-center">
           <motion.div className="text-8xl md:text-9xl font-bold text-[#00ffff] pixel-text glow-cyan race-pulse" animate={{ scale: [1, 1.1, 1] }} transition={{ repeat: Infinity, duration: 0.5 }}>
@@ -306,7 +306,7 @@ export default function HostRoomPage() {
   if (loading) return <LoadingRetro />;
 
   return (
-    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
+    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden">
       <audio ref={audioRef} src="/assets/music/hostroom.mp3" loop preload="auto" className="hidden" autoPlay />
       <AnimatePresence mode="wait">
         <motion.div key={currentBgIndex} className="absolute inset-0 w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${backgroundGifs[0]})` }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1, ease: "easeInOut" }} />
@@ -382,7 +382,6 @@ export default function HostRoomPage() {
         </DialogContent>
       </Dialog>
       <style jsx>{`
-          .pixel-font { font-family: 'Press Start 2P', cursive, monospace; image-rendering: pixelated; }
           .pixel-text { image-rendering: pixelated; text-shadow: 2px 2px 0px #000; }
           .pixel-button { image-rendering: pixelated; box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.8); transition: all 0.1s ease; }
           .pixel-button:hover:not(:disabled) { transform: translate(2px, 2px); box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.8); }
@@ -400,7 +399,7 @@ export default function HostRoomPage() {
           .glow-text { filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8)); }
           .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         `}</style>
-      <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+      
     </div>
   )
 }

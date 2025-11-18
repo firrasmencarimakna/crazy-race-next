@@ -241,7 +241,7 @@ export default function HostMonitorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
+    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden">
       <audio ref={audioRef} src="/assets/music/racingprogress-1.mp3" loop preload="auto" className="hidden" autoPlay />
       <div className="absolute inset-0 w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${backgroundImage})` }} />
       <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} whileHover={{ scale: 1.05 }} onClick={() => setIsMuted(p => !p)} className={`absolute top-4 right-4 z-40 p-3 border-2 pixel-button rounded-lg shadow-lg min-w-[48px] min-h-[48px] flex items-center justify-center transition-all cursor-pointer ${isMuted ? "bg-[#ff6bff]/30 border-[#ff6bff] glow-pink" : "bg-[#00ffff]/30 border-[#00ffff] glow-cyan"}`} aria-label={isMuted ? "Unmute" : "Mute"}><span className="filter drop-shadow-[2px_2px_2px_rgba(0,0,0,0.7)]">{isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}</span></motion.button>
@@ -319,7 +319,6 @@ export default function HostMonitorPage() {
       </Dialog>
 
       <style jsx>{`
-        .pixel-font { font-family: 'Press Start 2P', cursive, monospace; image-rendering: pixelated; }
         .pixel-text { image-rendering: pixelated; text-shadow: 2px 2px 0px #000; }
         .pixel-button { image-rendering: pixelated; box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.8); transition: all 0.1s ease; }
         .pixel-button:hover:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.8); }
@@ -331,7 +330,7 @@ export default function HostMonitorPage() {
         @keyframes neon-pulse { 50% { box-shadow: 0 0 15px rgba(0, 255, 255, 1), 0 0 30px rgba(0, 255, 255, 0.8); } }
         .animate-neon-pulse { animation: neon-pulse 1.5s ease-in-out infinite; }
       `}</style>
-      <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+      
     </div>
   )
 }

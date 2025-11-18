@@ -313,7 +313,7 @@ export default function QuizGamePage() {
 
   if (!isReady) {
     return (
-      <div className="min-h-screen bg-[#1a0a2a] flex items-center justify-center relative overflow-hidden pixel-font">
+      <div className="min-h-screen bg-[#1a0a2a] flex items-center justify-center relative overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentBgIndex}
@@ -336,7 +336,7 @@ export default function QuizGamePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden pixel-font">
+    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentBgIndex}
@@ -405,7 +405,6 @@ export default function QuizGamePage() {
         </Card>
       </div>
       <style jsx>{`
-        .pixel-font { font-family: 'Press Start 2P', cursive, monospace; image-rendering: pixelated; }
         .pixel-text { image-rendering: pixelated; text-shadow: 2px 2px 0px #000; }
         .pixel-card { box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 107, 255, 0.3); }
         .glow-cyan { filter: drop-shadow(0 0 10px #00ffff); }
@@ -422,7 +421,7 @@ export default function QuizGamePage() {
           50% { box-shadow: 0 0 15px rgba(255, 107, 255, 1), 0 0 30px rgba(255, 107, 255, 0.8); }
         }
       `}</style>
-      <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+      
 
       {isFinalizing && (
         <div className="absolute inset-0 bg-[#1a0a2a]/80 flex items-center justify-center z-50">

@@ -50,7 +50,7 @@ export default function LoadingRetroScreen({ progress = 0 }: { progress?: number
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center h-screen w-screen relative pixel-font overflow-hidden bg-[#0a0a0a]"
+          className="fixed inset-0 z-[9999] flex items-center justify-center h-screen w-screen relative overflow-hidden bg-[#0a0a0a]"
         >
           {/* Background */}
           <AnimatePresence mode="wait">
@@ -213,11 +213,6 @@ export default function LoadingRetroScreen({ progress = 0 }: { progress?: number
         .glow-pink-subtle {
           text-shadow: 0 0 2px rgba(255, 107, 255, 0.3);
         }
-        .pixel-font {
-          font-family: 'Press Start 2P', cursive, monospace;
-          image-rendering: pixelated;
-          -webkit-font-smoothing: none;
-        }
         .pixel-text {
           image-rendering: pixelated;
           text-shadow: 2px 2px 0px #000;
@@ -240,7 +235,7 @@ export default function LoadingRetroScreen({ progress = 0 }: { progress?: number
           50% { text-shadow: 0 0 8px #ff6bff, 2px 2px 0 #000; }
         }
       `}</style>
-      <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+      
     </>
   )
 }
