@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import LoadingRetro from '@/components/loadingRetro';
 import { formatTime } from '@/utils/game';
+import { syncServerTime, getSyncedServerTime } from '@/utils/serverTime';
 
 const APP_NAME = "crazyrace"; // Safety check for multi-tenant DB
 
@@ -23,6 +24,11 @@ export default function RacingGame() {
 
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isSavingRef = useRef(false);
+
+  useEffect(() => {
+    // Sync time once on component load to get the offset
+    syncServerTime();
+  }, []);
 
   useEffect(() => {
     const pid = localStorage.getItem("participantId") || "";
@@ -109,7 +115,7 @@ export default function RacingGame() {
     const gameDuration = session.total_time_minutes * 60;
 
     const updateRemaining = () => {
-      const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+      const elapsed = Math.floor((getSyncedServerTime() - gameStartTime) / 1000);
       const remaining = gameDuration - elapsed;
       setTotalTimeRemaining(Math.max(0, remaining));
 

@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogOverlay } from "@/components/ui/dialog"
 import LoadingRetro from "@/components/loadingRetro"
 import { breakOnCaps, formatUrlBreakable } from "@/utils/game"
 import Image from "next/image"
-import { syncServerTime } from "@/utils/serverTime"
+import { syncServerTime, getSyncedServerTime } from "@/utils/serverTime"
 import { useTranslation } from "react-i18next"
 import { t } from "i18next"
 
@@ -65,7 +65,7 @@ export default function HostRoomPage() {
 
   const calculateCountdown = (startTimestamp: string, durationSeconds: number = 10): number => {
     const start = new Date(startTimestamp).getTime();
-    const now = Date.now();
+    const now = getSyncedServerTime();
     const elapsed = (now - start) / 1000;
     return Math.max(0, Math.min(durationSeconds, Math.ceil(durationSeconds - elapsed)));
   };
@@ -88,7 +88,7 @@ export default function HostRoomPage() {
         setTimeout(async () => {
           const { error } = await supabase
             .from("game_sessions")
-            .update({ status: "active", started_at: new Date().toISOString(), countdown_started_at: null })
+            .update({ status: "active", started_at: new Date(getSyncedServerTime()).toISOString(), countdown_started_at: null })
             .eq("game_pin", roomCode);
           if (error) console.error('End countdown error:', error);
           else router.push(`/host/${roomCode}/game`);
@@ -265,7 +265,7 @@ export default function HostRoomPage() {
   const startGame = async () => {
     const { error } = await supabase
       .from("game_sessions")
-      .update({ countdown_started_at: new Date().toISOString() })
+      .update({ countdown_started_at: new Date(getSyncedServerTime()).toISOString() })
       .eq("game_pin", roomCode);
     if (error) console.error("startGame error:", error);
     else setGameStarted(true);

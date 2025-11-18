@@ -341,7 +341,7 @@ export default function HostLeaderboardPage() {
         Crazy Race
       </h1>
 
-      <div className="relative z-10 max-w-5xl mx-auto p-4">
+      <div className="relative z-10 max-w-5xl mx-auto p-4 pb-20 md:pb-0">
         <div className="text-center py-4 md:pt-14">
           <motion.h1
             className="text-4xl md:text-5xl font-bold text-[#00ffff] pixel-text glow-cyan tracking-wider animate-neon-glow"
@@ -349,13 +349,13 @@ export default function HostLeaderboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <span className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#ffefff] pixel-text glow-pink">{t('resulthost.title')}</span>
+            <span className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#ffefff] pixel-text glow-pink">{t('resulthost.title')}</span>
           </motion.h1>
         </div>
 
-        {/* Podium - Top 3: Staggered steps with fixed heights for visual podium */}
+        {/* Podium - Top 3: Hidden on sm-, shown on md+ */}
         <motion.div
-          className="flex justify-center items-end gap-4 sm:gap-6 mb-8 sm:mb-12 h-[400px] md:h-[475px] relative" // 🔥 FIXED: Height di semua screen, gap responsive
+          className="hidden md:flex justify-center items-end gap-4 sm:gap-6 mb-8 sm:mb-12 h-[400px] md:h-[475px] relative"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
@@ -363,17 +363,17 @@ export default function HostLeaderboardPage() {
           {/* 2nd Place - Left, medium height */}
           {topThree[1] && (
             <motion.div
-              className="w-48 sm:w-64 order-1 flex flex-col justify-end h-[240px] md:h-[400px]" // 🔥 FIXED: Responsive height (mobile: 240px, sm+: 300px)
+              className="w-48 sm:w-64 order-1 flex flex-col justify-end h-[240px] md:h-[400px]"
               initial={{ scale: 0.8, y: 50 }}
               animate={{ scale: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
             >
-              <Card className="p-4 sm:p-5 text-center pixel-card border-gray-300/50 bg-[#1a0a2a]/70 animate-pulse-silver min-h-[160px] flex-1 flex flex-col justify-center"> {/* 🔥 NEW: min-h & flex biar fill height */}
+              <Card className="p-4 sm:p-5 text-center pixel-card border-gray-300/50 bg-[#1a0a2a]/70 animate-pulse-silver min-h-[160px] flex-1 flex flex-col justify-center">
                 <div className={`text-2xl sm:text-3xl font-bold mb-1 sm:mb-2 ${getRankColor(2)} pixel-text`}>#2</div>
                 <img
                   src={carGifMap[topThree[1].car] || '/assets/car/car5_v2.webp'}
                   alt={`${carGifMap[topThree[1].car]} car`}
-                  className="h-12 sm:h-16 sm:sm:h-20 md:h-24 lg:h-28 w-16 sm:w-20 sm:sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150" // 🔥 FIXED: Responsive img sizes
+                  className="h-12 sm:h-16 sm:sm:h-20 md:h-24 lg:h-28 w-16 sm:w-20 sm:sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
                 />
                 <div className="text-xl sm:text-2xl font-bold text-[#00ffff] mb-1 sm:mb-2 pixel-text glow-cyan">{topThree[1].finalScore}</div>
                 <h3 className="text-lg sm:text-xl font-bold text-white pixel-text glow-text mb-1 sm:mb-2 break-words line-clamp-2">{breakOnCaps(topThree[1].nickname)}</h3>
@@ -384,12 +384,12 @@ export default function HostLeaderboardPage() {
           {/* 1st Place - Center, tallest podium */}
           {topThree[0] && (
             <motion.div
-              className="w-56 sm:w-80 order-2 flex flex-col justify-end h-[320px] md:h-[425px]" // 🔥 FIXED: Responsive height (mobile: 320px, sm+: 450px)
+              className="w-56 sm:w-80 order-2 flex flex-col justify-end h-[320px] md:h-[425px]"
               initial={{ scale: 0.9, y: 80 }}
               animate={{ scale: 1.1, y: 0 }}
               transition={{ duration: 1, delay: 0.3 }}
             >
-              <Card className="p-5 sm:p-6 text-center pixel-card border-yellow-400/70 bg-[#1a0a2a]/80 animate-pulse-gold min-h-[200px] flex-1 flex flex-col justify-center"> {/* 🔥 NEW: min-h & flex */}
+              <Card className="p-5 sm:p-6 text-center pixel-card border-yellow-400/70 bg-[#1a0a2a]/80 animate-pulse-gold min-h-[200px] flex-1 flex flex-col justify-center">
                 <div className={`text-4xl sm:text-5xl font-bold mb-2 sm:mb-3 ${getRankColor(1)} pixel-text`}>#1</div>
                 <img
                   src={carGifMap[topThree[0].car] || '/assets/car/car5_v2.webp'}
@@ -405,12 +405,12 @@ export default function HostLeaderboardPage() {
           {/* 3rd Place - Right, shortest height */}
           {topThree[2] && (
             <motion.div
-              className="w-48 sm:w-64 order-3 flex flex-col justify-end h-[200px] md:h-[375px]" // 🔥 FIXED: Responsive height (mobile: 200px, sm+: 250px)
+              className="w-48 sm:w-64 order-3 flex flex-col justify-end h-[200px] md:h-[375px]"
               initial={{ scale: 0.8, y: 50 }}
               animate={{ scale: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.5 }}
             >
-              <Card className="p-4 sm:p-5 text-center pixel-card border-amber-600/50 bg-[#1a0a2a]/70 animate-pulse-bronze min-h-[140px] flex-1 flex flex-col justify-center"> {/* 🔥 NEW: min-h & flex */}
+              <Card className="p-4 sm:p-5 text-center pixel-card border-amber-600/50 bg-[#1a0a2a]/70 animate-pulse-bronze min-h-[140px] flex-1 flex flex-col justify-center">
                 <div className={`text-2xl sm:text-3xl font-bold mb-1 sm:mb-2 ${getRankColor(3)} pixel-text`}>#3</div>
                 <img
                   src={carGifMap[topThree[2].car] || '/assets/car/car5_v2.webp'}
@@ -425,15 +425,52 @@ export default function HostLeaderboardPage() {
 
         </motion.div>
 
-        {/* Other Players */}
+        {/* Full List for sm- (all players) */}
+        <motion.div
+          className="flex md:hidden flex-col space-y-2 mb-6 mt-3"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+        >
+          <Card className="bg-[#1a0a2a]/60 border-[#ff6bff]/50 pixel-card p-3">
+            <div className="space-y-1.5">
+              {playerStats.map((player) => (
+                <div
+                  key={player.nickname}
+                  className="flex items-center justify-between px-3 py-2 bg-[#1a0a2a]/50 rounded-lg pixel-card"
+                >
+                  {/* Rank + Nickname */}
+                  <div className="flex items-center space-x-2 flex-1 min-w-0">
+                    <div className={`text-sm font-bold ${getRankColor(player.rank)} pixel-text min-w-[22px]`}>
+                      #{player.rank}
+                    </div>
+                    <h4 className="text-sm font-bold text-white pixel-text glow-text break-words line-clamp-1 flex-1 min-w-0">
+                      {breakOnCaps(player.nickname)}
+                    </h4>
+                  </div>
+
+                  {/* Score */}
+                  <div className="text-center min-w-[45px]">
+                    <div className="font-bold text-sm text-[#00ffff] glow-cyan">
+                      {player.finalScore}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </motion.div>
+
+
+        {/* Other Players List for md+ (ranks 4+) */}
         {others.length > 0 && (
           <motion.div
+            className="hidden md:block"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.7 }}
           >
             <Card className="bg-[#1a0a2a]/60 border-[#ff6bff]/50 pixel-card p-4 mb-4">
-              {/* <h3 className="text-lg font-bold mb-2 text-center text-[#00ffff] pixel-text glow-cyan">Other Racers</h3> */}
               <div className="space-y-2">
                 {others.map((player) => (
                   <div key={player.nickname} className="flex items-center justify-between px-4 py-3 bg-[#1a0a2a]/50 rounded-xl pixel-card">
@@ -455,14 +492,14 @@ export default function HostLeaderboardPage() {
           </motion.div>
         )}
 
-        {/* Actions */}
+        {/* Actions Desktop (md ke atas) */}
         <motion.div
-          className="fixed mx-7 inset-y-0 left-0 right-0 flex justify-between items-center pointer-events-none z-50"
+          className="hidden md:flex fixed mx-7 inset-y-0 left-0 right-0 justify-between items-center pointer-events-none z-50"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.9 }}
         >
-          {/* Tombol Home (kiri tengah) */}
+          {/* Tombol Home */}
           <button
             onClick={() => router.push('/')}
             className="pointer-events-auto flex items-center justify-center w-12 h-12 rounded-full bg-[#1a0a2a]/70 border border-[#00ffff] text-[#00ffff] hover:bg-[#00ffff]/20 transition-all duration-300 shadow-lg"
@@ -470,7 +507,7 @@ export default function HostLeaderboardPage() {
             <HomeIcon className="w-6 h-6" />
           </button>
 
-          {/* Tombol New Race (kanan tengah) */}
+          {/* Tombol Restart */}
           <button
             onClick={restartGame}
             className="pointer-events-auto flex items-center justify-center w-12 h-12 rounded-full bg-[#ff6bff]/70 border border-white text-white hover:bg-[#ff8aff]/80 transition-all duration-300 shadow-lg"
@@ -478,6 +515,27 @@ export default function HostLeaderboardPage() {
             <RotateCwIcon className="w-6 h-6" />
           </button>
         </motion.div>
+
+        {/* Actions Mobile (sm ke bawah) */}
+        <div className="md:hidden bg-[#1a0a2a]/50 backdrop-blur-sm w-full text-center py-2 fixed bottom-0 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-center space-x-3">
+          {/* Tombol Home */}
+          <button
+            onClick={() => router.push('/')}
+            className="bg-[#1a0a2a]/70 border border-[#00ffff] rounded-lg text-[#00ffff] px-4 py-2 text-sm hover:bg-[#00ffff]/20 transition-all duration-300"
+          >
+            HOME
+          </button>
+
+          {/* Tombol Restart */}
+          <button
+            onClick={restartGame}
+            className="bg-[#ff6bff] border border-white rounded-lg text-white px-4 py-2 text-sm hover:bg-[#ff8aff]/80 transition-all duration-300"
+          >
+            RESTART
+          </button>
+        </div>
+
+
       </div>
 
       <style jsx>{`
