@@ -7,18 +7,18 @@ interface PWAInstallBannerProps {
 
 export default function PWAInstallBanner({ onInstall, onDismiss }: PWAInstallBannerProps) {
   return (
-    <div className="fixed bottom-4 right-4 bg-[#1a0a2a] text-white border-2 border-[#00ffff] rounded-lg p-4 z-50 shadow-lg animate-fade-in-up">
-      <p className="mb-2 font-semibold leading-tight">Install Crazy Race!</p>
+    <div className="fixed bottom-2 md:button-4 left-2 md:left-4 bg-[#1a0a2a] text-white border-2 border-[#00ffff] rounded-lg p-4 z-50 shadow-lg animate-fade-in-up sm:p-3 md:p-4 md:text-base">
+      <p className="mb-2 text-sm font-semibold leading-tight">Install Crazy Race!</p>
       <div className="flex gap-2 justify-end">
         <button
           onClick={onInstall}
-          className="px-3 py-1.5 bg-[#00ffff] text-[#1a0a2a] rounded-md font-bold hover:bg-opacity-80 transition-colors text-sm"
+          className="px-3 py-1 sm:py-0.5 bg-[#00ffff] text-[#1a0a2a] rounded-md font-bold hover:bg-opacity-80 transition-colors text-xs"
         >
           Install
         </button>
         <button
           onClick={onDismiss}
-          className="px-3 py-1.5 border border-[#00ffff] rounded-md hover:bg-white/10 transition-colors text-sm"
+          className="px-3 py-1.5 border border-[#00ffff] rounded-md hover:bg-white/10 transition-colors text-xs"
         >
           Later
         </button>

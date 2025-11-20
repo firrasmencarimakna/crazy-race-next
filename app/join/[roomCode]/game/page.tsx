@@ -294,11 +294,10 @@ export default function QuizGamePage() {
         ? "border-[#00ffff] bg-[#00ffff]/10 animate-neon-pulse"
         : "border-[#ff6bff]/70 hover:border-[#ff6bff] hover:bg-[#ff6bff]/10 hover:scale-[1.01] glow-pink-subtle";
     }
-    if (optionIndex === currentQuestion.correctAnswer) {
-      return "border-[#00ff00] bg-[#00ff00]/10 text-[#00ff00] glow-green";
-    }
     if (optionIndex === selectedAnswer) {
-      return "border-red-500 bg-red-500/10 text-red-500";
+      return optionIndex === currentQuestion.correctAnswer
+        ? "border-[#00ff00] bg-[#00ff00]/10 text-[#00ff00] glow-green" // BENAR: Hijau
+        : "border-red-500 bg-red-500/10 text-red-500"; // SALAH: Merah
     }
     return "border-[#ff6bff]/50 bg-[#1a0a2a]/50 opacity-60";
   };
