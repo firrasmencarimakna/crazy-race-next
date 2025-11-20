@@ -108,19 +108,9 @@ export default function LoginPage() {
       <div className="absolute inset-0 bg-gradient-to-b from-[#1a0a2a]/20 to-[#1a0a2a]/80" />
 
       {/* Logo & Title - Responsive untuk mobile */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 sm:px-6">
+      <div className="relative z-10 flex flex-col items-center min-h-screen px-4 sm:px-6">
 
-        {/* <h1 className="absolute top-5 right-20 hidden md:block display-flex">
-            <Image
-              src="/gameforsmartlogo.webp"
-              alt="Gameforsmart Logo"
-              width={256}
-              height={64}
-            />
-          
-          </h1> */}
-
-        <h1 className="absolute py-10 mx-auto top-6 text-4xl text-[#00ffff] pixel-text glow-cyan">
+        <h1 className="text-center mx-auto py-10 text-4xl text-[#00ffff] pixel-text glow-cyan">
           Crazy Race
         </h1>
 
@@ -155,10 +145,16 @@ export default function LoginPage() {
                 onClick={handleGoogleLogin}
                 disabled={isLoading}
                 variant="outline"
-                className="w-full border-[#ff6bff]/60 text-[#ff6bff] hover:text-[#ff6bff] hover:bg-[#ff6bff]/20 hover:border-[#ff8aff] pixel-button flex items-center justify-center gap-2 h-12 sm:h-10 text-xs sm:text-base transition-all duration-200 cursor-pointer "
+                className="w-full min-h-12 sm:min-h-10 border-[#ff6bff]/60 text-[#ff6bff] hover:text-[#ff6bff] hover:bg-[#ff6bff]/20 hover:border-[#ff8aff] pixel-button flex items-center justify-center gap-2 sm:gap-3 px-4 py-3 transition-all duration-200 cursor-pointer"
               >
-                <FcGoogle size={50} />
-                Continue with Google
+                {/* Icon Google — ukuran responsif */}
+                <FcGoogle className="w-6 h-6 sm:w-7 sm:h-7 shrink-0" />
+
+                {/* Teks kondisional: mobile = "Google", desktop = "Continue with Google" */}
+                <span className="text-center font-medium">
+                  <span className="sm:hidden">Google</span>
+                  <span className="hidden sm:inline">Continue with Google</span>
+                </span>
               </Button>
 
               {/* Divider - Lebih subtle pada mobile */}
@@ -282,7 +278,7 @@ export default function LoginPage() {
           }
         }
       `}</style>
-      
+
     </div>
   )
 }
