@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { mysupa, supabase } from '@/lib/supabase';
 import LoadingRetro from '@/components/loadingRetro';
 import { formatTime } from '@/utils/game';
 import { syncServerTime, getSyncedServerTime } from '@/utils/serverTime';
@@ -13,11 +13,11 @@ export default function RacingGame() {
   const router = useRouter();
   const { roomCode } = useParams();
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  
+
   const [participantId, setParticipantId] = useState<string>("");
   const [gameSrc, setGameSrc] = useState('/racing-game/v4.final.html');
   const [session, setSession] = useState<any>(null);
-  
+
   const [totalTimeRemaining, setTotalTimeRemaining] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,16 +44,16 @@ export default function RacingGame() {
     setLoading(true);
     setError(null);
     try {
-      const { data: sessionData, error: sessionError } = await supabase
-        .from("game_sessions")
-        .select("id, started_at, total_time_minutes, difficulty, application")
+      const { data: sessionData, error: sessionError } = await mysupa
+        .from("sessions")
+        .select("id, started_at, total_time_minutes, difficulty")
         .eq("game_pin", roomCode)
         .single();
 
-      if (sessionError || !sessionData || sessionData.application !== APP_NAME) {
+      if (sessionError || !sessionData) {
         throw new Error(`Session error: ${sessionError?.message || 'Invalid session or app'}`);
       }
-      
+
       setSession(sessionData);
 
       let src = '/racing-game/v4.final.html';
@@ -86,26 +86,20 @@ export default function RacingGame() {
     if (roomCode) fetchMiniGameData();
   }, [roomCode, fetchMiniGameData]);
 
-  // REFACTORED: Use the 'finalize_player_session' RPC for a safe, atomic update.
-  const saveAndRedirectToResult = useCallback(async () => {
-    if (isSavingRef.current || !participantId || !session) return;
-    isSavingRef.current = true;
+  const saveAndRedirectToResult = async () => {
+    if (!participantId) return;
 
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-
-    console.log("Finalizing session from minigame via RPC...");
-    const { error: rpcError } = await supabase.rpc('finalize_player_session', {
-      p_session_id: session.id,
-      p_participant_id: participantId,
-      p_app_name: APP_NAME
-    });
-
-    if (rpcError) {
-      console.error("Error finalizing session from minigame:", rpcError);
-    }
+    await mysupa
+      .from("participants")
+      .update({
+        completion: true,
+        racing: false,
+        finished_at: new Date(getSyncedServerTime()).toISOString()
+      })
+      .eq("id", participantId);
 
     router.push(`/join/${roomCode}/result`);
-  }, [participantId, session, roomCode, router]);
+  };
 
   // Timer logic
   useEffect(() => {
@@ -136,14 +130,14 @@ export default function RacingGame() {
   useEffect(() => {
     if (!roomCode || !saveAndRedirectToResult) return;
 
-    const channel = supabase
+    const channel = mysupa
       .channel(`minigame-session-updates-${roomCode}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'game_sessions',
+          table: 'sessions',
           filter: `game_pin=eq.${roomCode}`,
         },
         (payload) => {
@@ -157,37 +151,42 @@ export default function RacingGame() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      mysupa.removeChannel(channel);
     };
   }, [roomCode, saveAndRedirectToResult]);
 
-  // REFACTORED: Use the 'set_player_racing_status' RPC for a safe, atomic update.
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
-      if (!event.data || event.data.type !== 'racing_finished' || !participantId || !session) {
-        return;
-      }
+      if (!event.data || event.data.type !== 'racing_finished' || !participantId) return;
 
-      console.log("Racing finished message received. Updating status via RPC...");
-      
-      const { error: rpcError } = await supabase.rpc('set_player_racing_status', {
-        p_session_id: session.id,
-        p_participant_id: participantId,
-        p_is_racing: false,
-        p_app_name: APP_NAME
-      });
+      try {
+        // UPDATE LANGSUNG ke mysupa.participants → NO RPC!
+        const { error } = await mysupa
+          .from("participants")
+          .update({ racing: false })
+          .eq("id", participantId);
 
-      if (rpcError) {
-        console.error("❌ Supabase update error via RPC:", rpcError);
-      } else {
-        console.log("✅ Racing status updated successfully via RPC.");
+        if (error) throw error;
+
+        console.log("Racing selesai! Kembali ke soal...");
+
+        // Ambil nextQuestionIndex dari localStorage
+        const nextIdx = localStorage.getItem("nextQuestionIndex");
+        if (nextIdx) {
+          localStorage.removeItem("nextQuestionIndex");
+        }
+
         router.replace(`/join/${roomCode}/game`);
+      } catch (err) {
+        console.error("Gagal update racing status:", err);
       }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [participantId, session, roomCode, router]);
+  }, [participantId, roomCode, router]);
+
+  iframeRef.current?.contentWindow?.focus();
 
   if (loading) return <LoadingRetro />;
   if (error) return <div className="w-full h-screen flex justify-center items-center text-red-500">Error: {error}</div>;

@@ -1,4 +1,17 @@
 {
+  "login": {
+    "title": "Login",
+    "googleMobile": "Google",
+    "googleDesktop": "Continue with Google",
+    "or": "Or",
+    "emailPlaceholder": "Email...",
+    "passwordPlaceholder": "Password...",
+    "signIn": "Sign In",
+    "signingIn": "Signing In...",
+    "noAccount": "Don't have an account?",
+    "registerHere": "Register here",
+    "error": "Something went wrong"
+  },
   "logoutDialog": {
     "title": "Log Out",
     "message": "Are you sure you want to log out?",

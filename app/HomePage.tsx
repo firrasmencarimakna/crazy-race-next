@@ -26,7 +26,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { mysupa, supabase } from "@/lib/supabase";
 import Image from "next/image";
 import { usePreloaderScreen } from "@/components/preloader-screen";
 import LoadingRetroScreen from "@/components/loading-screnn";
@@ -348,31 +348,44 @@ export default function HomePage() {
       ];
       const newParticipant = {
         id: participantId,
+        session: sessionData.id,
         nickname: nickname.trim(),
         car: randomCar,
         user_id: profile?.id || null,
+        score: 0
       };
 
       // Call the RPC function to handle the join atomically
-      const { data: rpcData, error: rpcError } = await supabase.rpc(
-        "join_game_session",
-        {
-          p_session_id: sessionData.id,
-          p_new_participant: newParticipant,
-          p_app_name: APP_NAME,
-        }
-      );
+      // const { data: rpcData, error: rpcError } = await supabase.rpc(
+      //   "join_game_session",
+      //   {
+      //     p_session_id: sessionData.id,
+      //     p_new_participant: newParticipant,
+      //     p_app_name: APP_NAME,
+      //   }
+      // );
 
-      if (rpcError) throw rpcError;
+      const { error } = await mysupa
+      .from("participants")
+      .insert({
+        id: newParticipant.id,
+        session_id: newParticipant.session,
+        nickname: newParticipant.nickname,
+        car: newParticipant.car,
+        user_id: newParticipant.user_id,
+        score: newParticipant.score
+      })
 
-      if (rpcData.success) {
-        localStorage.setItem("nickname", nickname.trim());
-        localStorage.setItem("participantId", rpcData.participantId);
+      if (error) throw error;
+
+      if (!error) {
+        localStorage.setItem("nickname", newParticipant.nickname.trim());
+        localStorage.setItem("participantId", newParticipant.id);
         localStorage.setItem("game_pin", roomCode);
         router.push(`/join/${roomCode}`);
       } else {
         // Handle specific failure reasons from the RPC
-        setAlertReason(rpcData.reason || "general");
+        setAlertReason("general");
         setShowAlert(true);
         setJoining(false);
       }

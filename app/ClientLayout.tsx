@@ -36,8 +36,6 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
     return <div className="bg-black min-h-screen" />;
   }
 
-  
-
   return (
     <ClientProviders>
       <AuthProvider>
