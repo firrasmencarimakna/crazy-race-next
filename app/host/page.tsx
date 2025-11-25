@@ -47,11 +47,6 @@ export default function QuestionListPage() {
   const [myQuizzesMode, setMyQuizzesMode] = useState(false); // New: Toggle for my quizzes filter
 
   const itemsPerPage = 9;
-  useEffect(() => {
-
-    console.log("============== hanya untuk debug =================")
-
-  }, [])
 
   useEffect(() => {
     const fetchProfile = async () => {
