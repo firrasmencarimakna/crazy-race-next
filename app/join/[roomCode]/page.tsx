@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Users, ArrowLeft } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { supabase } from "@/lib/supabase"
+import { mysupa, supabase } from "@/lib/supabase"
 import LoadingRetro from "@/components/loadingRetro"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogOverlay, DialogTitle } from "@/components/ui/dialog"
 
@@ -15,8 +15,6 @@ import Image from "next/image"
 import { breakOnCaps } from "@/utils/game"
 import { getSyncedServerTime, syncServerTime } from "@/utils/serverTime"
 import { t } from "i18next"
-
-const APP_NAME = "crazyrace"; // Safety check for multi-tenant DB
 
 // Background GIFs
 const backgroundGifs = [
@@ -122,11 +120,10 @@ export default function LobbyPage() {
   const handleExit = async () => {
     if (!currentPlayer.id || !session) return;
 
-    const { error } = await supabase.rpc('remove_participant_from_session', {
-      p_session_id: session.id,
-      p_participant_id: currentPlayer.id,
-      p_app_name: APP_NAME
-    });
+    const { error } = await mysupa
+      .from("participants")
+      .delete()
+      .eq("id", currentPlayer.id);
 
     if (error) {
       console.error('Error exiting session via RPC:', error);
@@ -148,12 +145,11 @@ export default function LobbyPage() {
     setParticipants(prev => prev.map(p => p.id === currentPlayer.id ? { ...p, car: selectedCar } : p));
     setShowCarDialog(false);
 
-    const { error } = await supabase.rpc('update_participant_car', {
-      p_session_id: session.id,
-      p_participant_id: currentPlayer.id,
-      p_new_car: selectedCar,
-      p_app_name: APP_NAME
-    });
+    const { error } = await mysupa
+      .from('participants')
+      .update({ car: selectedCar })
+      .eq('id', currentPlayer.id);
+
 
     if (error) {
       console.error('Error updating car via RPC:', error);
@@ -168,21 +164,21 @@ export default function LobbyPage() {
     hasBootstrapped.current = true;
 
     let sessionChannel: any = null;
+    let participantsChannel: any = null;
 
     const bootstrap = async () => {
       setLoading(true);
 
-      // REFACTORED: Added application filter for security.
-      const { data: fetchedSession, error: sessionErr } = await supabase
-        .from('game_sessions')
-        .select('id, status, countdown_started_at, started_at, participants, quiz_detail, application')
-        .eq('game_pin', roomCode)
-        .eq('application', APP_NAME)
+      // Fetch session dari gameplay supabase
+      const { data: fetchedSession, error: sessionErr } = await mysupa
+        .from("sessions")
+        .select("id, status, countdown_started_at, started_at, ended_at, current_questions")
+        .eq("game_pin", roomCode)
         .single();
 
       if (sessionErr || !fetchedSession) {
-        console.log('Session not found or invalid app', sessionErr);
-        router.replace('/');
+        console.log("Session not found", sessionErr);
+        router.replace("/");
         return;
       }
 
@@ -195,72 +191,91 @@ export default function LobbyPage() {
         stopCountdownSync();
       }
 
-      if (fetchedSession.status === 'active') {
-        router.replace(`/join/${roomCode}/game`);
-        return;
-      } else if (fetchedSession.status === 'finished') {
-        router.replace(`/join/${roomCode}/result`);
-        return;
-      }
+      // Fetch participants separately
+      const { data: fetchedParticipants } = await mysupa
+        .from("participants")
+        .select("*")   // ambil semua kolom
+        .eq("session_id", fetchedSession.id);
 
-      let parsedParticipants = [];
-      try {
-        parsedParticipants = typeof fetchedSession.participants === 'string'
-          ? JSON.parse(fetchedSession.participants)
-          : fetchedSession.participants || [];
-      } catch (e) { console.error("Error parsing participants:", e); }
-      setParticipants(parsedParticipants);
+      setParticipants(fetchedParticipants ?? []);
 
-      const myParticipantId = localStorage.getItem('participantId') || '';
-      const me = parsedParticipants.find((p: any) => p.id === myParticipantId);
+      const myParticipantId = localStorage.getItem("participantId") || "";
+      const me = (fetchedParticipants || []).find((p: any) => p.id === myParticipantId);
 
       if (!me) {
-        console.log("Participant not found in session, redirecting.");
-        router.replace('/');
-        localStorage.removeItem('participantId');
-        localStorage.removeItem('game_pin');
+        console.warn("Participant not found");
+        localStorage.removeItem("participantId");
+        localStorage.removeItem("game_pin");
+        router.replace("/");
         return;
       }
 
-      setCurrentPlayer({ id: me.id, nickname: me.nickname, car: me.car || 'blue' });
+      setCurrentPlayer({ id: me.id, nickname: me.nickname, car: me.car || "blue" });
 
-      sessionChannel = supabase
+      // Realtime listener hanya pada sessions table
+      sessionChannel = mysupa
         .channel(`session:${roomCode}`)
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'game_sessions',
-          filter: `game_pin=eq.${roomCode}`
-        }, (payload) => {
-          const newSessionData = payload.new;
-          setGamePhase(newSessionData.status);
-          setSession(newSessionData);
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "sessions", filter: `game_pin=eq.${roomCode}` },
+          async (payload) => {
+            const newSessionData = payload.new;
+            setSession(newSessionData);
+            setGamePhase(newSessionData.status);
 
-          let updatedParticipants = [];
-          try {
-            updatedParticipants = typeof newSessionData.participants === 'string'
-              ? JSON.parse(newSessionData.participants)
-              : newSessionData.participants || [];
-          } catch (e) { console.error("Error parsing updated participants:", e); }
-          setParticipants(updatedParticipants);
+            // countdown realtime
+            if (newSessionData.countdown_started_at) startCountdownSync(newSessionData.countdown_started_at, 10);
+            else stopCountdownSync();
 
-          if (newSessionData.status === 'active') router.replace(`/join/${roomCode}/game`);
-          else if (newSessionData.status === 'finished') router.replace(`/join/${roomCode}/result`);
-
-          if (newSessionData.countdown_started_at) {
-            startCountdownSync(newSessionData.countdown_started_at, 10);
-          } else {
-            stopCountdownSync();
+            // Navigation between phases
+            if (newSessionData.status === "active") router.replace(`/join/${roomCode}/game`);
+            else if (newSessionData.status === "finished") router.replace(`/join/${roomCode}/result`);
           }
-
-          const localId = localStorage.getItem('participantId');
-          if (!updatedParticipants.find((p: any) => p.id === localId)) {
-            console.warn("Kicked from session.");
-            localStorage.removeItem('participantId');
-            router.push('/');
-          }
-        })
+        )
         .subscribe();
+
+      participantsChannel = mysupa
+        .channel(`participants:${roomCode}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "participants",
+            filter: `session_id=eq.${fetchedSession.id}`,   // FIX HERE
+          },
+          (payload) => {
+            console.log("Participant change", payload);
+
+            if (payload.eventType === "INSERT") {
+              setParticipants(prev => [...prev, payload.new]);
+            }
+
+            if (payload.eventType === "UPDATE") {
+              setParticipants(prev =>
+                prev.map(p => p.id === payload.new.id ? payload.new : p)
+              );
+            }
+
+            if (payload.eventType === "DELETE") {
+              setParticipants(prev => prev.filter(p => p.id !== payload.old.id));
+
+              // Hanya jika yang di-delete adalah DIRINYA SENDIRI → baru dianggap kicked
+              const kickedId = payload.old.id;
+              const myId = localStorage.getItem("participantId");
+
+              if (kickedId === myId) {
+                console.warn("You have been kicked from the session");
+                localStorage.removeItem("participantId");
+                localStorage.removeItem("game_pin");
+                router.push("/");
+              }
+            }
+          }
+        )
+        .subscribe();
+
+
 
       setLoading(false);
     };
@@ -269,9 +284,11 @@ export default function LobbyPage() {
 
     return () => {
       stopCountdownSync();
-      if (sessionChannel) supabase.removeChannel(sessionChannel);
+      if (sessionChannel) mysupa.removeChannel(sessionChannel);
+      if (participantsChannel) mysupa.removeChannel(participantsChannel);
     };
   }, [roomCode, router, startCountdownSync, stopCountdownSync]);
+
 
   useEffect(() => {
     const bgInterval = setInterval(() => {
@@ -446,7 +463,7 @@ export default function LobbyPage() {
         .animate-neon-pulse { animation: neon-pulse 1.5s ease-in-out infinite; }
         .glow-pink-subtle { animation: neon-pulse-pink 1.5s ease-in-out infinite; }
       `}</style>
-      
+
     </div>
   )
 }
