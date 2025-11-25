@@ -1,4 +1,17 @@
 {
+  "login": {
+    "title": "Masuk",
+    "googleMobile": "Google",
+    "googleDesktop": "Lanjut dengan Google",
+    "or": "Atau",
+    "emailPlaceholder": "Email...",
+    "passwordPlaceholder": "Kata sandi...",
+    "signIn": "Masuk",
+    "signingIn": "Sedang masuk...",
+    "noAccount": "Belum punya akun?",
+    "registerHere": "Daftar di sini",
+    "error": "Terjadi kesalahan"
+  },
   "logoutDialog": {
     "title": "Keluar",
     "message": "Apakah Anda yakin ingin keluar?",
