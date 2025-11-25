@@ -48,7 +48,7 @@ export default function HostMonitorPage() {
     try {
       const { data: sess } = await mysupa
         .from("sessions")
-        .select("id, host_id, quiz_id, question_limit, total_time_minutes, current_questions")
+        .select("id, host_id, quiz_id, question_limit, total_time_minutes, current_questions, started_at, ended_at")
         .eq("id", sessionId)
         .single();
 
@@ -100,12 +100,13 @@ export default function HostMonitorPage() {
         .upsert({
           game_pin: roomCode,
           quiz_id: sess.quiz_id,
-          host_id: sess.host_id,                    // INI YANG WAJIB!
+          host_id: sess.host_id,
           status: "finished",
           application: "crazyrace",
           total_time_minutes: sess.total_time_minutes || 5,
           question_limit: totalQuestions.toString(),
-          ended_at: new Date().toISOString(),
+          started_at: sess.started_at,
+          ended_at: sess.ended_at,
           participants: formattedParticipants,
           responses: formattedResponses,
           current_questions: sess.current_questions,
