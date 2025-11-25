@@ -5,11 +5,12 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Clock } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
+import { mysupa, supabase } from "@/lib/supabase"
 import { motion, AnimatePresence } from "framer-motion"
 import LoadingRetro from "@/components/loadingRetro"
 import { formatTime } from "@/utils/game"
 import { syncServerTime, getSyncedServerTime } from "@/utils/serverTime"
+import { generateXID } from "@/lib/id-generator"
 
 // Background GIFs
 const backgroundGifs = [
@@ -73,65 +74,62 @@ export default function QuizGamePage() {
     setParticipantId(pid);
   }, [router])
 
-  const fetchGameData = useCallback(async (retryCount = 0) => {
-    if (!participantId) return;
-    setLoading(true);
-    setError(null);
+  const fetchGameData = useCallback(async () => {
+    if (!participantId || !roomCode) return;
+
     try {
-      const { data: sessionData, error: sessionError } = await supabase
-        .from("game_sessions")
-        .select("id, started_at, status, total_time_minutes, current_questions, responses, application")
+      // 1. Ambil session
+      const { data: sess, error } = await mysupa
+        .from("sessions")
+        .select("id, status, started_at, total_time_minutes, current_questions")
         .eq("game_pin", roomCode)
         .single();
 
-      if (sessionError || !sessionData || sessionData.application !== APP_NAME) {
-        throw new Error(`Session error: ${sessionError?.message || 'Invalid session or app'}`);
-      }
-
-      if (sessionData.status !== 'active') {
+      if (error || !sess || sess.status !== "active") {
         router.replace(`/join/${roomCode}`);
         return;
       }
 
-      setSession(sessionData);
-
-      const parsedQuestions = (sessionData.current_questions || []).map((q: any) => ({
+      // 2. Parse questions DULU (tapi JANGAN setState dulu)
+      const parsedQuestions = (sess.current_questions || []).map((q: any) => ({
         id: q.id,
         question: q.question,
         options: q.answers.map((a: any) => a.answer),
         correctAnswer: parseInt(q.correct),
       }));
-      setQuestions(parsedQuestions);
 
-      const duration = sessionData.total_time_minutes * 60;
-      setGameDuration(duration);
+      // 3. Ambil participant DULU
+      const { data: participant } = await mysupa
+        .from("participants")
+        .select("answers, completion, current_question")
+        .eq("id", participantId)
+        .single();
 
-      const startTime = new Date(sessionData.started_at).getTime();
-      setGameStartTime(startTime);
+      // 4. CEK DULU sebelum setQuestions!
+      if (participant) {
+        const answeredCount = (participant.answers || []).length;
 
-      const myResponse = (sessionData.responses || []).find((r: any) => r.participant === participantId);
-      if (myResponse) {
-        // Set current question index from DB, but ensure it's not out of bounds
-        const dbQuestionIndex = myResponse.current_question || 0;
-        if (dbQuestionIndex < parsedQuestions.length) {
-          setCurrentQuestionIndex(dbQuestionIndex);
-        } else {
-          // If player has answered all questions, move to result
-          saveProgressAndRedirect();
+        if (participant.completion || answeredCount >= parsedQuestions.length) {
+          router.replace(`/join/${roomCode}/result`);
+          return;
         }
+
+        // Baru set index setelah yakin tidak selesai
+        setCurrentQuestionIndex(answeredCount);
       }
 
+      // 5. BARU SET SEMUA STATE (setelah semua pengecekan selesai)
+      setSession(sess);
+      setQuestions(parsedQuestions);  // ← pindah ke bawah!
+      setGameDuration((sess.total_time_minutes || 5) * 60);
+      setGameStartTime(new Date(sess.started_at).getTime());
       setLoading(false);
+
     } catch (err: any) {
-      console.error("Fetch error:", err.message);
-      setError(err.message);
-      if (retryCount < 3) {
-        setTimeout(() => fetchGameData(retryCount + 1), 1000 * (retryCount + 1));
-      } else {
-        router.replace(`/`);
-      }
+      console.error("Fetch error:", err);
+      setError("Gagal memuat game.");
     }
-  }, [roomCode, participantId, router]);
+  }, [participantId, roomCode, router]);
 
   useEffect(() => {
     if (participantId) {
@@ -139,27 +137,17 @@ export default function QuizGamePage() {
     }
   }, [participantId, fetchGameData]);
 
-  // REFACTORED: Use the new 'finalize_player_session' RPC for a safe, atomic update.
-  const saveProgressAndRedirect = useCallback(async () => {
-    const currentSession = sessionRef.current;
-    if (!participantId || !currentSession) return;
-
-    // Stop the timer immediately
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-
-    console.log("Finalizing session via RPC...");
-    const { error: rpcError } = await supabase.rpc('finalize_player_session', {
-      p_session_id: currentSession.id,
-      p_participant_id: participantId,
-      p_app_name: APP_NAME
-    });
-
-    if (rpcError) {
-      console.error("Error finalizing session:", rpcError);
-    }
+  const saveProgressAndRedirect = async () => {
+    await mysupa
+      .from("participants")
+      .update({ 
+        completion: true,
+        finished_at: new Date(getSyncedServerTime()).toISOString()
+      })
+      .eq("id", participantId);
 
     router.push(`/join/${roomCode}/result`);
-  }, [participantId, roomCode, router]);
+  };
 
   useEffect(() => {
     if (loading || !gameStartTime || gameDuration === 0) {
@@ -189,14 +177,14 @@ export default function QuizGamePage() {
   useEffect(() => {
     if (!roomCode || !saveProgressAndRedirect) return;
 
-    const channel = supabase
+    const channel = mysupa
       .channel(`minigame-session-updates-${roomCode}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'game_sessions',
+          table: 'sessions',
           filter: `game_pin=eq.${roomCode}`,
         },
         (payload) => {
@@ -210,7 +198,7 @@ export default function QuizGamePage() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      mysupa.removeChannel(channel);
     };
   }, [roomCode, saveProgressAndRedirect]);
 
@@ -221,72 +209,80 @@ export default function QuizGamePage() {
     return () => clearInterval(bgInterval);
   }, []);
 
-  // REFACTORED: This function is now much simpler and safer, using RPC calls.
-  const handleAnswerSelect = useCallback(async (answerIndex: number) => {
-    if (isAnswered || !session || !currentQuestion) return;
+  const handleAnswerSelect = async (answerIndex: number) => {
+    if (isAnswered || !currentQuestion || !participantId) return;
 
     setIsAnswered(true);
     setSelectedAnswer(answerIndex);
     setShowResult(true);
 
     const isCorrect = answerIndex === currentQuestion.correctAnswer;
-
-    // Step 1: Submit the answer using the safe RPC function.
-    const { error: rpcError } = await supabase.rpc('update_player_response', {
-      p_session_id: session.id,
-      p_participant_id: participantId,
-      p_question_id: currentQuestion.id,
-      p_answer_id: answerIndex.toString(),
-      p_is_correct: isCorrect,
-      p_total_questions: totalQuestions,
-      p_app_name: APP_NAME
-    });
-
-    if (rpcError) {
-      console.error("Fatal: Could not submit answer via RPC.", rpcError);
-      setError("Could not save your answer. Please try again.");
-      setIsAnswered(false); // Allow retry
-      setShowResult(false);
-      setSelectedAnswer(null);
-      return;
-    }
-
-    // Step 2: Handle navigation after a short delay.
     const nextIndex = currentQuestionIndex + 1;
-    setTimeout(async () => {
-      if (nextIndex < totalQuestions) {
-        // Check if it's time for a minigame
-        if (nextIndex % 3 === 0) {
-          const { error: racingRpcError } = await supabase.rpc('set_player_racing_status', {
-            p_session_id: session.id,
-            p_participant_id: participantId,
-            p_is_racing: true,
-            p_app_name: APP_NAME
-          });
-          if (racingRpcError) console.error("Error setting racing status:", racingRpcError);
-          
+
+    try {
+      // 1. Ambil data participant dulu (termasuk answers yang sudah ada)
+      const { data: participant, error: fetchError } = await mysupa
+        .from("participants")
+        .select("answers, score, correct")
+        .eq("id", participantId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // 2. Siapkan jawaban baru
+      const newAnswer = {
+        id: generateXID(),
+        question_id: currentQuestion.id,
+        answer: answerIndex,
+        correct: isCorrect,
+      };
+
+      // 3. Gabungkan dengan jawaban lama (kalau null → jadi array kosong)
+      const updatedAnswers = [...(participant.answers || []), newAnswer];
+
+      // 4. Hitung score & correct baru
+      const scorePerQuestion = Math.max(1, Math.floor(100 / totalQuestions));
+      const newScore = (participant.score || 0) + (isCorrect ? scorePerQuestion : 0);
+      const newCorrect = (participant.correct || 0) + (isCorrect ? 1 : 0);
+
+      // 5. Update semua sekaligus
+      const { error } = await mysupa
+        .from("participants")
+        .update({
+          answers: updatedAnswers,
+          current_question: nextIndex,
+          score: newScore,
+          correct: newCorrect,
+          completion: nextIndex >= totalQuestions,
+          racing: nextIndex % 3 === 0 ? true : false, // auto set racing kalau masuk minigame
+        })
+        .eq("id", participantId);
+
+      if (error) throw error;
+
+      setTimeout(() => {
+        if (nextIndex >= totalQuestions) {
+          saveProgressAndRedirect()
+        } else if (nextIndex % 3 === 0 && nextIndex < totalQuestions) {
+          // Hanya masuk minigame kalau BELUM selesai semua soal
           localStorage.setItem("nextQuestionIndex", nextIndex.toString());
           router.push(`/join/${roomCode}/minigame`);
         } else {
-          // Just move to the next question
           setCurrentQuestionIndex(nextIndex);
           setSelectedAnswer(null);
           setIsAnswered(false);
           setShowResult(false);
         }
-      } else {
-        // Last question answered, finalize and move to results
-        setIsFinalizing(true);
-        try {
-          await saveProgressAndRedirect();
-        } catch (err) {
-          console.error("Failed to finalize session:", err);
-          setError("Could not finalize your session. Please refresh the page.");
-          setIsFinalizing(false); // Reset on failure
-        }
-      }
-    }, 500);
-  }, [isAnswered, session, currentQuestion, participantId, totalQuestions, currentQuestionIndex, roomCode, router, saveProgressAndRedirect]);
+      }, 800);
+
+    } catch (err: any) {
+      console.error("Gagal simpan jawaban:", err);
+      setError("Gagal menyimpan jawaban. Coba lagi.");
+      setIsAnswered(false);
+      setShowResult(false);
+      setSelectedAnswer(null);
+    }
+  };
 
   const getOptionStyle = (optionIndex: number) => {
     if (!showResult) {
@@ -420,7 +416,7 @@ export default function QuizGamePage() {
           50% { box-shadow: 0 0 15px rgba(255, 107, 255, 1), 0 0 30px rgba(255, 107, 255, 0.8); }
         }
       `}</style>
-      
+
 
       {isFinalizing && (
         <div className="absolute inset-0 bg-[#1a0a2a]/80 flex items-center justify-center z-50">

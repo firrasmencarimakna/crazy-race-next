@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Clock, Hash, Play, Settings } from "lucide-react"
 import { useRouter, useParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { supabase } from "@/lib/supabase"
+import { mysupa, supabase } from "@/lib/supabase"
 import LoadingRetro from "@/components/loadingRetro"
 import Image from "next/image"
 import { t } from "i18next"
@@ -38,6 +38,7 @@ export default function HostSettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [selectedDifficulty, setSelectedDifficulty] = useState("easy");
+  const [sessData, setSessData] = useState([] as any)
 
   // Memoize question count options to prevent re-calculation on every render
   const questionCountOptions = useMemo(() => {
@@ -51,10 +52,10 @@ export default function HostSettingsPage() {
   useEffect(() => {
     const fetchSessionDetails = async () => {
       setLoading(true);
-      
+
       const { data: sessionData, error: sessionError } = await supabase
         .from("game_sessions")
-        .select("quiz_id, quiz_detail, total_time_minutes, question_limit, difficulty")
+        .select("id, quiz_id, host_id, quiz_detail, total_time_minutes, question_limit, difficulty")
         .eq("game_pin", roomCode)
         .eq("application", APP_NAME)
         .single();
@@ -65,6 +66,8 @@ export default function HostSettingsPage() {
         router.push('/host');
         return;
       }
+
+      setSessData(sessionData)
 
       if (sessionData.total_time_minutes) setDuration((sessionData.total_time_minutes * 60).toString());
       if (sessionData.question_limit) setQuestionCount(sessionData.question_limit.toString());
@@ -130,7 +133,20 @@ export default function HostSettingsPage() {
       .update(settings)
       .eq("game_pin", roomCode);
 
-    if (error) {
+    const { error: myerr } = await mysupa
+      .from("sessions")
+      .insert({
+        id: sessData.id,
+        game_pin: roomCode,
+        quiz_id: sessData.quiz_id,
+        host_id: sessData.host_id,
+        total_time_minutes: settings.total_time_minutes,
+        question_limit: settings.question_limit,
+        difficulty: settings.difficulty,
+        current_questions: settings.current_questions
+      })
+
+    if (error || myerr) {
       console.error("Error updating session settings:", error);
       setSaving(false);
       return;
@@ -232,7 +248,7 @@ export default function HostSettingsPage() {
         @keyframes glow-cyan { 0%, 100% { filter: drop-shadow(0 0 5px #00ffff); } 50% { filter: drop-shadow(0 0 15px #00ffff); } }
         @keyframes glow-pink { 0%, 100% { filter: drop-shadow(0 0 5px #ff6bff); } 50% { filter: drop-shadow(0 0 15px #ff6bff); } }
       `}</style>
-      
+
     </div>
   )
 }

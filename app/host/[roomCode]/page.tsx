@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Copy, Users, Play, ArrowLeft, VolumeX, Volume2, Maximize2, Check, X } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { supabase } from "@/lib/supabase"
+import { mysupa, supabase } from "@/lib/supabase"
 import QRCode from "react-qr-code"
 import { Dialog, DialogContent, DialogOverlay } from "@/components/ui/dialog"
 import LoadingRetro from "@/components/loadingRetro"
@@ -74,6 +74,7 @@ export default function HostRoomPage() {
     if (countdownIntervalRef.current) {
       clearInterval(countdownIntervalRef.current);
     }
+
     let remaining = calculateCountdown(startTimestamp, duration);
     setCountdown(remaining);
     if (remaining <= 0) return;
@@ -81,21 +82,29 @@ export default function HostRoomPage() {
     countdownIntervalRef.current = setInterval(() => {
       remaining = calculateCountdown(startTimestamp, duration);
       setCountdown(remaining);
-      setLoading(true)
+      setLoading(true);
+
       if (remaining <= 0) {
         clearInterval(countdownIntervalRef.current!);
         setCountdown(0);
+
         setTimeout(async () => {
-          const { error } = await supabase
-            .from("game_sessions")
-            .update({ status: "active", started_at: new Date(getSyncedServerTime()).toISOString(), countdown_started_at: null })
+          const { error } = await mysupa
+            .from("sessions")
+            .update({
+              status: "active",
+              started_at: new Date(getSyncedServerTime()).toISOString(),
+              countdown_started_at: null,
+            })
             .eq("game_pin", roomCode);
-          if (error) console.error('End countdown error:', error);
+
+          if (error) console.error("End countdown error:", error);
           else router.push(`/host/${roomCode}/game`);
         }, 1000);
       }
     }, 1000);
   }, [roomCode, router]);
+
 
   const stopCountdownSync = useCallback(() => {
     if (countdownIntervalRef.current) {
@@ -153,12 +162,12 @@ export default function HostRoomPage() {
   }, [hasInteracted, isMuted]);
 
   useEffect(() => {
-  const countdownAudio = countdownAudioRef.current;
-  const bgAudio = audioRef.current;
-  if (!countdownAudio) return;
+    const countdownAudio = countdownAudioRef.current;
+    const bgAudio = audioRef.current;
+    if (!countdownAudio) return;
 
-  // Separate effect untuk play countdown (depend cuma countdown & muted, gak isCountdownPlaying)
-  if (countdown > 0 && !isCountdownPlaying) {
+    // Separate effect untuk play countdown (depend cuma countdown & muted, gak isCountdownPlaying)
+    if (countdown > 0 && !isCountdownPlaying) {
       // Baru mulai countdown
       setIsCountdownPlaying(true);
 
@@ -192,63 +201,128 @@ export default function HostRoomPage() {
     }
   }, [isMuted]);
 
+
   useEffect(() => {
+    if (!roomCode) return;
+
     let sessionSubscription: any = null;
+
     const fetchSessionAndParticipants = async () => {
-      const { data: sessionData, error: sessionError } = await supabase
-        .from("game_sessions")
-        .select("id, status, countdown_started_at, participants, application")
+      const { data: sessionData, error } = await mysupa
+        .from("sessions")
+        .select("id, status, countdown_started_at")
         .eq("game_pin", roomCode)
-        .eq("application", APP_NAME) // Added application filter
         .single();
 
-      if (sessionError || !sessionData) {
-        console.error("Error fetching session:", sessionError);
+      if (error || !sessionData) {
+        console.error("Error fetching session:", error);
         setLoading(false);
-        router.push('/host'); // Redirect if session is invalid
+        router.push("/host");
         return;
       }
 
-      let parsedParticipants = [];
-      try {
-        parsedParticipants = typeof sessionData.participants === 'string' ? JSON.parse(sessionData.participants) : sessionData.participants || [];
-      } catch (e) { console.error("Error parsing participants:", e); }
-      
-      setParticipants(parsedParticipants);
       setSession(sessionData);
       setLoading(false);
 
+      // ⭐ FIRST FETCH PARTICIPANTS
+      const { data: fetchedParticipants, error: pErr } = await mysupa
+        .from("participants")
+        .select("*")
+        .eq("session_id", sessionData.id);
+
+      if (pErr) console.error("Fetch participants error:", pErr);
+      setParticipants(fetchedParticipants || []);
+
+      setLoading(false);
+
+      // Countdown start?
       if (sessionData.countdown_started_at) {
         startCountdownSync(sessionData.countdown_started_at, 10);
       } else {
         stopCountdownSync();
       }
 
-      sessionSubscription = supabase
-        .channel(`host-session-${roomCode}`)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'game_sessions', filter: `game_pin=eq.${roomCode}` },
-          (payload) => {
-            const newSessionData = payload.new;
-            setSession(newSessionData);
-            let updatedParticipants = [];
-            try {
-              updatedParticipants = typeof newSessionData.participants === 'string' ? JSON.parse(newSessionData.participants) : newSessionData.participants || [];
-            } catch (e) { console.error("Error parsing updated participants:", e); }
-            setParticipants(updatedParticipants);
-            if (newSessionData.countdown_started_at) startCountdownSync(newSessionData.countdown_started_at, 10);
-            else stopCountdownSync();
-            if (newSessionData.status === 'active') router.push(`/host/${roomCode}/game`);
+      // 🔥 Subscribe realtime session changes
+      sessionSubscription = mysupa
+        .channel(`session:${roomCode}`)
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "sessions", filter: `game_pin=eq.${roomCode}` },
+          async (payload) => {
+            console.log("Session updated:", payload);
+
+            const newSession = payload.new;
+            setSession(newSession);
+
+            if (newSession.countdown_started_at) {
+              startCountdownSync(newSession.countdown_started_at, 10);
+            } else {
+              stopCountdownSync();
+            }
+
+            if (newSession.status === "active") {
+              router.replace(`/host/${roomCode}/game`);
+            } else if (newSession.status === "finished") {
+              router.replace(`/host/${roomCode}/result`);
+            }
           }
         )
         .subscribe();
     };
 
-    if (roomCode) fetchSessionAndParticipants();
+    fetchSessionAndParticipants();
+
     return () => {
       stopCountdownSync();
-      if (sessionSubscription) supabase.removeChannel(sessionSubscription);
+      if (sessionSubscription) mysupa.removeChannel(sessionSubscription);
     };
-  }, [roomCode, startCountdownSync, stopCountdownSync, router]);
+  }, [roomCode, router, startCountdownSync, stopCountdownSync]);
+
+  useEffect(() => {
+  if (!session?.id) return;
+
+  const channel = mysupa
+    .channel(`participants:${roomCode}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "participants",
+        filter: `session_id=eq.${session.id}`, // ← selalu pakai session.id yang terbaru
+      },
+      (payload) => {
+        console.log("Realtime participant change:", payload);
+
+        if (payload.eventType === "INSERT") {
+          setParticipants((prev) => {
+            // Cegah duplikat
+            if (prev.some(p => p.id === payload.new.id)) return prev;
+            return [...prev, payload.new];
+          });
+        }
+        if (payload.eventType === "UPDATE") {
+          setParticipants((prev) =>
+            prev.map((p) => (p.id === payload.new.id ? payload.new : p))
+          );
+        }
+        if (payload.eventType === "DELETE") {
+          setParticipants((prev) =>
+            prev.filter((p) => p.id !== payload.old.id)
+          );
+        }
+      }
+    )
+    .subscribe((status) => {
+      console.log("Participants channel status:", status);
+    });
+
+  // Cleanup
+  return () => {
+    mysupa.removeChannel(channel);
+  };
+}, [session?.id, roomCode]);
+
 
   useEffect(() => {
     if (typeof window !== 'undefined') setJoinLink(`${window.location.origin}/${roomCode}`);
@@ -263,29 +337,30 @@ export default function HostRoomPage() {
   };
 
   const startGame = async () => {
-    const { error } = await supabase
-      .from("game_sessions")
+    const { error } = await mysupa
+      .from("sessions")
       .update({ countdown_started_at: new Date(getSyncedServerTime()).toISOString() })
       .eq("game_pin", roomCode);
+
     if (error) console.error("startGame error:", error);
     else setGameStarted(true);
   };
 
-  // REFACTORED: Use the 'remove_participant_from_session' RPC for a safe, atomic update.
   const confirmKick = async () => {
     if (!selectedPlayerId || !session) return;
 
-    const { error } = await supabase.rpc('remove_participant_from_session', {
-      p_session_id: session.id,
-      p_participant_id: selectedPlayerId,
-      p_app_name: APP_NAME
-    });
+    const { error } = await mysupa
+      .from("participants")
+      .delete()
+      .eq("id", selectedPlayerId)
+      .eq("session_id", session.id);
 
     if (error) {
-      console.error("Kick participant error via RPC:", error);
+      console.error("Kick participant error:", error);
     } else {
-      console.log(`Participant ${selectedPlayerName} kicked successfully via RPC`);
+      console.log(`Participant ${selectedPlayerId} kicked successfully`);
     }
+
     setKickDialogOpen(false);
     setSelectedPlayerId(null);
   };
@@ -399,7 +474,7 @@ export default function HostRoomPage() {
           .glow-text { filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8)); }
           .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         `}</style>
-      
+
     </div>
   )
 }

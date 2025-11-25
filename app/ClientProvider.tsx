@@ -4,7 +4,6 @@ import { ReactNode, useEffect, useState } from "react";
 import { I18nextProvider } from "react-i18next";
 import { getI18nInstance } from "@/lib/i18n";
 import { motion } from "framer-motion";
-import { PWAInstallProvider } from "@/contexts/pwaContext";
 
 export default function ClientProviders({ children }: { children: ReactNode }) {
   const [isReady, setIsReady] = useState(false);
@@ -28,10 +27,8 @@ export default function ClientProviders({ children }: { children: ReactNode }) {
   }
 
   return (
-    <PWAInstallProvider>
       <I18nextProvider key={i18nInstance.language} i18n={i18nInstance}>
         {children}
       </I18nextProvider>
-    </PWAInstallProvider>
   );
 }

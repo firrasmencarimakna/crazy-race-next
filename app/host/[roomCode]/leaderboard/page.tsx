@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { supabase } from "@/lib/supabase"
+import { mysupa, supabase } from "@/lib/supabase"
 import { breakOnCaps } from "@/utils/game"
 import Image from "next/image"
 import { HomeIcon, RotateCwIcon } from "lucide-react"
@@ -42,7 +42,6 @@ const carGifMap: Record<string, string> = {
 }
 
 export default function HostLeaderboardPage() {
-  const { user } = useAuth();
   const params = useParams();
   const router = useRouter();
   const roomCode = params.roomCode as string;
@@ -51,6 +50,7 @@ export default function HostLeaderboardPage() {
   const [playerStats, setPlayerStats] = useState<PlayerStats[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [currentBgIndex, setCurrentBgIndex] = useState(0);
+  const [session, setSession] = useState<any>(null); // TAMBAHKAN INI DI ATAS
 
   const computePlayerStats = (response: any, totalQuestions: number): Omit<PlayerStats, 'nickname' | 'car' | 'rank'> => {
     const stats = response || {};
@@ -71,111 +71,147 @@ export default function HostLeaderboardPage() {
       setLoading(true);
       setError(null);
 
-      const { data: sessionData, error: sessionError } = await supabase
-        .from('game_sessions')
-        .select('participants, responses')
-        .eq('game_pin', roomCode)
-        .eq('application', APP_NAME) // Added application filter
+      // 1. Ambil session dari mysupa
+      const { data: sess, error: sessErr } = await mysupa
+        .from("sessions")
+        .select("id, question_limit, current_questions")
+        .eq("game_pin", roomCode)
         .single();
 
-      if (sessionError || !sessionData) {
-        console.error('Error fetching session:', sessionError);
-        setError('Failed to load session data');
+      if (sessErr || !sess) throw new Error("Session tidak ditemukan");
+
+      setSession(sess);
+
+      const totalQuestions = sess.question_limit || (sess.current_questions || []).length;
+
+      // 2. Ambil semua participant yang completion = true
+      const { data: participants, error: partErr } = await mysupa
+        .from("participants")
+        .select("id, nickname, car, score, correct, answers, duration, completion")
+        .eq("session_id", sess.id)
+        .eq("completion", true);
+
+      if (partErr || !participants || participants.length === 0) {
+        setError("Belum ada yang selesai");
+        setLoading(false);
         return;
       }
 
-      // Parse participants & responses
-      let parsedParticipants = [];
-      let parsedResponses = [];
-      try {
-        parsedParticipants = typeof sessionData.participants === 'string' ? JSON.parse(sessionData.participants) : sessionData.participants || [];
-        parsedResponses = typeof sessionData.responses === 'string' ? JSON.parse(sessionData.responses) : sessionData.responses || [];
-      } catch (e) {
-        console.error('Parse error:', e);
-        setError('Failed to parse data');
-        return;
-      }
+      // 3. Hitung statistik
+      const stats = participants.map(p => {
+        const correctCount = p.correct || 0;
+        const accuracy = totalQuestions > 0
+          ? Number(((correctCount / totalQuestions) * 100).toFixed(2))
+          : 0;
 
-      if (parsedResponses.length === 0) {
-        setError('No responses found');
-        return;
-      }
+        const totalSeconds = p.duration || 9999; // kalau duration 0 → urutan belakang
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
+        const totalTime = `${mins}:${secs.toString().padStart(2, "0")}`;
 
-      // Filter hanya pemain yang sudah completion = true
-      const completeResponses = parsedResponses.filter(
-        (r: any) => r.completion === true
-      );
+        return {
+          participantId: p.id,
+          nickname: p.nickname,
+          car: p.car || "blue",
+          finalScore: p.score || 0,
+          correctAnswers: correctCount,
+          totalQuestions,
+          accuracy,
+          totalTime,
+          duration: totalSeconds,
+        };
+      });
 
+      // 4. Urutkan: skor tinggi → waktu cepat
+      const sorted = stats.sort((a, b) => {
+        if (b.finalScore !== a.finalScore) return b.finalScore - a.finalScore;
+        return a.duration - b.duration; // waktu lebih cepat = lebih baik
+      });
 
-      if (completeResponses.length === 0) {
-        setError('No completed players');
-        return;
-      }
+      const ranked = sorted.map((s, i) => ({ ...s, rank: i + 1 }));
+      setPlayerStats(ranked);
 
-      // Compute stats
-      const allStats = completeResponses
-        .filter((r: any) => r.participant)
-        .map((r: any) => {
-          const participant = parsedParticipants.find((p: any) => p.id === r.participant);
-          if (!participant) return null;
-          return {
-            ...computePlayerStats(r, r.total_question || 0),
-            nickname: participant.nickname,
-            car: participant.car || 'blue',
-          };
-        })
-        .filter(Boolean); // Remove null
-
-      if (allStats.length === 0) {
-        setError('No valid results');
-        return;
-      }
-
-      // Sort & rank
-      const sortedStats = [...allStats].sort((a, b) =>
-        b.finalScore - a.finalScore || a.duration - b.duration
-      );
-      const rankedStats = sortedStats.map((stats, index) => ({
-        ...stats,
-        rank: index + 1,
-      }));
-
-      setPlayerStats(rankedStats);
     } catch (err: any) {
-      console.error('Error fetching data:', err);
-      setError('Failed to load leaderboard');
+      console.error("Error load leaderboard:", err);
+      setError("Gagal memuat leaderboard");
     } finally {
       setLoading(false);
     }
   }, [roomCode]);
 
+  const handleRealtimeUpdate = (payload: any) => {
+    const p = payload.new || payload.old;
+
+    // Kalau player selesai (completion: true)
+    if (payload.eventType === "INSERT" || 
+    (payload.eventType === "UPDATE" && (p.completion || payload.new.completion))) {
+      const totalQuestions = session?.question_limit || (session?.current_questions || []).length;
+
+      const accuracy = totalQuestions > 0
+        ? Number(((p.correct || 0) / totalQuestions) * 100).toFixed(2)
+        : "0";
+
+      const totalSeconds = p.duration || 9999;
+      const mins = Math.floor(totalSeconds / 60);
+      const secs = totalSeconds % 60;
+      const totalTime = `${mins}:${secs.toString().padStart(2, "0")}`;
+
+      const newPlayer = {
+        participantId: p.id,
+        nickname: p.nickname,
+        car: p.car || "blue",
+        finalScore: p.score || 0,
+        correctAnswers: p.correct || 0,
+        totalQuestions,
+        accuracy: Number(accuracy),
+        totalTime,
+        duration: totalSeconds,
+      };
+
+      setPlayerStats(prev => {
+        const filtered = prev.filter((x: any) => x.participantId !== p.id);
+        const updated = [...filtered, newPlayer];
+
+        // Sort ulang
+        const sorted = updated.sort((a, b) => {
+          if (b.finalScore !== a.finalScore) return b.finalScore - a.finalScore;
+          return a.duration - b.duration;
+        });
+
+        return sorted.map((s, i) => ({ ...s, rank: i + 1 }));
+      });
+    }
+
+    // Kalau player dihapus (jarang)
+    if (payload.eventType === "DELETE") {
+      setPlayerStats(prev => prev.filter((x: any) => x.participantId !== payload.old.id));
+    }
+  };
+
   useEffect(() => {
     if (roomCode) fetchData();
-  }, [fetchData]);
+  }, [roomCode]);
 
-  // Realtime sub
   useEffect(() => {
-    if (!roomCode) return;
+  if (!roomCode || !session?.id) return;
 
-    const subscription = supabase
-      .channel(`host-leaderboard-${roomCode}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'game_sessions',
-          filter: `game_pin=eq.${roomCode}`,
-        },
-        () => fetchData() // Refetch on update
-      )
-      .subscribe();
+  const channel = mysupa
+    .channel(`leaderboard-${roomCode}`)
+    .on("postgres_changes", {
+      event: "*",
+      schema: "public",
+      table: "participants",
+      filter: `session_id=eq.${session.id}`
+    }, (payload) => {
+      // JANGAN fetchData() → GUNAKAN payload LANGSUNG!
+      handleRealtimeUpdate(payload);
+    })
+    .subscribe();
 
-    return () => {
-      supabase.removeChannel(subscription);
-    };
-
-  }, [roomCode, fetchData]);
+  return () => {
+    mysupa.removeChannel(channel)
+  };
+}, [roomCode, session?.id]);
 
   // Background
   useEffect(() => {
@@ -185,72 +221,70 @@ export default function HostLeaderboardPage() {
     return () => clearInterval(bgInterval);
   }, []);
 
-  // Tambah function restartGame di atas return (dalam component, di leaderboard)
-  const restartGame = async (e: React.MouseEvent) => {
-    const icon = e.currentTarget.querySelector("svg");
-    if (icon) icon.classList.add("animate-spin");
+  const restartGame = async () => {
+  try {
+    // 1. Ambil session lama dari mysupa
+    const { data: oldSess } = await mysupa
+      .from("sessions")
+      .select("quiz_id, host_id, question_limit, total_time_minutes, difficulty, current_questions")
+      .eq("game_pin", roomCode)
+      .single();
 
-    try {
-      // Step 1: Fetch current session untuk settings & quiz_id
-      const { data: currentSession, error: fetchError } = await supabase
-        .from("game_sessions")
-        .select("quiz_id, host_id, total_time_minutes, question_limit, difficulty, game_end_mode, allow_join_after_start, application, difficulty")
-        .eq("game_pin", roomCode)
-        .eq("application", APP_NAME) // Added application filter
-        .single();
+    if (!oldSess) throw new Error("Session lama tidak ditemukan");
 
-      if (fetchError || !currentSession) throw fetchError || new Error('Current session not found');
+    // 2. Shuffle questions
+    const questions = oldSess.current_questions || [];
+    const shuffled = shuffleArray(questions);
+    const sliced = shuffled.slice(0, oldSess.question_limit || 5);
 
-      // Step 2: Fetch full quiz untuk questions
-      const { data: quizData, error: quizError } = await supabase
-        .from("quizzes")
-        .select("questions")
-        .eq("id", currentSession.quiz_id)
-        .single();
+    // 3. Generate PIN baru
+    const newPin = generateGamePin(6);
 
-      if (quizError || !quizData) throw quizError || new Error('Quiz not found');
+    // 4. BUAT SESSION BARU DI mysupa (real-time gameplay)
+    const { error: mysupaError } = await mysupa
+      .from("sessions")
+      .insert({
+        game_pin: newPin,
+        quiz_id: oldSess.quiz_id,
+        status: "waiting",
+        question_limit: oldSess.question_limit,
+        total_time_minutes: oldSess.total_time_minutes,
+        difficulty: oldSess.difficulty,
+        current_questions: sliced,
+      });
 
-      // Step 3: Shuffle & slice questions (reuse question_limit)
-      const shuffledQuestions = shuffleArray(quizData.questions);
-      const slicedQuestions = shuffledQuestions.slice(0, parseInt(currentSession.question_limit || '10'));
+    if (mysupaError) throw mysupaError;
 
-      // Step 4: Generate new game_pin
-      const newGamePin = generateGamePin(6);
+    // 5. BUAT SESSION BARU DI supabase UTAMA (agar bisa join!)
+    const { error: mainError } = await supabase
+      .from("game_sessions")
+      .insert({
+        game_pin: newPin,
+        quiz_id: oldSess.quiz_id,
+        host_id: oldSess.host_id,
+        status: "waiting",
+        application: "crazyrace",
+        total_time_minutes: oldSess.total_time_minutes || 5,
+        question_limit: oldSess.question_limit?.toString() || "5",
+        difficulty: oldSess.difficulty,
+        current_questions: sliced,
+        participants: [],
+        responses: [],
+      });
 
-      // Step 5: Insert new session (same settings, new pin, waiting, empty participants/responses, shuffled questions)
-      const newSession = {
-        quiz_id: currentSession.quiz_id,
-        host_id: currentSession.host_id,
-        game_pin: newGamePin,
-        status: 'waiting',
-        total_time_minutes: currentSession.total_time_minutes || 5,
-        question_limit: currentSession.question_limit || '10',
-        game_end_mode: currentSession.game_end_mode || 'manual',
-        allow_join_after_start: currentSession.allow_join_after_start || false,
-        participants: [], // Empty
-        responses: [], // Empty
-        current_questions: slicedQuestions, // Shuffled slice
-        application: currentSession.application || APP_NAME, // Ensure application is set
-        created_at: new Date().toISOString(),
-        difficulty: currentSession.difficulty
-      };
-
-      const { data: newSessionData, error: insertError } = await supabase
-        .from("game_sessions")
-        .insert(newSession)
-        .select("game_pin")
-        .single();
-
-      if (insertError || !newSessionData) throw insertError || new Error('Failed to create new session');
-
-      console.log('New session created:', newGamePin);
-      router.push(`/host/${newGamePin}`); // Direct to new host room
-    } catch (err: any) {
-      console.error('Restart error:', err);
-    } finally {
-      if (icon) icon.classList.remove("animate-spin");
+    if (mainError) {
+      console.error("Gagal buat di supabase utama:", mainError);
+      throw mainError
     }
-  };
+
+    console.log("Restart berhasil! PIN baru:", newPin);
+    router.push(`/host/${newPin}`);
+
+  } catch (err: any) {
+    console.error("Restart gagal:", err);
+    alert("Gagal restart game: " + err.message);
+  }
+};
 
   const getRankColor = (rank: number) => {
     switch (rank) {
@@ -634,7 +668,7 @@ export default function HostLeaderboardPage() {
           animation: neon-glow 2s ease-in-out infinite;
         }
       `}</style>
-      
+
     </div>
   )
 }

@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card"
 import { Home } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { supabase } from "@/lib/supabase"
+import { mysupa, supabase } from "@/lib/supabase"
 import LoadingRetro from "@/components/loadingRetro"
 import { breakOnCaps } from "@/utils/game"
 import Image from "next/image"
@@ -38,8 +38,6 @@ type PlayerStats = {
   participantId: string
 }
 
-const APP_NAME = "crazyrace"; // Safety check for multi-tenant DB
-
 export default function PlayerResultsPage() {
   const params = useParams()
   const router = useRouter()
@@ -70,66 +68,57 @@ export default function PlayerResultsPage() {
         setLoading(true);
         setError(null);
 
-        // Fetch game_sessions with application filter
-        const { data: sessionData, error: sessionError } = await supabase
-          .from("game_sessions")
-          .select("id, total_time_minutes, participants, responses, application")
+        // 1. Ambil session dari mysupa (cuma buat ambil total soal & waktu)
+        const { data: sess, error: sessErr } = await mysupa
+          .from("sessions")
+          .select("question_limit, total_time_minutes, current_questions")
           .eq("game_pin", roomCode)
-          .eq("application", APP_NAME) // Added application filter
           .single();
 
-        if (sessionError || !sessionData || sessionData.application !== APP_NAME) {
-          throw new Error(`Session not found or invalid app: ${sessionError?.message || 'No data'}`);
-        }
+        if (sessErr || !sess) throw new Error("Session tidak ditemukan");
 
-        const gameDuration = sessionData.total_time_minutes * 60; // Convert to seconds
+        const totalQuestions = sess.question_limit || (sess.current_questions || []).length;
+        const gameDuration = (sess.total_time_minutes || 5) * 60;
 
-        // Parse participants & responses
-        let parsedParticipants = [];
-        let parsedResponses = [];
-        try {
-          parsedParticipants = typeof sessionData.participants === 'string' ? JSON.parse(sessionData.participants) : sessionData.participants || [];
-          parsedResponses = typeof sessionData.responses === 'string' ? JSON.parse(sessionData.responses) : sessionData.responses || [];
-        } catch (e: any) {
-          throw new Error(`Parse error: ${e.message}`);
-        }
+        // 2. Ambil data player dari mysupa.participants
+        const { data: participant, error: partErr } = await mysupa
+          .from("participants")
+          .select("nickname, car, score, correct, completion, duration")
+          .eq("id", participantId)
+          .single();
 
-        if (parsedResponses.length === 0) {
-          throw new Error("No responses found");
-        }
+        if (partErr || !participant) throw new Error("Data kamu tidak ditemukan");
 
-        // Ambil current player response
-        const myResponse = parsedResponses.find((r: any) => r.participant === participantId);
-        if (!myResponse) {
-          throw new Error("Player response not found");
-        }
+        // 3. Hitung statistik
+        const correctCount = participant.correct || 0;
+        const finalScore = participant.score || 0;
 
-        const result = myResponse; // Direct dari response
-        const totalSeconds = Math.min(result.duration || 0, gameDuration);
+        // Hitung akurasi
+        const accuracy = totalQuestions > 0
+          ? ((correctCount / totalQuestions) * 100).toFixed(2)
+          : "0.00";
+
+        // Format waktu (duration di-save di minigame atau dihitung dari timer)
+        const totalSeconds = Math.min(participant.duration || 0, gameDuration);
         const mins = Math.floor(totalSeconds / 60);
         const secs = totalSeconds % 60;
         const totalTime = `${mins}:${secs.toString().padStart(2, "0")}`;
 
-        // Cari nickname & car dari participants
-        const currentParticipant = parsedParticipants.find((p: any) => p.id === participantId);
-        if (!currentParticipant) {
-          throw new Error("Player participant not found");
-        }
-
         setCurrentPlayerStats({
-          nickname: currentParticipant.nickname,
-          car: currentParticipant.car || "blue",
-          finalScore: result.score || 0,
-          correctAnswers: result.correct || 0,
-          totalQuestions: result.total_question || 0,
-          accuracy: result.accuracy || "0.00",
+          nickname: participant.nickname,
+          car: participant.car || "blue",
+          finalScore,
+          correctAnswers: correctCount,
+          totalQuestions,
+          accuracy,
           totalTime,
           participantId,
         });
 
         setLoading(false);
       } catch (err: any) {
-        setError(err.message);
+        console.error("Error load result:", err);
+        setError("Gagal memuat hasil. Coba refresh.");
         setLoading(false);
       }
     };
@@ -342,7 +331,7 @@ export default function PlayerResultsPage() {
           animation: neon-glow 2s ease-in-out infinite;
         }
       `}</style>
-      
+
     </div>
   )
 }
