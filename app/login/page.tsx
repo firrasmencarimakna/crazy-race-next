@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/authContext"
 import { FcGoogle } from 'react-icons/fc';
 import { useTranslation } from "react-i18next"
+import Image from "next/image"
 
 // Background GIFs - Sesuai tema retro neon, optimized for mobile (smaller files if possible)
 const backgroundGifs = [
@@ -27,10 +28,10 @@ export default function LoginPage() {
   const [error, setError] = useState("")
 
   const registerUrl =
-  typeof window !== "undefined" &&
-  window.location.hostname.includes("gameforsmart.com")
-    ? "https://gameforsmart.com/auth/register"
-    : "https://gameforsmart2025.vercel.app/auth/register";
+    typeof window !== "undefined" &&
+      window.location.hostname.includes("gameforsmart.com")
+      ? "https://gameforsmart.com/auth/register"
+      : "https://gameforsmart2025.vercel.app/auth/register";
 
 
   useEffect(() => {
@@ -107,13 +108,23 @@ export default function LoginPage() {
 
       </AnimatePresence>
 
-      {/* Overlay untuk readability pada mobile */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#1a0a2a]/20 to-[#1a0a2a]/80" />
+      <h1 className="absolute top-5 right-10 hidden md:block">
+        <Image
+          src="/gameforsmartlogo.webp"
+          alt="Gameforsmart Logo"
+          width={256}
+          height={64}
+        />
+      </h1>
+
+      <h1 className="absolute top-6 left-10 text-3xl text-[#00ffff] pixel-text glow-cyan hidden md:block">
+        Crazy Race
+      </h1>
 
       {/* Logo & Title - Responsive untuk mobile */}
-      <div className="relative z-10 flex flex-col items-center min-h-screen px-4 sm:px-6">
+      <div className="relative z-10 flex flex-col justify-center items-center md:min-h-screen px-4 sm:px-6">
 
-        <h1 className="text-center mx-auto py-10 text-4xl text-[#00ffff] pixel-text glow-cyan">
+        <h1 className="text-center mx-auto py-10 text-3xl text-[#00ffff] pixel-text glow-cyan md:hidden">
           Crazy Race
         </h1>
 
