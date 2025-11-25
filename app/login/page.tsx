@@ -55,15 +55,9 @@ export default function LoginPage() {
       })
 
       if (error) throw error
-
-      if (data.user) {
-        // Tunggu profile create/update via onAuthStateChange, lalu redirect
-        // Gak langsung push, biar auth context handle
-        console.log("Login sukses, waiting for profile...")
-      }
+      
     } catch (err: any) {
       setError(err.message || "Terjadi kesalahan, coba lagi!")
-
     }
   }
 

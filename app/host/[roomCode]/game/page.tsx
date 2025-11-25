@@ -44,84 +44,80 @@ export default function HostMonitorPage() {
 
   useEffect(() => { syncServerTime(); }, []);
 
-  const syncResultsToMainSupabase = async () => {
-  try {
-    // 1. Ambil session dari mysupa
-    const { data: sess } = await mysupa
-      .from("sessions")
-      .select("id, quiz_id, question_limit, total_time_minutes, current_questions")
-      .eq("game_pin", roomCode)
-      .single();
+  const syncResultsToMainSupabase = async (sessionId: string) => {
+    try {
+      const { data: sess } = await mysupa
+        .from("sessions")
+        .select("id, host_id, quiz_id, question_limit, total_time_minutes, current_questions")
+        .eq("id", sessionId)
+        .single();
 
-    if (!sess) {
-      console.error("Session tidak ditemukan di mysupa");
-      return;
+      if (!sess) throw new Error("Session tidak ditemukan");
+
+      const totalQuestions = sess.question_limit || (sess.current_questions || []).length;
+
+      const { data: participants } = await mysupa
+        .from("participants")
+        .select("id, user_id, nickname, car, score, correct, answers, duration, completion, current_question")
+        .eq("session_id", sessionId);
+
+      if (!participants || participants.length === 0) return;
+
+      // FORMAT PARTICIPANTS
+      const formattedParticipants = participants.map(p => {
+        const correctCount = p.correct || 0;
+        const accuracy = totalQuestions > 0
+          ? Number(((correctCount / totalQuestions) * 100).toFixed(2))
+          : 0;
+
+        return {
+          id: p.id,
+          user_id: p.user_id || null,
+          nickname: p.nickname,
+          car: p.car || "blue",
+          score: p.score || 0,
+          correct: correctCount,
+          completion: p.completion || false,
+          duration: p.duration || 0,
+          total_question: totalQuestions,
+          current_question: p.current_question || 0,
+          accuracy: accuracy.toFixed(2),
+        };
+      });
+
+      // FORMAT RESPONSES
+      const formattedResponses = participants
+        .filter(p => (p.answers || []).length > 0)
+        .map(p => ({
+          id: generateXID(),
+          participant: p.id,
+          answers: p.answers || [],
+        }));
+
+      // INSERT KE SUPABASE UTAMA → WAJIB ADA host_id!
+      const { error } = await supabase
+        .from("game_sessions")
+        .upsert({
+          game_pin: roomCode,
+          quiz_id: sess.quiz_id,
+          host_id: sess.host_id,                    // INI YANG WAJIB!
+          status: "finished",
+          application: "crazyrace",
+          total_time_minutes: sess.total_time_minutes || 5,
+          question_limit: totalQuestions.toString(),
+          ended_at: new Date().toISOString(),
+          participants: formattedParticipants,
+          responses: formattedResponses,
+          current_questions: sess.current_questions,
+        }, { onConflict: "game_pin" });
+
+      if (error) throw error;
+
+      console.log("Hasil berhasil disinkronkan ke supabase utama!");
+    } catch (err: any) {
+      console.error("Gagal sync:", err);
     }
-
-    const totalQuestions = sess.question_limit || (sess.current_questions || []).length;
-
-    // 2. Ambil semua participant (termasuk yang completion = false)
-    const { data: participants } = await mysupa
-      .from("participants")
-      .select("id, user_id, nickname, car, score, correct, answers, duration, completion, current_question, finished_at")
-      .eq("session_id", sess.id);
-
-    if (!participants || participants.length === 0) return;
-
-    // 3. Format participants — EXACTLY SESUAI KEINGINANMU!
-    const formattedParticipants = participants.map(p => {
-      const correctCount = p.correct || 0;
-      const accuracy = totalQuestions > 0 
-        ? Number(((correctCount / totalQuestions) * 100).toFixed(2))
-        : 0;
-
-      return {
-        id: p.id,
-        user_id: p.user_id || null,
-        nickname: p.nickname,
-        car: p.car || "blue",
-        score: p.score || 0,
-        correct: correctCount,
-        completion: p.completion || false,
-        duration: p.duration || 0,
-        total_question: totalQuestions,
-        current_question: p.current_question || 0,
-        accuracy: accuracy.toFixed(2),
-      };
-    });
-
-    // 4. Format responses — HANYA participant + answers
-    const formattedResponses = participants
-      .filter(p => (p.answers || []).length > 0)
-      .map(p => ({
-        id: generateXID(),
-        participant: p.id,
-        answers: p.answers || [],
-      }));
-
-    // 5. Kirim ke supabase utama
-    const { error } = await supabase
-      .from("game_sessions")
-      .upsert({
-        game_pin: roomCode,
-        quiz_id: sess.quiz_id,
-        status: "finished",
-        application: "crazyrace",
-        total_time_minutes: sess.total_time_minutes || 5,
-        question_limit: totalQuestions.toString(),
-        ended_at: new Date().toISOString(),
-        participants: formattedParticipants,
-        responses: formattedResponses,
-        current_questions: sess.current_questions,
-      }, { onConflict: "game_pin" });
-
-    if (error) throw error;
-
-    console.log("Hasil berhasil disinkronkan ke supabase utama! Format baru!");
-  } catch (err: any) {
-    console.error("Gagal sync ke supabase utama:", err);
-  }
-};
+  };
 
   // Timer akurat
   const updateTimer = useCallback(() => {
@@ -325,6 +321,8 @@ export default function HostMonitorPage() {
         .eq("completion", false)
 
       if (playerError) throw playerError;
+
+      await syncResultsToMainSupabase(sess.id);
 
       console.log("Game diakhiri! Semua player masuk leaderboard.");
       router.push(`/host/${roomCode}/leaderboard`);
