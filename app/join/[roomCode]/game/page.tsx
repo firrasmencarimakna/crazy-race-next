@@ -233,7 +233,7 @@ export default function QuizGamePage() {
       const newAnswer = {
         id: generateXID(),
         question_id: currentQuestion.id,
-        answer: answerIndex,
+        answer_id: answerIndex,
         correct: isCorrect,
       };
 
