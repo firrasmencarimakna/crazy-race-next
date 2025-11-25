@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/authContext"
 import { FcGoogle } from 'react-icons/fc';
+import { useTranslation } from "react-i18next"
 
 // Background GIFs - Sesuai tema retro neon, optimized for mobile (smaller files if possible)
 const backgroundGifs = [
@@ -18,11 +19,19 @@ const backgroundGifs = [
 export default function LoginPage() {
   const router = useRouter()
   const { user, profile, loading } = useAuth()
+  const { t } = useTranslation()
   const [currentBgIndex, setCurrentBgIndex] = useState(0)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+
+  const registerUrl =
+  typeof window !== "undefined" &&
+  window.location.hostname.includes("gameforsmart.com")
+    ? "https://gameforsmart.com/auth/register"
+    : "https://gameforsmart2025.vercel.app/auth/register";
+
 
   useEffect(() => {
     if ((user || profile) && !loading) { // Cek user ATAU profile (biar tunggu profile ready)
@@ -55,7 +64,7 @@ export default function LoginPage() {
       })
 
       if (error) throw error
-      
+
     } catch (err: any) {
       setError(err.message || "Terjadi kesalahan, coba lagi!")
     }
@@ -118,7 +127,7 @@ export default function LoginPage() {
           <Card className="bg-[#1a0a2a]/70 backdrop-blur-md border-2 border-[#ff6bff]/60 pixel-card p-4 sm:p-6 md:p-8 shadow-2xl">
             <CardHeader className="space-y-3 sm:space-y-2">
               <CardTitle className="text-xl sm:text-2xl font-bold text-[#00ffff] pixel-text glow-cyan text-center leading-tight">
-                Login
+                {t("login.title")}
               </CardTitle>
             </CardHeader>
 
@@ -146,8 +155,8 @@ export default function LoginPage() {
 
                 {/* Teks kondisional: mobile = "Google", desktop = "Continue with Google" */}
                 <span className="text-center font-medium">
-                  <span className="sm:hidden">Google</span>
-                  <span className="hidden sm:inline">Continue with Google</span>
+                  <span className="sm:hidden">{t("login.googleMobile")}</span>
+                  <span className="hidden sm:inline">{t("login.googleDesktop")}</span>
                 </span>
               </Button>
 
@@ -158,7 +167,7 @@ export default function LoginPage() {
                 </div>
                 <div className="relative flex justify-center text-xs uppercase tracking-wider">
                   <span className="bg-[#1a0a2a]/80 px-3 py-1 text-[#ff6bff]/90 rounded-full">
-                    Or
+                    {t("login.or")}
                   </span>
                 </div>
               </div>
@@ -167,7 +176,7 @@ export default function LoginPage() {
                 <div className="space-y-1">
                   <Input
                     type="email"
-                    placeholder="Email..."
+                    placeholder={t("login.emailPlaceholder")}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="bg-[#0a0a0f]/70 border-[#ff6bff]/60 text-white placeholder-[#ff6bff]/60 pixel-input focus:border-[#00ffff] focus:ring-[#00ffff]/30 h-12 sm:h-10 text-sm transition-all duration-200 shadow-inner"
@@ -178,7 +187,7 @@ export default function LoginPage() {
                 <div className="space-y-1">
                   <Input
                     type="password"
-                    placeholder="Password..."
+                    placeholder={t("login.passwordPlaceholder")}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="bg-[#0a0a0f]/70 border-[#ff6bff]/60 text-white placeholder-[#ff6bff]/60 pixel-input focus:border-[#00ffff] focus:ring-[#00ffff]/30 h-12 sm:h-10 text-sm transition-all duration-200 shadow-inner"
@@ -194,17 +203,32 @@ export default function LoginPage() {
                   {isLoading ? (
                     <span className="flex items-center justify-center">
                       <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin mr-2" />
-                      Signing In...
+                      {t("login.signingIn")}
                     </span>
                   ) : (
                     <>
-                      Sign In
+                      {t("login.signIn")}
                     </>
                   )}
                 </Button>
               </form>
 
-
+              {/* REGISTER LINK — WAJIB ADA! */}
+              <div
+                className="mt-6 text-center"
+              >
+                <p className="text-[#ff6bff]/90 text-xs sm:text-sm pixel-text">
+                  {t("login.noAccount")}{" "}
+                  <a
+                    href={registerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#00ffff] underline glow-cyan-subtle hover:text-[#33ffff] transition-all duration-200 hover:scale-105 inline-block"
+                  >
+                    {t("login.registerHere")}
+                  </a>
+                </p>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
