@@ -10,6 +10,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const fullUrl = `${protocol}://${host}`;
 
   return {
+    metadataBase: new URL(fullUrl),
     title: "Crazy Race",
     description: "Answer • Race • Win",
     openGraph: {
