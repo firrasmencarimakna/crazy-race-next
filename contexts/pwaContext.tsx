@@ -52,14 +52,14 @@ export function PWAInstallProvider({ children }: { children: ReactNode }) {
 
     installPrompt.prompt();
 
-    const { outcome } = await installPrompt.userChoice;
+    // const { outcome } = await installPrompt.userChoice;
 
     // if (outcome === "accepted") {
     //   console.log("User accepted the PWA installation");
     // } else {
     //   console.log("User dismissed the PWA installation");
     // }
-    // The prompt can only be used once, so clear it.
+    // // The prompt can only be used once, so clear it.
     setInstallPrompt(null);
   };
 
