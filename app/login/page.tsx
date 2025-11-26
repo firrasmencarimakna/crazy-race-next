@@ -26,6 +26,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [identifier, setIdentifier] = useState("");
 
   const registerUrl =
     typeof window !== "undefined" &&
@@ -48,10 +49,27 @@ export default function LoginPage() {
     return () => clearInterval(interval)
   }, [])
 
+  const resolveEmail = async (input: string) => {
+    // Kalau input mengandung @ → berarti email
+    if (input.includes("@")) return input.toLowerCase();
+
+    // Kalau username → cari di tabel profiles
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("email")
+      .eq("username", input)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) throw new Error("Username tidak ditemukan!");
+
+    return data.email.toLowerCase();
+  };
+
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email.trim() || !password.trim()) {
-      setError("Email dan Password harus diisi!")
+    if (!identifier.trim() || !password.trim()) {
+      setError("Email/Username dan Password harus diisi!")
       return
     }
 
@@ -59,15 +77,19 @@ export default function LoginPage() {
     setError("")
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.toLowerCase(),
+      const resolvedEmail = await resolveEmail(identifier.trim());
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email: resolvedEmail,
         password,
       })
 
-      if (error) throw error
+      if (error) throw error;
 
     } catch (err: any) {
       setError(err.message || "Terjadi kesalahan, coba lagi!")
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -159,7 +181,7 @@ export default function LoginPage() {
                 onClick={handleGoogleLogin}
                 disabled={isLoading}
                 variant="outline"
-                className="w-full min-h-12 sm:min-h-10 border-[#ff6bff]/60 text-[#ff6bff] hover:text-[#ff6bff] hover:bg-[#ff6bff]/20 hover:border-[#ff8aff] pixel-button flex items-center justify-center gap-2 sm:gap-3 px-4 py-3 transition-all duration-200 cursor-pointer"
+                className="w-full min-h-12 sm:min-h-10 border-[#ff6bff]/60 text-[#ff6bff] hover:text-[#ff6bff] hover:bg-[#ff6bff]/20 hover:border-[#ff8aff] pixel-button flex items-center justify-center gap-2 sm:gap-3 px-4 py-5 transition-all duration-200 cursor-pointer"
               >
                 {/* Icon Google — ukuran responsif */}
                 <FcGoogle className="w-6 h-6 sm:w-7 sm:h-7 shrink-0" />
@@ -183,14 +205,14 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <form onSubmit={handleEmailLogin} className="space-y-4">
+              <form onSubmit={handleEmailLogin} className="space-y-4 mt-4">
                 <div className="space-y-1">
                   <Input
-                    type="email"
+                    type="text"
                     placeholder={t("login.emailPlaceholder")}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="bg-[#0a0a0f]/70 border-[#ff6bff]/60 text-white placeholder-[#ff6bff]/60 pixel-input focus:border-[#00ffff] focus:ring-[#00ffff]/30 h-12 sm:h-10 text-sm transition-all duration-200 shadow-inner"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    className="bg-[#0a0a0f]/70 border-[#ff6bff]/60 text-white placeholder-[#ff6bff]/60 pixel-input focus:border-[#00ffff] focus:ring-[#00ffff]/30 text-xs md:text-sm transition-all duration-200 shadow-inner h-11"
                     disabled={isLoading}
                   />
                 </div>
@@ -201,14 +223,14 @@ export default function LoginPage() {
                     placeholder={t("login.passwordPlaceholder")}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="bg-[#0a0a0f]/70 border-[#ff6bff]/60 text-white placeholder-[#ff6bff]/60 pixel-input focus:border-[#00ffff] focus:ring-[#00ffff]/30 h-12 sm:h-10 text-sm transition-all duration-200 shadow-inner"
+                    className="bg-[#0a0a0f]/70 border-[#ff6bff]/60 text-white placeholder-[#ff6bff]/60 pixel-input focus:border-[#00ffff] focus:ring-[#00ffff]/30 text-xs md:text-sm transition-all duration-200 shadow-inner h-11"
                     disabled={isLoading}
                   />
                 </div>
 
                 <Button
                   type="submit"
-                  disabled={isLoading || !email.trim() || !password.trim()}
+                  disabled={isLoading  || !identifier.trim() || !password.trim()}
                   className="w-full bg-gradient-to-r from-[#00ffff] via-[#00ffff]/80 to-[#ff6bff] hover:from-[#33ffff] hover:to-[#ff8aff] text-black font-bold pixel-button-large glow-cyan text-base sm:text-lg py-3.5 sm:py-4 h-12 sm:h-auto transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-lg hover:shadow-xl"
                 >
                   {isLoading ? (
