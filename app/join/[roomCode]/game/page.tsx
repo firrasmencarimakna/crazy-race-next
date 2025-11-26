@@ -53,6 +53,10 @@ export default function QuizGamePage() {
   const hasBootstrapped = useRef(false);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  const pendingAnswersRef = useRef<any[]>([]); 
+  const pendingScoreRef = useRef<number>(0);
+  const pendingCorrectRef = useRef<number>(0);
+
   const currentQuestion = questions[currentQuestionIndex]
   const totalQuestions = questions.length
 
@@ -138,13 +142,29 @@ export default function QuizGamePage() {
   }, [participantId, fetchGameData]);
 
   const saveProgressAndRedirect = async () => {
-    await mysupa
-      .from("participants")
-      .update({ 
-        completion: true,
-        finished_at: new Date(getSyncedServerTime()).toISOString()
-      })
-      .eq("id", participantId);
+    if (pendingAnswersRef.current.length > 0) {
+      console.log("Mengirim sisa jawaban yang tertunda di akhir game...");
+
+      await mysupa.rpc('submit_quiz_answer_batch', {
+        p_participant_id: participantId,
+        p_new_answers: pendingAnswersRef.current,
+        p_total_score_add: pendingScoreRef.current,
+        p_total_correct_add: pendingCorrectRef.current,
+        p_next_index: totalQuestions,
+        p_is_finished: true,
+        p_is_racing: false
+      });
+
+      pendingAnswersRef.current = [];
+    } else {
+      await mysupa
+        .from("participants")
+        .update({
+          completion: true,
+          finished_at: new Date(getSyncedServerTime()).toISOString()
+        })
+        .eq("id", participantId);
+    }
 
     router.push(`/join/${roomCode}/result`);
   };
@@ -218,69 +238,69 @@ export default function QuizGamePage() {
 
     const isCorrect = answerIndex === currentQuestion.correctAnswer;
     const nextIndex = currentQuestionIndex + 1;
+    const isFinished = nextIndex >= totalQuestions;
+    const isRacing = nextIndex % 3 === 0 && !isFinished;
+
+    const scorePerQuestion = Math.max(1, Math.floor(100 / totalQuestions));
+    const currentScoreAdd = isCorrect ? scorePerQuestion : 0;
+    const currentCorrectAdd = isCorrect ? 1 : 0;
+
+    const newAnswer = {
+      id: generateXID(),
+      question_id: currentQuestion.id,
+      answer_id: String(answerIndex),
+      correct: isCorrect,
+    };
+
+    const payloadAnswers = [...pendingAnswersRef.current, newAnswer];
+    const payloadScore = pendingScoreRef.current + currentScoreAdd;
+    const payloadCorrect = pendingCorrectRef.current + currentCorrectAdd;
 
     try {
-      // 1. Ambil data participant dulu (termasuk answers yang sudah ada)
-      const { data: participant, error: fetchError } = await mysupa
-        .from("participants")
-        .select("answers, score, correct")
-        .eq("id", participantId)
-        .single();
+      const serverTask = mysupa.rpc('submit_quiz_answer_batch', {
+        p_participant_id: participantId,
+        p_new_answers: payloadAnswers,      // Kirim array (titipan + baru)
+        p_total_score_add: payloadScore,    // Kirim total score
+        p_total_correct_add: payloadCorrect,// Kirim total correct
+        p_next_index: nextIndex,
+        p_is_finished: isFinished,
+        p_is_racing: isRacing
+      });
 
-      if (fetchError) throw fetchError;
+      const timeoutTask = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Request Timeout")), 3000)
+      );
+      const visualTask = new Promise(resolve => setTimeout(resolve, 500));
 
-      // 2. Siapkan jawaban baru
-      const newAnswer = {
-        id: generateXID(),
-        question_id: currentQuestion.id,
-        answer_id: String(answerIndex),
-        correct: isCorrect,
-      };
+      await visualTask;
+      await Promise.race([serverTask, timeoutTask]);
+      console.log("Data terkirim ke server!");
 
-      // 3. Gabungkan dengan jawaban lama (kalau null → jadi array kosong)
-      const updatedAnswers = [...(participant.answers || []), newAnswer];
+      pendingAnswersRef.current = [];
+      pendingScoreRef.current = 0;
+      pendingCorrectRef.current = 0;
 
-      // 4. Hitung score & correct baru
-      const scorePerQuestion = Math.max(1, Math.floor(100 / totalQuestions));
-      const newScore = (participant.score || 0) + (isCorrect ? scorePerQuestion : 0);
-      const newCorrect = (participant.correct || 0) + (isCorrect ? 1 : 0);
-
-      // 5. Update semua sekaligus
-      const { error } = await mysupa
-        .from("participants")
-        .update({
-          answers: updatedAnswers,
-          current_question: nextIndex,
-          score: newScore,
-          correct: newCorrect,
-          completion: nextIndex >= totalQuestions,
-          racing: nextIndex % 3 === 0 ? true : false, // auto set racing kalau masuk minigame
-        })
-        .eq("id", participantId);
-
-      if (error) throw error;
-
-      setTimeout(() => {
-        if (nextIndex >= totalQuestions) {
-          saveProgressAndRedirect()
-        } else if (nextIndex % 3 === 0 && nextIndex < totalQuestions) {
-          // Hanya masuk minigame kalau BELUM selesai semua soal
-          localStorage.setItem("nextQuestionIndex", nextIndex.toString());
-          router.push(`/join/${roomCode}/minigame`);
-        } else {
-          setCurrentQuestionIndex(nextIndex);
-          setSelectedAnswer(null);
-          setIsAnswered(false);
-          setShowResult(false);
-        }
-      }, 800);
-
+      navigateNext(nextIndex, isFinished, isRacing);
     } catch (err: any) {
-      console.error("Gagal simpan jawaban:", err);
-      setError("Gagal menyimpan jawaban. Coba lagi.");
+      console.warn("⚠️ Gagal kirim (Timeout/Error), simpan ke tas lokal:", err);
+      pendingAnswersRef.current = payloadAnswers;
+      pendingScoreRef.current = payloadScore;
+      pendingCorrectRef.current = payloadCorrect;
+      navigateNext(nextIndex, isFinished, isRacing);
+    }
+  };
+
+  const navigateNext = (nextIndex: number, isFinished: boolean, isRacing: boolean) => {
+    if (isFinished) {
+      saveProgressAndRedirect();
+    } else if (isRacing) {
+      localStorage.setItem("nextQuestionIndex", nextIndex.toString());
+      router.push(`/join/${roomCode}/minigame`);
+    } else {
+      setCurrentQuestionIndex(nextIndex);
+      setSelectedAnswer(null);
       setIsAnswered(false);
       setShowResult(false);
-      setSelectedAnswer(null);
     }
   };
 

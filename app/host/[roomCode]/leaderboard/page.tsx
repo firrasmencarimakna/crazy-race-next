@@ -389,7 +389,7 @@ export default function HostLeaderboardPage() {
 
         {/* Podium - Top 3: Hidden on sm-, shown on md+ */}
         <motion.div
-          className="hidden md:flex justify-center items-end gap-4 sm:gap-6 mb-8 sm:mb-12 h-[400px] md:h-[475px] relative"
+          className="hidden md:flex justify-center items-end gap-4 sm:gap-6 mb-8 sm:mb-12 h-[400px] lg:h-[475px] relative"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
@@ -397,20 +397,20 @@ export default function HostLeaderboardPage() {
           {/* 2nd Place - Left, medium height */}
           {topThree[1] && (
             <motion.div
-              className="w-48 sm:w-64 order-1 flex flex-col justify-end h-[240px] md:h-[400px]"
+              className="w-45 lg:w-64 order-1 flex flex-col justify-end h-[310px] lg:h-[400px]"
               initial={{ scale: 0.8, y: 50 }}
               animate={{ scale: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
             >
-              <Card className="p-4 sm:p-5 text-center pixel-card border-gray-300/50 bg-[#1a0a2a]/70 animate-pulse-silver min-h-[160px] flex-1 flex flex-col justify-center">
-                <div className={`text-2xl sm:text-3xl font-bold mb-1 sm:mb-2 ${getRankColor(2)} pixel-text`}>#2</div>
+              <Card className="p-3 lg:p-6 text-center pixel-card border-gray-300/50 bg-[#1a0a2a]/70 animate-pulse-silver min-h-[160px] flex-1 flex flex-col justify-center">
+                <div className={`text-2xl lg:text-3xl font-bold mb-1 sm:mb-2 ${getRankColor(2)} pixel-text`}>#2</div>
                 <img
                   src={carGifMap[topThree[1].car] || '/assets/car/car5_v2.webp'}
                   alt={`${carGifMap[topThree[1].car]} car`}
-                  className="h-12 sm:h-16 sm:sm:h-20 md:h-24 lg:h-28 w-16 sm:w-20 sm:sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
+                  className="w-20 lg:w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
                 />
-                <div className="text-xl sm:text-2xl font-bold text-[#00ffff] mb-1 sm:mb-2 pixel-text glow-cyan">{topThree[1].finalScore}</div>
-                <h3 className="text-lg sm:text-xl font-bold text-white pixel-text glow-text mb-1 sm:mb-2 break-words line-clamp-2">{breakOnCaps(topThree[1].nickname)}</h3>
+                <div className="text-xl lg:text-2xl font-bold text-[#00ffff] mb-1 sm:mb-2 pixel-text glow-cyan">{topThree[1].finalScore}</div>
+                <h3 className="text-base lg:text-xl font-bold text-white pixel-text glow-text break-words line-clamp-3">{breakOnCaps(topThree[1].nickname)}</h3>
               </Card>
             </motion.div>
           )}
@@ -418,20 +418,20 @@ export default function HostLeaderboardPage() {
           {/* 1st Place - Center, tallest podium */}
           {topThree[0] && (
             <motion.div
-              className="w-56 sm:w-80 order-2 flex flex-col justify-end h-[320px] md:h-[425px]"
+              className="w-50 lg:w-80 order-2 flex flex-col justify-end h-[350px] lg:h-[425px]"
               initial={{ scale: 0.9, y: 80 }}
               animate={{ scale: 1.1, y: 0 }}
               transition={{ duration: 1, delay: 0.3 }}
             >
-              <Card className="p-5 sm:p-6 text-center pixel-card border-yellow-400/70 bg-[#1a0a2a]/80 animate-pulse-gold min-h-[200px] flex-1 flex flex-col justify-center">
-                <div className={`text-4xl sm:text-5xl font-bold mb-2 sm:mb-3 ${getRankColor(1)} pixel-text`}>#1</div>
+              <Card className="p-3 lg:p-6 text-center pixel-card border-yellow-400/70 bg-[#1a0a2a]/80 animate-pulse-gold min-h-[200px] flex-1 flex flex-col justify-center">
+                <div className={`text-3xl lg:text-5xl font-bold mb-2 sm:mb-3 ${getRankColor(1)} pixel-text`}>#1</div>
                 <img
                   src={carGifMap[topThree[0].car] || '/assets/car/car5_v2.webp'}
                   alt={`${topThree[0].car} car`}
-                  className="h-12 sm:h-16 sm:sm:h-20 md:h-24 lg:h-28 w-16 sm:w-20 sm:sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
+                  className="w-30 lg:w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
                 />
-                <div className="text-3xl sm:text-4xl font-bold text-[#00ffff] mb-2 pixel-text glow-cyan">{topThree[0].finalScore}</div>
-                <h3 className="text-2xl sm:text-3xl font-bold text-white pixel-text glow-text mb-2 sm:mb-3 break-words line-clamp-2">{breakOnCaps(topThree[0].nickname)}</h3>
+                <div className="text-2xl lg:text-4xl font-bold text-[#00ffff] mb-2 pixel-text glow-cyan">{topThree[0].finalScore}</div>
+                <h3 className="text-xl lg:text-2xl font-bold text-white pixel-text glow-text break-words line-clamp-3">{breakOnCaps(topThree[0].nickname)}</h3>
               </Card>
             </motion.div>
           )}
@@ -439,20 +439,20 @@ export default function HostLeaderboardPage() {
           {/* 3rd Place - Right, shortest height */}
           {topThree[2] && (
             <motion.div
-              className="w-48 sm:w-64 order-3 flex flex-col justify-end h-[200px] md:h-[375px]"
+              className="w-45 lg:w-64 order-3 flex flex-col justify-end h-[275px] lg:h-[375px]"
               initial={{ scale: 0.8, y: 50 }}
               animate={{ scale: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.5 }}
             >
-              <Card className="p-4 sm:p-5 text-center pixel-card border-amber-600/50 bg-[#1a0a2a]/70 animate-pulse-bronze min-h-[140px] flex-1 flex flex-col justify-center">
-                <div className={`text-2xl sm:text-3xl font-bold mb-1 sm:mb-2 ${getRankColor(3)} pixel-text`}>#3</div>
+              <Card className="p-3 lg:p-6 text-center pixel-card border-amber-600/50 bg-[#1a0a2a]/70 animate-pulse-bronze min-h-[140px] flex-1 flex flex-col justify-center gap-4 lg:gap-6">
+                <div className={`text-xl lg:text-3xl font-bold mb-1 sm:mb-2 ${getRankColor(3)} pixel-text`}>#3</div>
                 <img
                   src={carGifMap[topThree[2].car] || '/assets/car/car5_v2.webp'}
                   alt={`${carGifMap[topThree[2].car]} car`}
-                  className="h-12 sm:h-16 sm:sm:h-20 md:h-24 lg:h-28 w-16 sm:w-20 sm:sm:w-28 md:w-32 lg:w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
+                  className="w-20 lg:w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
                 />
-                <div className="text-xl sm:text-2xl font-bold text-[#00ffff] mb-1 sm:mb-2 pixel-text glow-cyan">{topThree[2].finalScore}</div>
-                <h3 className="text-lg sm:text-xl font-bold text-white pixel-text glow-text mb-1 sm:mb-2 break-words line-clamp-2">{breakOnCaps(topThree[2].nickname)}</h3>
+                <div className="text-xl lg:text-2xl font-bold text-[#00ffff] mb-1 sm:mb-2 pixel-text glow-cyan">{topThree[2].finalScore}</div>
+                <h3 className="text-base lg:text-lg font-bold text-white pixel-text glow-text break-words line-clamp-3">{breakOnCaps(topThree[2].nickname)}</h3>
               </Card>
             </motion.div>
           )}
@@ -478,7 +478,7 @@ export default function HostLeaderboardPage() {
                     <div className={`text-sm font-bold ${getRankColor(player.rank)} pixel-text min-w-[22px]`}>
                       #{player.rank}
                     </div>
-                    <h4 className="text-sm font-bold text-white pixel-text glow-text break-words line-clamp-1 flex-1 min-w-0">
+                    <h4 className="text-sm font-bold text-white pixel-text glow-text break-words line-clamp-2 flex-1 min-w-0 pl-1">
                       {breakOnCaps(player.nickname)}
                     </h4>
                   </div>
