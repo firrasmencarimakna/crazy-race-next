@@ -150,6 +150,7 @@ export default function HomePage() {
     | "duplicate"
     | "roomNotFound"
     | "pwaInstallUnavailable"
+    | "sessionLocked"
     | ""
   >("");
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
@@ -327,81 +328,41 @@ export default function HomePage() {
 
     setJoining(true);
     try {
-      // 1. Request pertama: ambil session dari sistem utama (TIDAK BOLEH DIUBAH)
-      const { data: sessionData, error: sessionError } = await supabase
-        .from("game_sessions")
-        .select("id, status, application")
-        .eq("game_pin", roomCode)
-        .single();
+      const { data, error } = await mysupa.rpc("join_game", {
+        p_room_code: roomCode,
+        p_user_id: profile.id,
+        p_nickname: nickname.trim(),
+      });
 
-      if (sessionError || !sessionData || sessionData.application !== APP_NAME) {
+      if (!data || error) {
+        setAlertReason("general");
+        setShowAlert(true);
+        setJoining(false);
+        return;
+      }
+
+      if (data.error === "room_not_found") {
         setAlertReason("roomNotFound");
         setShowAlert(true);
         setJoining(false);
         return;
       }
 
-      const sessionId = sessionData.id;
-
-      // 2. Request kedua: cek apakah user ini SUDAH PERNAH join di session ini
-      const { data: existingParticipant, error: checkError } = await mysupa
-        .from("participants")
-        .select("id, nickname, car")
-        .eq("session_id", sessionId)
-        .eq("user_id", profile.id)
-        .maybeSingle(); // penting: maybeSingle() → null kalau tidak ada
-
-      if (checkError && checkError.code !== "PGRST116") {
-        throw checkError; // error selain "not found"
+      if (data.error === "session_locked") {
+        // status = active / finished, user belum join sebelumnya
+        setAlertReason("sessionLocked");
+        setShowAlert(true);
+        setJoining(false);
+        return;
       }
 
-      let participantId: string;
-      let finalNickname = nickname.trim();
-      let finalCar = "blue";
-
-      if (existingParticipant) {
-        // REKONEKSI! → pakai data lama
-        participantId = existingParticipant.id;
-        finalNickname = existingParticipant.nickname; // paksa pakai nickname lama
-        finalCar = existingParticipant.car || "blue";
-
-        console.log("Reconnecting player:", participantId);
-      } else {
-        // Join baru → buat participant baru
-        participantId = generateXID();
-        const randomCar = ["purple", "white", "black", "aqua", "blue"][
-          Math.floor(Math.random() * 5)
-        ];
-        finalCar = randomCar;
-
-        const { error: insertError } = await mysupa
-          .from("participants")
-          .insert({
-            id: participantId,
-            session_id: sessionId,
-            nickname: finalNickname,
-            car: finalCar,
-            user_id: profile.id,
-            score: 0,
-          });
-
-        if (insertError) {
-          if (insertError.code === "23505") { // unique violation
-            setAlertReason("duplicate");
-            setShowAlert(true);
-            setJoining(false);
-            return;
-          }
-          throw insertError;
-        }
-      }
-
-      // Simpan ke localStorage (untuk reconnect & realtime)
-      localStorage.setItem("nickname", finalNickname);
-      localStorage.setItem("participantId", participantId);
+      // Aman (reconnect / join baru)
+      localStorage.setItem("nickname", data.nickname);
+      localStorage.setItem("participantId", data.participant_id);
       localStorage.setItem("game_pin", roomCode);
 
       router.push(`/join/${roomCode}`);
+
     } catch (error: any) {
       console.error("Join error:", error);
       setAlertReason("general");
