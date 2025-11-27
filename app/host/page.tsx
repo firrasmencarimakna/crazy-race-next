@@ -99,7 +99,7 @@ export default function QuestionListPage() {
       setLoading(true);
       let query = supabase
         .from("quizzes")
-        .select("id, title, description, category, questions, is_public, created_at, updated_at,creator_id")
+        .select("id, title, category, is_public, created_at, creator_id")
         .order("created_at", { ascending: false });
 
       // FIX: Tambah OR filter - public ATAU milik user (untuk favorites)
@@ -135,8 +135,7 @@ export default function QuestionListPage() {
 
   // Update filteredQuestions logic (AND my quizzes + category/favorites)
   const filteredQuestions = quizzes.filter((q) => {
-    const matchesSearch = q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      q.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = q.title.toLowerCase().includes(searchQuery.toLowerCase());
     let matchesCategory = selectedCategory === "All" || q.category === selectedCategory;
 
     // Favorites mode
