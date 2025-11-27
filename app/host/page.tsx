@@ -92,36 +92,31 @@ export default function QuestionListPage() {
     }
   }, [user]);
 
-
-
-  useEffect(() => {
-    const fetchQuizzes = async () => {
-      setLoading(true);
-      let query = supabase
-        .from("quizzes")
-        .select("id, title, category, is_public, created_at, creator_id")
-        .order("created_at", { ascending: false });
-
-      // FIX: Tambah OR filter - public ATAU milik user (untuk favorites)
-      if (profile?.id) {
-        query = query.or(`is_public.eq.true,creator_id.eq.${profile.id}`);
-      } else {
-        query = query.eq("is_public", true);
-      }
-
-      const { data, error } = await query;
+    useEffect(() => {
+  const fetchQuizzes = async () => {
+    setLoading(true);
+    
+    try {
+      const { data, error } = await supabase
+        .rpc('get_quizzes_with_question_count', {
+          user_id: profile?.id || null
+        });
 
       if (error) {
         console.error("Error fetching quizzes:", error);
       } else {
         setQuizzes(data || []);
-        console.log('Fetched quizzes:', data?.length); // Debug
+        console.log('Fetched quizzes with counts:', data?.length);
       }
+    } catch (error) {
+      console.error("Unexpected error:", error);
+    } finally {
       setLoading(false);
-    };
-
-    fetchQuizzes();
-  }, [profile?.id]);
+    }
+  };
+  
+  fetchQuizzes();
+}, [profile?.id]);
 
   useEffect(() => {
     setCurrentPage(1); // Reset to 1 on filter change
@@ -445,7 +440,7 @@ export default function QuestionListPage() {
                           <div className="text-xs text-[#ff6bff] pixel-text glow-pink-subtle capitalize">{quiz.category}</div>
                         )}
                         <div className="flex items-center gap-2 text-[#ff6bff] text-sm pixel-text glow-pink-subtle">
-                          <HelpCircle className="h-4 w-4" /> {quiz.questions?.length ?? 0}
+                          <HelpCircle className="h-4 w-4" /> {quiz.question_count ?? 0}
                         </div>
                       </CardFooter>
                     </Card>

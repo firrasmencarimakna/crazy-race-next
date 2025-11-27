@@ -61,6 +61,10 @@
       "title": "Oops! Duplicate Nickname!",
       "message": "That nickname is already taken in this room. Please choose another one."
     },
+    "sessionLocked": {
+      "title": "Cannot Join",
+      "message": "The game has already started or finished. New players cannot join."
+    },
     "closeButton": "Okay!"
   },
   "menu": {

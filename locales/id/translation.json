@@ -61,6 +61,10 @@
       "title": "Oops! Nama Panggilan Duplikat!",
       "message": "Nama panggilan itu sudah digunakan di ruangan ini. Silakan pilih yang lain."
     },
+    "sessionLocked": {
+      "title": "Tidak Bisa Masuk",
+      "message": "Permainan sudah dimulai atau sudah selesai. Pemain baru tidak bisa bergabung."
+    },
     "closeButton": "Oke!"
   },
   "menu": {

@@ -98,7 +98,7 @@ export default function LobbyPage() {
         clearInterval(countdownIntervalRef.current!);
         countdownIntervalRef.current = null;
       }
-    }, 250);
+    }, 100);
   }, []);
 
   const stopCountdownSync = useCallback(() => {

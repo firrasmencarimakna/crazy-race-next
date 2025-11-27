@@ -119,7 +119,7 @@ export default function HostRoomPage() {
             else router.push(`/host/${roomCode}/game`);
           }, 500);
         }
-      }, 250);
+      }, 100);
     },
     [roomCode, router]
   );
