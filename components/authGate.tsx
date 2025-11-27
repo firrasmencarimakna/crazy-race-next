@@ -16,12 +16,14 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     typeof window !== "undefined" && window.location.hash.includes("access_token")
 
   useEffect(() => {
-    if (loading) return
-
-    if (!isPublic && !user && !isOAuthCallback) {
+    if (!loading && !isPublic && !user && !isOAuthCallback) {
       router.replace("/login")
     }
   }, [loading, user, pathname, router, isPublic, isOAuthCallback])
+
+  if (isPublic) {
+    return <>{children}</>;
+  }
 
   if (loading) {
     return <LoadingRetro />
@@ -29,7 +31,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   // While the redirect is in progress for an unauthenticated user on a private route,
   // keep showing the loading screen to prevent rendering the protected content.
-  if (!isPublic && !user && !isOAuthCallback) {
+  if (!user && !isOAuthCallback) {
     return <LoadingRetro />
   }
 

@@ -135,7 +135,7 @@ export default function HostSettingsPage() {
 
     const { error: myerr } = await mysupa
       .from("sessions")
-      .insert({
+      .upsert({
         id: sessData.id,
         game_pin: roomCode,
         quiz_id: sessData.quiz_id,
@@ -144,7 +144,10 @@ export default function HostSettingsPage() {
         question_limit: settings.question_limit,
         difficulty: settings.difficulty,
         current_questions: settings.current_questions
-      })
+      }, {
+        onConflict: "id"  // atau 'game_pin', pilih salah satu yang unique
+      });
+
 
     if (error || myerr) {
       console.error("Error updating session settings:", error);
