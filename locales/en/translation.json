@@ -4,7 +4,7 @@
     "googleMobile": "Google",
     "googleDesktop": "Continue with Google",
     "or": "Or",
-    "emailPlaceholder": "Email...",
+    "emailPlaceholder": "Email or username...",
     "passwordPlaceholder": "Password...",
     "signIn": "Sign In",
     "signingIn": "Signing In...",
@@ -57,7 +57,7 @@
       "title": "Oops Belum Siap Balapan",
       "message": "Fill in the Room Code (6 letters) and Nickname first, OK!"
     },
-    "duplicateNickname": {
+    "duplicate": {
       "title": "Oops! Duplicate Nickname!",
       "message": "That nickname is already taken in this room. Please choose another one."
     },

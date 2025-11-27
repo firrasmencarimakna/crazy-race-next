@@ -65,29 +65,29 @@ function LogoutDialog({
   const [loading, setLoading] = useState(false);
 
   const handleLogout = async () => {
-  setLoading(true);
+    setLoading(true);
 
-  try {
-    // Logout dari Supabase (lokal only — aman!)
-    await supabase.auth.signOut();
+    try {
+      // Logout dari Supabase (lokal only — aman!)
+      await supabase.auth.signOut();
 
-    // Hapus SEMUA localStorage di domain ini → bye-bye token nyangkut!
-    localStorage.clear();
+      // Hapus SEMUA localStorage di domain ini → bye-bye token nyangkut!
+      localStorage.clear();
 
-    // Langsung lempar ke login
-    router.replace("/login");
-    onOpenChange(false);
-  } catch (err) {
-    console.error("Logout error:", err);
+      // Langsung lempar ke login
+      router.replace("/login");
+      onOpenChange(false);
+    } catch (err) {
+      console.error("Logout error:", err);
 
-    // Kalau tetap error (jarang banget), paksa bersihkan + redirect
-    localStorage.clear();
-    router.replace("/login");
-    onOpenChange(false);
-  } finally {
-    setLoading(false);
-  }
-};
+      // Kalau tetap error (jarang banget), paksa bersihkan + redirect
+      localStorage.clear();
+      router.replace("/login");
+      onOpenChange(false);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div
@@ -149,7 +149,6 @@ export default function HomePage() {
     | "general"
     | "duplicate"
     | "roomNotFound"
-    | "notAccepting"
     | "pwaInstallUnavailable"
     | ""
   >("");
@@ -320,77 +319,91 @@ export default function HomePage() {
       setShowAlert(true);
       return;
     }
-    setJoining(true);
+    if (!profile?.id) {
+      setAlertReason("general");
+      setShowAlert(true);
+      return;
+    }
 
+    setJoining(true);
     try {
-      // First, get the session ID from the game pin.
+      // 1. Request pertama: ambil session dari sistem utama (TIDAK BOLEH DIUBAH)
       const { data: sessionData, error: sessionError } = await supabase
         .from("game_sessions")
         .select("id, status, application")
         .eq("game_pin", roomCode)
         .single();
 
-      if (
-        sessionError ||
-        !sessionData ||
-        sessionData.application !== APP_NAME
-      ) {
+      if (sessionError || !sessionData || sessionData.application !== APP_NAME) {
         setAlertReason("roomNotFound");
         setShowAlert(true);
         setJoining(false);
         return;
       }
 
-      // Prepare the new participant object
-      const participantId = generateXID();
-      const randomCar = ["purple", "white", "black", "aqua", "blue"][
-        Math.floor(Math.random() * 5)
-      ];
-      const newParticipant = {
-        id: participantId,
-        session: sessionData.id,
-        nickname: nickname.trim(),
-        car: randomCar,
-        user_id: profile?.id || null,
-        score: 0
-      };
+      const sessionId = sessionData.id;
 
-      // Call the RPC function to handle the join atomically
-      // const { data: rpcData, error: rpcError } = await supabase.rpc(
-      //   "join_game_session",
-      //   {
-      //     p_session_id: sessionData.id,
-      //     p_new_participant: newParticipant,
-      //     p_app_name: APP_NAME,
-      //   }
-      // );
+      // 2. Request kedua: cek apakah user ini SUDAH PERNAH join di session ini
+      const { data: existingParticipant, error: checkError } = await mysupa
+        .from("participants")
+        .select("id, nickname, car")
+        .eq("session_id", sessionId)
+        .eq("user_id", profile.id)
+        .maybeSingle(); // penting: maybeSingle() → null kalau tidak ada
 
-      const { error } = await mysupa
-      .from("participants")
-      .insert({
-        id: newParticipant.id,
-        session_id: newParticipant.session,
-        nickname: newParticipant.nickname,
-        car: newParticipant.car,
-        user_id: newParticipant.user_id,
-        score: newParticipant.score
-      })
-
-      if (error) throw error;
-
-      if (!error) {
-        localStorage.setItem("nickname", newParticipant.nickname.trim());
-        localStorage.setItem("participantId", newParticipant.id);
-        localStorage.setItem("game_pin", roomCode);
-        router.push(`/join/${roomCode}`);
-      } else {
-        // Handle specific failure reasons from the RPC
-        setAlertReason("general");
-        setShowAlert(true);
-        setJoining(false);
+      if (checkError && checkError.code !== "PGRST116") {
+        throw checkError; // error selain "not found"
       }
-    } catch (error) {
-      console.error("Unexpected error during join:", error);
+
+      let participantId: string;
+      let finalNickname = nickname.trim();
+      let finalCar = "blue";
+
+      if (existingParticipant) {
+        // REKONEKSI! → pakai data lama
+        participantId = existingParticipant.id;
+        finalNickname = existingParticipant.nickname; // paksa pakai nickname lama
+        finalCar = existingParticipant.car || "blue";
+
+        console.log("Reconnecting player:", participantId);
+      } else {
+        // Join baru → buat participant baru
+        participantId = generateXID();
+        const randomCar = ["purple", "white", "black", "aqua", "blue"][
+          Math.floor(Math.random() * 5)
+        ];
+        finalCar = randomCar;
+
+        const { error: insertError } = await mysupa
+          .from("participants")
+          .insert({
+            id: participantId,
+            session_id: sessionId,
+            nickname: finalNickname,
+            car: finalCar,
+            user_id: profile.id,
+            score: 0,
+          });
+
+        if (insertError) {
+          if (insertError.code === "23505") { // unique violation
+            setAlertReason("duplicate");
+            setShowAlert(true);
+            setJoining(false);
+            return;
+          }
+          throw insertError;
+        }
+      }
+
+      // Simpan ke localStorage (untuk reconnect & realtime)
+      localStorage.setItem("nickname", finalNickname);
+      localStorage.setItem("participantId", participantId);
+      localStorage.setItem("game_pin", roomCode);
+
+      router.push(`/join/${roomCode}`);
+    } catch (error: any) {
+      console.error("Join error:", error);
       setAlertReason("general");
       setShowAlert(true);
       setJoining(false);
@@ -457,13 +470,13 @@ export default function HomePage() {
       </h1>
 
       {isBannerVisible && (
-      <PWAInstallBanner
-        onInstall={() => {
-          handlePWAInstall();
-          setBannerVisible(false);
-        }}
-        onDismiss={handleDismissBanner}
-      />
+        <PWAInstallBanner
+          onInstall={() => {
+            handlePWAInstall();
+            setBannerVisible(false);
+          }}
+          onDismiss={handleDismissBanner}
+        />
       )}
 
       <AnimatePresence>
@@ -634,8 +647,8 @@ export default function HomePage() {
                       }}
                       disabled={joining}
                       className={`w-full text-xs ${joining
-                          ? "opacity-50 cursor-not-allowed"
-                          : "bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] hover:to-[#ffb3ff] text-white border-[#ff6bff]/80 hover:border-[#ff8aff]/80 glow-pink cursor-pointer"
+                        ? "opacity-50 cursor-not-allowed"
+                        : "bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] hover:to-[#ffb3ff] text-white border-[#ff6bff]/80 hover:border-[#ff8aff]/80 glow-pink cursor-pointer"
                         } pixel-button`}
                     >
                       {joining ? t("menu.starting") : t("menu.tryoutButton")}
@@ -682,8 +695,8 @@ export default function HomePage() {
                         }
                         whileHover={{ scale: 1.02 }}
                         className={`flex items-center justify-center p-3 bg-[#1a0a2a]/80 border border-[#00ffff]/30 rounded-lg transition-all duration-200 hover:bg-[#00ffff]/20 hover:border-[#00ffff] ${currentLanguage === lang.code
-                            ? "border-[#00ffff] bg-[#00ffff]/10"
-                            : ""
+                          ? "border-[#00ffff] bg-[#00ffff]/10"
+                          : ""
                           }`}
                       >
                         <span className="text-3xl">{lang.flag}</span>
@@ -791,8 +804,8 @@ export default function HomePage() {
                         whileHover={{ scale: 1.2 }}
                         whileTap={{ scale: 0.95 }}
                         className={`w-3 h-3 rounded-full transition-all duration-300 shadow-sm ${index === currentPage
-                            ? "bg-[#a100ff] shadow-lg shadow-[#a100ff]/40 scale-125"
-                            : "bg-white/20 hover:bg-white/40 hover:scale-110"
+                          ? "bg-[#a100ff] shadow-lg shadow-[#a100ff]/40 scale-125"
+                          : "bg-white/20 hover:bg-white/40 hover:scale-110"
                           }`}
                       />
                     ))}
@@ -936,8 +949,8 @@ export default function HomePage() {
                   onClick={handleJoin}
                   disabled={joining || authLoading}
                   className={`w-full transition-all duration-300 ease-in-out pixel-button-large retro-button ${joining
-                      ? "opacity-50 cursor-not-allowed"
-                      : `bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white border-[#0070f3]/80 hover:border-[#0ea5e9]/80 glow-cyan cursor-pointer`
+                    ? "opacity-50 cursor-not-allowed"
+                    : `bg-gradient-to-r from-[#3ABEF9] to-[#3ABEF9] hover:from-[#3ABEF9] hover:to-[#A7E6FF] text-white border-[#0070f3]/80 hover:border-[#0ea5e9]/80 glow-cyan cursor-pointer`
                     }`}
                 >
                   {joining ? t("joinRace.joining") : t("joinRace.joinButton")}
