@@ -84,7 +84,7 @@ export default function HostSettingsPage() {
 
       const { data: quizData, error: quizError } = await supabase
         .from("quizzes")
-        .select("*")
+        .select("questions")
         .eq("id", sessionData.quiz_id)
         .single();
 
@@ -124,33 +124,40 @@ export default function HostSettingsPage() {
       total_time_minutes: Math.floor(parseInt(duration) / 60),
       question_limit: parseInt(questionCount),
       difficulty: selectedDifficulty,
-      game_end_mode: "manual",
-      current_questions: shuffleArray(quiz.questions).slice(0, parseInt(questionCount)),
+      current_questions: shuffleArray(quiz.questions).slice(
+        0,
+        parseInt(questionCount)
+      ),
     };
 
-    const { error } = await supabase
-      .from("game_sessions")
-      .update(settings)
-      .eq("game_pin", roomCode);
+    // Jalankan update ke 2 database secara paralel
+    const [dbMain, dbSecondary] = await Promise.all([
+      supabase
+        .from("game_sessions")
+        .update(settings)
+        .eq("game_pin", roomCode),
 
-    const { error: myerr } = await mysupa
-      .from("sessions")
-      .upsert({
-        id: sessData.id,
-        game_pin: roomCode,
-        quiz_id: sessData.quiz_id,
-        host_id: sessData.host_id,
-        total_time_minutes: settings.total_time_minutes,
-        question_limit: settings.question_limit,
-        difficulty: settings.difficulty,
-        current_questions: settings.current_questions
-      }, {
-        onConflict: "id"  // atau 'game_pin', pilih salah satu yang unique
-      });
+      mysupa
+        .from("sessions")
+        .upsert(
+          {
+            id: sessData.id,
+            game_pin: roomCode,
+            quiz_id: sessData.quiz_id,
+            host_id: sessData.host_id,
+            ...settings,
+          },
+          { onConflict: "id" }
+        ),
+    ]);
 
-
-    if (error || myerr) {
-      console.error("Error updating session settings:", error);
+    // Cek error dari dua2nya
+    if (dbMain.error || dbSecondary.error) {
+      console.error(
+        "Error syncing settings:",
+        dbMain.error || dbSecondary.error
+      );
+      alert("Gagal menyimpan pengaturan. Coba lagi.");
       setSaving(false);
       return;
     }
@@ -199,8 +206,8 @@ export default function HostSettingsPage() {
                   <div className="flex items-start space-x-3">
                     <div className="flex-shrink-0 mt-1"><Hash className="h-5 w-5 text-[#ff87ff]" /></div>
                     <div className="flex-1 space-y-1">
-                      <p className="text-base sm:text-lg text-[#ff87ff] pixel-text font-semibold">{quizDetail.title || quiz?.title || 'Unknown Quiz'}</p>
-                      <p className="text-[#00ffff] pixel-text text-xs sm:text-sm overflow-y-auto max-h-[60px]">{quizDetail.description || quiz?.description || 'No description available'}</p>
+                      <p className="text-base sm:text-lg text-[#ff87ff] pixel-text font-semibold">{quizDetail.title || 'Unknown Quiz'}</p>
+                      <p className="text-[#00ffff] pixel-text text-xs sm:text-sm overflow-y-auto max-h-[60px]">{quizDetail.description || 'No description available'}</p>
                     </div>
                   </div>
                 </div>
