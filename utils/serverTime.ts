@@ -2,7 +2,7 @@ import { mysupa, supabase } from "@/lib/supabase"
 
 let serverTimeOffset: number | null = null
 let lastSyncTime = 0
-const SYNC_INTERVAL = 30000 // re-sync tiap 30 detik
+const SYNC_INTERVAL = 10000
 
 export async function getServerTime(): Promise<number> {
   try {

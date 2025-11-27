@@ -57,7 +57,7 @@
       "title": "Oops Belum Siap Balapan!",
       "message": "Isi Kode Ruangan (6 huruf) dan Nama Panggilan dulu, ya!"
     },
-    "duplicateNickname": {
+    "duplicate": {
       "title": "Oops! Nama Panggilan Duplikat!",
       "message": "Nama panggilan itu sudah digunakan di ruangan ini. Silakan pilih yang lain."
     },

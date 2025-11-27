@@ -117,9 +117,9 @@ export default function HostRoomPage() {
 
             if (error) console.error("End countdown error:", error);
             else router.push(`/host/${roomCode}/game`);
-          }, 1000);
+          }, 500);
         }
-      }, 1000);
+      }, 250);
     },
     [roomCode, router]
   );
