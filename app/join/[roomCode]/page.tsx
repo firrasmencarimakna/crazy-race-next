@@ -98,7 +98,7 @@ export default function LobbyPage() {
         clearInterval(countdownIntervalRef.current!);
         countdownIntervalRef.current = null;
       }
-    }, 250);
+    }, 100);
   }, []);
 
   const stopCountdownSync = useCallback(() => {
@@ -172,7 +172,7 @@ export default function LobbyPage() {
       // Fetch session dari gameplay supabase
       const { data: fetchedSession, error: sessionErr } = await mysupa
         .from("sessions")
-        .select("id, status, countdown_started_at, started_at, ended_at, current_questions")
+        .select("id, status, countdown_started_at, started_at, ended_at")
         .eq("game_pin", roomCode)
         .single();
 
@@ -194,7 +194,7 @@ export default function LobbyPage() {
       // Fetch participants separately
       const { data: fetchedParticipants } = await mysupa
         .from("participants")
-        .select("*")   // ambil semua kolom
+        .select("*")
         .eq("session_id", fetchedSession.id);
 
       setParticipants(fetchedParticipants ?? []);

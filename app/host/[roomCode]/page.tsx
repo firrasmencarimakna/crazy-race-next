@@ -119,7 +119,7 @@ export default function HostRoomPage() {
             else router.push(`/host/${roomCode}/game`);
           }, 500);
         }
-      }, 250);
+      }, 100);
     },
     [roomCode, router]
   );
@@ -246,7 +246,7 @@ export default function HostRoomPage() {
       // ⭐ FIRST FETCH PARTICIPANTS
       const { data: fetchedParticipants, error: pErr } = await mysupa
         .from("participants")
-        .select("*")
+        .select("id, nickname, car")
         .eq("session_id", sessionData.id);
 
       if (pErr) console.error("Fetch participants error:", pErr);
