@@ -341,6 +341,13 @@ export default function HomePage() {
         return;
       }
 
+      if (data.error === "duplicate_nickname") {
+        setAlertReason("duplicate");
+        setShowAlert(true);
+        setJoining(false);
+        return;
+      }
+
       if (data.error === "room_not_found") {
         setAlertReason("roomNotFound");
         setShowAlert(true);

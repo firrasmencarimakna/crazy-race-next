@@ -57,7 +57,6 @@ export default function HostSettingsPage() {
         .from("game_sessions")
         .select("id, quiz_id, host_id, quiz_detail, total_time_minutes, question_limit, difficulty")
         .eq("game_pin", roomCode)
-        .eq("application", APP_NAME)
         .single();
 
       if (sessionError || !sessionData) {
@@ -130,34 +129,43 @@ export default function HostSettingsPage() {
       ),
     };
 
-    // Jalankan update ke 2 database secara paralel
-    const [dbMain, dbSecondary] = await Promise.all([
-      supabase
-        .from("game_sessions")
-        .update(settings)
-        .eq("game_pin", roomCode),
+    // cek session dulu
+    const { data: existing, error: rpcError } = await mysupa.rpc(
+      "get_session_id",
+      { pin: roomCode }
+    );
 
-      mysupa
+    if (rpcError) {
+      console.error(rpcError);
+      alert("Error saat cek session");
+      setSaving(false);
+      return;
+    }
+
+    let dbSecondary;
+
+    if (!existing) {
+      dbSecondary = await mysupa.from("sessions").insert({
+        id: sessData.id,
+        game_pin: roomCode,
+        quiz_id: sessData.quiz_id,
+        host_id: sessData.host_id,
+        ...settings,
+      });
+    } else {
+      dbSecondary = await mysupa
         .from("sessions")
-        .upsert(
-          {
-            id: sessData.id,
-            game_pin: roomCode,
-            quiz_id: sessData.quiz_id,
-            host_id: sessData.host_id,
-            ...settings,
-          },
-          { onConflict: "id" }
-        ),
-    ]);
+        .update(settings)
+        .eq("game_pin", roomCode);
+    }
 
-    // Cek error dari dua2nya
+    const dbMain = await supabase
+      .from("game_sessions")
+      .update(settings)
+      .eq("game_pin", roomCode);
+
     if (dbMain.error || dbSecondary.error) {
-      console.error(
-        "Error syncing settings:",
-        dbMain.error || dbSecondary.error
-      );
-      alert("Gagal menyimpan pengaturan. Coba lagi.");
+      alert("Gagal menyimpan pengaturan");
       setSaving(false);
       return;
     }
