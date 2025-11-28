@@ -130,11 +130,17 @@ export default function HostSettingsPage() {
     };
 
     // cek session dulu
-    const { data: existing } = await mysupa
-      .from("sessions")
-      .select("id")
-      .eq("game_pin", roomCode)
-      .maybeSingle();
+    const { data: existing, error: rpcError } = await mysupa.rpc(
+      "get_session_id",
+      { pin: roomCode }
+    );
+
+    if (rpcError) {
+      console.error(rpcError);
+      alert("Error saat cek session");
+      setSaving(false);
+      return;
+    }
 
     let dbSecondary;
 
