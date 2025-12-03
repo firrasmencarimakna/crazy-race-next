@@ -66,27 +66,12 @@ function LogoutDialog({
 
   const handleLogout = async () => {
     setLoading(true);
+      
+    await supabase.auth.signOut();
+    localStorage.clear();
 
-    try {
-      // Logout dari Supabase (lokal only — aman!)
-      await supabase.auth.signOut();
-
-      // Hapus SEMUA localStorage di domain ini → bye-bye token nyangkut!
-      localStorage.clear();
-
-      // Langsung lempar ke login
-      router.replace("/login");
-      onOpenChange(false);
-    } catch (err) {
-      console.error("Logout error:", err);
-
-      // Kalau tetap error (jarang banget), paksa bersihkan + redirect
-      localStorage.clear();
-      router.replace("/login");
-      onOpenChange(false);
-    } finally {
-      setLoading(false);
-    }
+    window.location.replace("/login");
+    onOpenChange(false);
   };
 
   return (
