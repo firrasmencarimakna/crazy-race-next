@@ -23,8 +23,8 @@ const backgroundGifs = [
 
 // UPDATE: generateRoomCode - rename ke generateGamePin (sama logic)
 export function generateGamePin(length = 6) {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  const digits = "0123456789";
+  return Array.from({ length }, () => digits[Math.floor(Math.random() * digits.length)]).join("");
 }
 
 export default function QuestionListPage() {
