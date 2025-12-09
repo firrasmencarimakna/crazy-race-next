@@ -25,6 +25,7 @@ import Image from "next/image";
 import { syncServerTime, getSyncedServerTime } from "@/utils/serverTime";
 import { useTranslation } from "react-i18next";
 import { t } from "i18next";
+import { useHostGuard } from "@/lib/host-guard";
 
 const APP_NAME = "crazyrace"; // Safety check for multi-tenant DB
 
@@ -42,6 +43,9 @@ export default function HostRoomPage() {
   const params = useParams();
   const router = useRouter();
   const roomCode = params.roomCode as string;
+
+  // Security: Verify host access
+  useHostGuard(roomCode);
 
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const countdownAudioRef = useRef<HTMLAudioElement>(null);

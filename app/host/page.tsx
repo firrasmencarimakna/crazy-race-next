@@ -229,8 +229,9 @@ export default function QuestionListPage() {
     return;
   }
 
-    // Simpan pin untuk host session
+    // Simpan pin dan host ID untuk security
     localStorage.setItem("hostGamePin", gamePin);
+    sessionStorage.setItem("currentHostId", profile?.id || user?.id);
 
     router.replace(`/host/${gamePin}/settings`); // Path sama, adjust kalau perlu
   }

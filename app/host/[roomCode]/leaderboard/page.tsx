@@ -13,6 +13,7 @@ import { generateGamePin } from "../../page"
 import { shuffleArray } from "../settings/page"
 import { useAuth } from "@/contexts/authContext"
 import { t } from "i18next"
+import { useHostGuard } from "@/lib/host-guard"
 
 const APP_NAME = "crazyrace"; // Safety check for multi-tenant DB
 
@@ -45,6 +46,9 @@ export default function HostLeaderboardPage() {
   const params = useParams();
   const router = useRouter();
   const roomCode = params.roomCode as string;
+
+  // Security: Verify host access
+  useHostGuard(roomCode);
 
   const [loading, setLoading] = useState(true);
   const [playerStats, setPlayerStats] = useState<PlayerStats[]>([]);
