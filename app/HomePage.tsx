@@ -262,19 +262,30 @@ export default function HomePage() {
     setShowLanguageMenu(false);
   };
 
-  useEffect(() => {
-    localStorage.removeItem("nickname");
-    localStorage.removeItem("nextQuestionIndex");
-    let defaultNick = generateNickname();
-    if (profile?.fullname) defaultNick = profile.fullname;
-    else if (profile?.username) defaultNick = profile.username;
-    else if (user?.email) defaultNick = user.email.split("@")[0];
-    setNickname(defaultNick);
-    localStorage.setItem("nickname", defaultNick);
-    const savedLanguage = localStorage.getItem("language") || "en";
-    i18n.changeLanguage(savedLanguage);
-    setCurrentLanguage(savedLanguage);
-  }, [user, profile, i18n]);
+  // Di useEffect yang set nickname
+useEffect(() => {
+  if (authLoading) return;
+
+  const setupNickname = async () => {
+    let nick = generateNickname();
+
+    // ✅ Priority order: fullname > username > fallback
+    if (profile?.fullname && profile.fullname.trim()) {
+      nick = profile.fullname;
+    } else if (profile?.username && profile.username.trim()) {
+      nick = profile.username;
+    } else if (user?.email) {
+      nick = user.email.split("@")[0];
+    } else {
+      nick = generateNickname();
+    }
+
+    setNickname(nick);
+    localStorage.setItem("nickname", nick);
+  };
+
+  setupNickname();
+}, [user, profile, authLoading, i18n]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -298,12 +309,24 @@ export default function HomePage() {
 
   // REFACTORED: Uses the 'join_game_session' RPC for a safe, atomic join process.
   const handleJoin = async () => {
+    // ✅ Validasi input
     if (roomCode.length !== 6 || !nickname.trim()) {
       setAlertReason(roomCode.length !== 6 ? "roomCode" : "nickname");
       setShowAlert(true);
       return;
     }
-    if (!profile?.id) {
+
+    // ✅ Validasi profile sudah ter-fetch dan valid
+    if (!profile?.id || profile.id.startsWith('fallback-')) {
+      console.warn('⚠️ Profile not fully loaded, retrying...');
+      setAlertReason("general");
+      setShowAlert(true);
+      return;
+    }
+
+    // ✅ Validasi fullname/username sudah ter-fetch
+    if (!profile?.fullname && !profile?.username) {
+      console.warn('⚠️ Profile name not loaded properly');
       setAlertReason("general");
       setShowAlert(true);
       return;
@@ -318,6 +341,7 @@ export default function HomePage() {
       });
 
       if (!data || error) {
+        console.error('❌ Join game RPC error:', error);
         setAlertReason("general");
         setShowAlert(true);
         setJoining(false);
@@ -346,7 +370,7 @@ export default function HomePage() {
         return;
       }
 
-      // Aman (reconnect / join baru)
+      // ✅ Aman (reconnect / join baru)
       localStorage.setItem("nickname", data.nickname);
       localStorage.setItem("participantId", data.participant_id);
       localStorage.setItem("game_pin", roomCode);
@@ -354,7 +378,7 @@ export default function HomePage() {
       router.push(`/join/${roomCode}`);
 
     } catch (error: any) {
-      console.error("Join error:", error);
+      console.error("❌ Join error:", error);
       setAlertReason("general");
       setShowAlert(true);
       setJoining(false);
