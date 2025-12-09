@@ -153,12 +153,12 @@
       @media (max-width: 767px) {
         #mobile-controls {
           display: flex !important;
-          margin-top: -130px;
+          margin-top: -200px;
           /* Sesuai permintaan: Naikkan tombol ke atas 230px */
         }
 
         #screen-area {
-          max-height: calc(100vh + 110px);
+          max-height: calc(100vh + 40px);
           /* Adjust: 120px controls - 230px naik = -110px efektif, jadi +110px ruang untuk overlap tanpa potong */
           z-index: 5;
           /* Pastikan screen di belakang tombol (tombol z-index 10) */
@@ -166,11 +166,11 @@
 
         #controls-area {
           display: flex;
-          height: 350px;
+          height: 420px;
           /* Adjust: Tinggi lebih besar (120px + 230px) agar margin-top -230px muat sepenuhnya tanpa keluar container */
           align-items: flex-start;
           /* Align ke atas agar tombol start dari top controls-area */
-          padding-top: 230px;
+          padding-top: 300px;
           /* Offset internal agar tombol posisi pas di -230px relatif */
         }
       }
