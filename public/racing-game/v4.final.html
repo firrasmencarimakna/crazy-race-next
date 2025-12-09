@@ -1059,12 +1059,13 @@
       reset({ width: width, height: height });
     }
 
-    // Fungsi untuk update visibilitas kontrol mobile berdasarkan lebar layar
+    // Fungsi untuk update visibilitas kontrol mobile berdasarkan deteksi sentuhan
     function updateControlsVisibility() {
-      const isMobileView = window.innerWidth < 768;
+      const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
       const mobileControls = document.getElementById('mobile-controls');
       const controlsArea = document.getElementById('controls-area');
-      if (isMobileView) {
+      
+      if (isTouchDevice) {
         mobileControls.style.display = 'flex';
         controlsArea.style.display = 'flex';
       } else {
