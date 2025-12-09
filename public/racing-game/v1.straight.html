@@ -373,6 +373,9 @@
 </head>
 
 <body>
+  <div id="controls-info" class="hidden bg-gray-800 text-white p-4 rounded-lg shadow-lg" style="position: fixed; top: 1rem; right: 1rem; z-index: 100; opacity: 1; transition: opacity 0.5s ease-out;">
+    <p>Use <strong>WASD</strong> or <strong>Arrow Keys</strong> to move.</p>
+  </div>
   <div id="game-container">
     <div id="screen-area">
       <button id="controls-toggle"
@@ -975,6 +978,23 @@
     
   </script>
 
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+      if (!isTouchDevice) {
+        const controlsInfo = document.getElementById('controls-info');
+        if (controlsInfo) {
+          controlsInfo.classList.remove('hidden');
+          setTimeout(() => {
+            controlsInfo.style.opacity = '0';
+            setTimeout(() => {
+              controlsInfo.remove();
+            }, 500); // Wait for fade out to complete
+          }, 3000);
+        }
+      }
+    });
+  </script>
 </body>
 
 </html>
