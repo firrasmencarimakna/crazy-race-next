@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, ArrowLeft, HelpCircle, Heart, User } from "lucide-react"
 import { useEffect, useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { supabase } from "@/lib/supabase"
+import { mysupa, supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import LoadingRetro from "@/components/loadingRetro"
 import Image from "next/image"
@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/authContext"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useTranslation } from "react-i18next"
 import { t } from "i18next"
+import { generateXID } from "@/lib/id-generator"
 
 // List of background GIFs in filename order
 const backgroundGifs = [
@@ -23,8 +24,8 @@ const backgroundGifs = [
 
 // UPDATE: generateRoomCode - rename ke generateGamePin (sama logic)
 export function generateGamePin(length = 6) {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  const digits = "0123456789";
+  return Array.from({ length }, () => digits[Math.floor(Math.random() * digits.length)]).join("");
 }
 
 export default function QuestionListPage() {
@@ -94,6 +95,8 @@ export default function QuestionListPage() {
 
     useEffect(() => {
   const fetchQuizzes = async () => {
+    if (!profile?.id) return;
+    
     setLoading(true);
     
     try {
@@ -174,35 +177,57 @@ export default function QuestionListPage() {
     setCreating(true);
 
     const gamePin = generateGamePin();
+    const sessId = generateXID();
 
-    // Defaults untuk game_sessions baru (adjust sesuai kebutuhan)
-    const newSession = {
+    const primarySession = {
+      id: sessId,
       quiz_id: quizId,
       host_id: profile?.id || user?.id, // Prioritas profile.id, fallback user.id
       game_pin: gamePin,
-      status: "waiting",
       total_time_minutes: 5, // Default dari contoh
       question_limit: 5, // Default
       difficulty: "easy",
+      current_questions: [], // Akan diisi di settings atau game start
+      status: "waiting",
+    }
+
+    // Defaults untuk game_sessions baru (adjust sesuai kebutuhan)
+    const newMainSession = {
+      ...primarySession, 
       game_end_mode: "manual", // Default
       allow_join_after_start: false, // Default
       participants: [], // Mulai kosong
       responses: [], // Kosong
-      current_questions: [], // Akan diisi di settings atau game start
       application: "crazyrace"
     };
 
-    const { error } = await supabase
+    const { error: mainError } = await supabase
       .from("game_sessions")
-      .insert(newSession)
+      .insert(newMainSession)
       .select("game_pin")
       .single();
 
-    if (error) {
-      console.error("Error creating session:", error);
+    if (mainError) {
+      console.error("Error creating session:", mainError);
       setCreating(false);
       return;
     }
+
+    const { error: gameError } = await mysupa
+      .from("sessions")
+      .insert(primarySession)
+      .select("id")
+      .single();
+
+    if (gameError) {
+    console.error("Error creating session (mysupa):", gameError);
+
+    // 3) ROLLBACK di supabase utama
+    await supabase.from("game_sessions").delete().eq("id", sessId);
+
+    setCreating(false);
+    return;
+  }
 
     // Simpan pin untuk host session
     localStorage.setItem("hostGamePin", gamePin);
