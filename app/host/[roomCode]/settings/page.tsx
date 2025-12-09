@@ -128,44 +128,14 @@ export default function HostSettingsPage() {
         parseInt(questionCount)
       ),
     };
-
-    // cek session dulu
-    const { data: existing, error: rpcError } = await mysupa.rpc(
-      "get_session_id",
-      { pin: roomCode }
-    );
-
-    if (rpcError) {
-      console.error(rpcError);
-      alert("Error saat cek session");
-      setSaving(false);
-      return;
-    }
-
-    let dbSecondary;
-
-    if (!existing) {
-      dbSecondary = await mysupa.from("sessions").insert({
-        id: sessData.id,
-        game_pin: roomCode,
-        quiz_id: sessData.quiz_id,
-        host_id: sessData.host_id,
-        ...settings,
-      });
-    } else {
-      dbSecondary = await mysupa
-        .from("sessions")
-        .update(settings)
-        .eq("game_pin", roomCode);
-    }
-
-    const dbMain = await supabase
-      .from("game_sessions")
+    
+    const { error } = await mysupa
+      .from("sessions")
       .update(settings)
       .eq("game_pin", roomCode);
 
-    if (dbMain.error || dbSecondary.error) {
-      alert("Gagal menyimpan pengaturan");
+    if (error) {
+      console.error("Gagal menyimpan pengaturan");
       setSaving(false);
       return;
     }
