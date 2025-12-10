@@ -74,7 +74,7 @@
       box-sizing: border-box;
       /* Border masuk ke height 120px, total pas 120px */
       width: 100%;
-      height: 130px;
+      height: 230px;
       background: linear-gradient(to top, #1a202c, #2d3748);
       border-top: 4px solid #333;
       display: flex;
@@ -153,25 +153,25 @@
     @media (max-width: 767px) {
       #mobile-controls {
         display: flex !important;
-        margin-top: -270px;
+        margin-top: -80px;
         /* Sesuai permintaan: Naikkan tombol ke atas 230px */
       }
 
       #screen-area {
         max-height: calc(100vh - 30px);
-        /* Adjust: 120px controls - 230px naik = -110px efektif, jadi +110px ruang untuk overlap tanpa potong */
+        /* Adjust: Reserve space for controls at the bottom */
         z-index: 5;
         /* Pastikan screen di belakang tombol (tombol z-index 10) */
       }
 
       #controls-area {
         display: flex;
-        height: 490px;
-        /* Adjust: Tinggi lebih besar (120px + 230px) agar margin-top -230px muat sepenuhnya tanpa keluar container */
-        align-items: flex-start;
-        /* Align ke atas agar tombol start dari top controls-area */
-        padding-top: 370px;
-        /* Offset internal agar tombol posisi pas di -230px relatif */
+        height: 230px;
+        /* Revert to original height */
+        align-items: center;
+        /* Align buttons in the middle vertically */
+        padding-top: 0;
+        /* Remove padding-top */
       }
     }
 
