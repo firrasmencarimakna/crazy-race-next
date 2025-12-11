@@ -389,33 +389,40 @@ export default function QuizGamePage() {
           </CardContent>
         </Card>
         <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 pixel-card">
-          <CardHeader className="text-center">
-            <h2 className="text-lg sm:text-2xl font-bold text-[#00ffff] pixel-text glow-cyan text-balance">
-              {currentQuestion.question}
-            </h2>
-          </CardHeader>
+<CardHeader className="text-center pb-4 px-4">
+  <div className="max-h-[200px] overflow-y-auto"> {/* <-- ini yang penting */}
+    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#00ffff] pixel-text glow-cyan leading-tight text-balance whitespace-pre-wrap break-words px-2">
+      {currentQuestion.question}
+    </h2>
+  </div>
+</CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {currentQuestion.options.map((option, index) => (
-                <motion.button
-                  key={index}
-                  onClick={() => handleAnswerSelect(index)}
-                  disabled={isAnswered}
-                  className={`p-3 sm:p-4 rounded-xl border-4 border-double transition-all duration-200 text-left bg-[#1a0a2a]/50 ${getOptionStyle(index)}`}
-                  whileHover={{ scale: isAnswered ? 1 : 1.01 }}
-                  whileTap={{ scale: isAnswered ? 1 : 0.99 }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-8 h-8 rounded-full bg-[#ff6bff]/20 flex items-center justify-center font-bold text-[#ff6bff] pixel-text glow-pink-subtle">
-                        {String.fromCharCode(65 + index)}
-                      </div>
-                      <span className="text-base sm:text-lg font-medium text-white pixel-text glow-text">{option}</span>
-                    </div>
-                  </div>
-                </motion.button>
-              ))}
-            </div>
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  {currentQuestion.options.map((option, index) => (
+<motion.button
+  key={index}
+  onClick={() => handleAnswerSelect(index)}
+  disabled={isAnswered}
+  className={`p-3 sm:p-4 rounded-xl border-4 border-double transition-all duration-200 text-left bg-[#1a0a2a]/50 ${getOptionStyle(index)} min-h-[80px]`}
+  whileHover={{ scale: isAnswered ? 1 : 1.01 }}
+  whileTap={{ scale: isAnswered ? 1 : 0.99 }}
+>
+  <div className="flex items-start gap-3 sm:gap-4">
+    {/* Kotak huruf A/B/C/D */}
+    <div className="w-8 h-8 rounded-full bg-[#ff6bff]/20 flex items-center justify-center font-bold text-[#ff6bff] pixel-text glow-pink-subtle flex-shrink-0 mt-0.5">
+      {String.fromCharCode(65 + index)}
+    </div>
+
+    {/* Teks jawaban */}
+    <div className="flex-1 min-w-0">
+      <span className="text-base sm:text-lg font-medium text-white pixel-text glow-text whitespace-pre-wrap break-words leading-relaxed">
+        {option}
+      </span>
+    </div>
+  </div>
+</motion.button>
+  ))}
+</div>
           </CardContent>
         </Card>
       </div>
