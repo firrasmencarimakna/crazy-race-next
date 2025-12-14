@@ -4,6 +4,7 @@ out
 build
 dist
 
+.agent
 .git
 .gitignore
 .gemini

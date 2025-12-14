@@ -147,8 +147,8 @@ export default function HostLeaderboardPage() {
     const p = payload.new || payload.old;
 
     // Kalau player selesai (completion: true)
-    if (payload.eventType === "INSERT" || 
-    (payload.eventType === "UPDATE" && (p.completion || payload.new.completion))) {
+    if (payload.eventType === "INSERT" ||
+      (payload.eventType === "UPDATE" && (p.completion || payload.new.completion))) {
       const totalQuestions = session?.question_limit || (session?.current_questions || []).length;
 
       const accuracy = totalQuestions > 0
@@ -197,25 +197,25 @@ export default function HostLeaderboardPage() {
   }, [roomCode]);
 
   useEffect(() => {
-  if (!roomCode || !session?.id) return;
+    if (!roomCode || !session?.id) return;
 
-  const channel = mysupa
-    .channel(`leaderboard-${roomCode}`)
-    .on("postgres_changes", {
-      event: "*",
-      schema: "public",
-      table: "participants",
-      filter: `session_id=eq.${session.id}`
-    }, (payload) => {
-      // JANGAN fetchData() → GUNAKAN payload LANGSUNG!
-      handleRealtimeUpdate(payload);
-    })
-    .subscribe();
+    const channel = mysupa
+      .channel(`leaderboard-${roomCode}`)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "participants",
+        filter: `session_id=eq.${session.id}`
+      }, (payload) => {
+        // JANGAN fetchData() → GUNAKAN payload LANGSUNG!
+        handleRealtimeUpdate(payload);
+      })
+      .subscribe();
 
-  return () => {
-    mysupa.removeChannel(channel)
-  };
-}, [roomCode, session?.id]);
+    return () => {
+      mysupa.removeChannel(channel)
+    };
+  }, [roomCode, session?.id]);
 
   // Background
   useEffect(() => {
@@ -226,69 +226,70 @@ export default function HostLeaderboardPage() {
   }, []);
 
   const restartGame = async () => {
-  try {
-    // 1. Ambil session lama dari mysupa
-    const { data: oldSess } = await mysupa
-      .from("sessions")
-      .select("quiz_id, host_id, question_limit, total_time_minutes, difficulty, current_questions")
-      .eq("game_pin", roomCode)
-      .single();
+    try {
+      // 1. Ambil session lama dari mysupa
+      const { data: oldSess } = await mysupa
+        .from("sessions")
+        .select("quiz_id, host_id, question_limit, total_time_minutes, difficulty, current_questions")
+        .eq("game_pin", roomCode)
+        .single();
 
-    if (!oldSess) throw new Error("Session lama tidak ditemukan");
+      if (!oldSess) throw new Error("Session lama tidak ditemukan");
 
-    // 2. Shuffle questions
-    const questions = oldSess.current_questions || [];
-    const shuffled = shuffleArray(questions);
-    const sliced = shuffled.slice(0, oldSess.question_limit || 5);
+      // 2. Shuffle questions
+      const questions = oldSess.current_questions || [];
+      const shuffled = shuffleArray(questions);
+      const sliced = shuffled.slice(0, oldSess.question_limit || 5);
 
-    // 3. Generate PIN baru
-    const newPin = generateGamePin(6);
+      // 3. Generate PIN baru
+      const newPin = generateGamePin(6);
 
-    // 4. BUAT SESSION BARU DI mysupa (real-time gameplay)
-    const { error: mysupaError } = await mysupa
-      .from("sessions")
-      .insert({
-        game_pin: newPin,
-        quiz_id: oldSess.quiz_id,
-        status: "waiting",
-        question_limit: oldSess.question_limit,
-        total_time_minutes: oldSess.total_time_minutes,
-        difficulty: oldSess.difficulty,
-        current_questions: sliced,
-      });
+      // 4. BUAT SESSION BARU DI mysupa (real-time gameplay)
+      const { error: mysupaError } = await mysupa
+        .from("sessions")
+        .insert({
+          game_pin: newPin,
+          quiz_id: oldSess.quiz_id,
+          host_id: oldSess.host_id, // PENTING: tanpa ini host guard akan redirect!
+          status: "waiting",
+          question_limit: oldSess.question_limit,
+          total_time_minutes: oldSess.total_time_minutes,
+          difficulty: oldSess.difficulty,
+          current_questions: sliced,
+        });
 
-    if (mysupaError) throw mysupaError;
+      if (mysupaError) throw mysupaError;
 
-    // 5. BUAT SESSION BARU DI supabase UTAMA (agar bisa join!)
-    const { error: mainError } = await supabase
-      .from("game_sessions")
-      .insert({
-        game_pin: newPin,
-        quiz_id: oldSess.quiz_id,
-        host_id: oldSess.host_id,
-        status: "waiting",
-        application: "crazyrace",
-        total_time_minutes: oldSess.total_time_minutes || 5,
-        question_limit: oldSess.question_limit?.toString() || "5",
-        difficulty: oldSess.difficulty,
-        current_questions: sliced,
-        participants: [],
-        responses: [],
-      });
+      // 5. BUAT SESSION BARU DI supabase UTAMA (agar bisa join!)
+      const { error: mainError } = await supabase
+        .from("game_sessions")
+        .insert({
+          game_pin: newPin,
+          quiz_id: oldSess.quiz_id,
+          host_id: oldSess.host_id,
+          status: "waiting",
+          application: "crazyrace",
+          total_time_minutes: oldSess.total_time_minutes || 5,
+          question_limit: oldSess.question_limit?.toString() || "5",
+          difficulty: oldSess.difficulty,
+          current_questions: sliced,
+          participants: [],
+          responses: [],
+        });
 
-    if (mainError) {
-      console.error("Gagal buat di supabase utama:", mainError);
-      throw mainError
+      if (mainError) {
+        console.error("Gagal buat di supabase utama:", mainError);
+        throw mainError
+      }
+
+      console.log("Restart berhasil! PIN baru:", newPin);
+      router.push(`/host/${newPin}`);
+
+    } catch (err: any) {
+      console.error("Restart gagal:", err);
+      alert("Gagal restart game: " + err.message);
     }
-
-    console.log("Restart berhasil! PIN baru:", newPin);
-    router.push(`/host/${newPin}`);
-
-  } catch (err: any) {
-    console.error("Restart gagal:", err);
-    alert("Gagal restart game: " + err.message);
-  }
-};
+  };
 
   const getRankColor = (rank: number) => {
     switch (rank) {
