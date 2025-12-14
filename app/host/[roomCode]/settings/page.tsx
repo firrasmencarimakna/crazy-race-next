@@ -12,6 +12,7 @@ import { mysupa, supabase } from "@/lib/supabase"
 import LoadingRetro from "@/components/loadingRetro"
 import Image from "next/image"
 import { t } from "i18next"
+import { useHostGuard } from "@/lib/host-guard"
 
 const APP_NAME = "crazyrace";
 
@@ -30,6 +31,9 @@ export default function HostSettingsPage() {
   const router = useRouter()
   const params = useParams()
   const roomCode = params.roomCode as string
+
+  // Security: Verify host access
+  useHostGuard(roomCode)
 
   const [duration, setDuration] = useState("300")
   const [questionCount, setQuestionCount] = useState("5")
