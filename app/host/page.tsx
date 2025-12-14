@@ -93,33 +93,33 @@ export default function QuestionListPage() {
     }
   }, [user]);
 
-    useEffect(() => {
-  const fetchQuizzes = async () => {
-    if (!profile?.id) return;
-    
-    setLoading(true);
-    
-    try {
-      const { data, error } = await supabase
-        .rpc('get_quizzes_with_question_count', {
-          user_id: profile?.id || null
-        });
+  useEffect(() => {
+    const fetchQuizzes = async () => {
+      if (!profile?.id) return;
 
-      if (error) {
-        console.error("Error fetching quizzes:", error);
-      } else {
-        setQuizzes(data || []);
-        console.log('Fetched quizzes with counts:', data?.length);
+      setLoading(true);
+
+      try {
+        const { data, error } = await supabase
+          .rpc('get_quizzes_with_question_count', {
+            user_id: profile?.id || null
+          });
+
+        if (error) {
+          console.error("Error fetching quizzes:", error);
+        } else {
+          setQuizzes(data || []);
+          console.log('Fetched quizzes with counts:', data?.length);
+        }
+      } catch (error) {
+        console.error("Unexpected error:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Unexpected error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  fetchQuizzes();
-}, [profile?.id]);
+    };
+
+    fetchQuizzes();
+  }, [profile?.id]);
 
   useEffect(() => {
     setCurrentPage(1); // Reset to 1 on filter change
@@ -178,26 +178,26 @@ export default function QuestionListPage() {
 
     const gamePin = generateGamePin();
     const sessId = generateXID();
+    const hostId = profile?.id || user?.id;
 
     const primarySession = {
       id: sessId,
       quiz_id: quizId,
-      host_id: profile?.id || user?.id, // Prioritas profile.id, fallback user.id
+      host_id: hostId,
       game_pin: gamePin,
-      total_time_minutes: 5, // Default dari contoh
-      question_limit: 5, // Default
+      total_time_minutes: 5,
+      question_limit: 5,
       difficulty: "easy",
-      current_questions: [], // Akan diisi di settings atau game start
+      current_questions: [],
       status: "waiting",
     }
 
-    // Defaults untuk game_sessions baru (adjust sesuai kebutuhan)
     const newMainSession = {
-      ...primarySession, 
-      game_end_mode: "manual", // Default
-      allow_join_after_start: false, // Default
-      participants: [], // Mulai kosong
-      responses: [], // Kosong
+      ...primarySession,
+      game_end_mode: "manual",
+      allow_join_after_start: false,
+      participants: [],
+      responses: [],
       application: "crazyrace"
     };
 
@@ -220,17 +220,18 @@ export default function QuestionListPage() {
       .single();
 
     if (gameError) {
-    console.error("Error creating session (mysupa):", gameError);
+      console.error("Error creating session (mysupa):", gameError);
 
-    // 3) ROLLBACK di supabase utama
-    await supabase.from("game_sessions").delete().eq("id", sessId);
+      // 3) ROLLBACK di supabase utama
+      await supabase.from("game_sessions").delete().eq("id", sessId);
 
-    setCreating(false);
-    return;
-  }
+      setCreating(false);
+      return;
+    }
 
-    // Simpan pin untuk host session
+    // Simpan pin dan host ID untuk security
     localStorage.setItem("hostGamePin", gamePin);
+    sessionStorage.setItem("currentHostId", hostId);
 
     router.replace(`/host/${gamePin}/settings`); // Path sama, adjust kalau perlu
   }
@@ -620,7 +621,7 @@ export default function QuestionListPage() {
           }
         }
       `}</style>
-      
+
     </div>
   )
 }

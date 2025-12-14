@@ -25,6 +25,7 @@ import Image from "next/image";
 import { syncServerTime, getSyncedServerTime } from "@/utils/serverTime";
 import { useTranslation } from "react-i18next";
 import { t } from "i18next";
+import { useHostGuard } from "@/lib/host-guard";
 
 const APP_NAME = "crazyrace"; // Safety check for multi-tenant DB
 
@@ -42,6 +43,9 @@ export default function HostRoomPage() {
   const params = useParams();
   const router = useRouter();
   const roomCode = params.roomCode as string;
+
+  // Security: Verify host access
+  useHostGuard(roomCode);
 
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const countdownAudioRef = useRef<HTMLAudioElement>(null);
@@ -470,11 +474,10 @@ export default function HostRoomPage() {
         animate={{ opacity: 1, x: 0 }}
         whileHover={{ scale: 1.05 }}
         onClick={() => setIsMuted((p) => !p)}
-        className={`absolute top-4 right-4 z-40 p-3 border-2 pixel-button rounded-lg shadow-lg min-w-[48px] min-h-[48px] flex items-center justify-center transition-all cursor-pointer ${
-          isMuted
+        className={`absolute top-4 right-4 z-40 p-3 border-2 pixel-button rounded-lg shadow-lg min-w-[48px] min-h-[48px] flex items-center justify-center transition-all cursor-pointer ${isMuted
             ? "bg-[#ff6bff]/30 border-[#ff6bff] glow-pink shadow-[#ff6bff]/30 hover:bg-[#ff8aff]/50"
             : "bg-[#00ffff]/30 border-[#00ffff] glow-cyan shadow-[#00ffff]/30 hover:bg-[#33ffff]/50"
-        }`}
+          }`}
         aria-label={isMuted ? "Unmute" : "Mute"}
       >
         <span className="filter drop-shadow-[2px_2px_2px_rgba(0,0,0,0.7)]">

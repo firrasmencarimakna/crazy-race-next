@@ -25,7 +25,7 @@ type QuizQuestion = {
   id: string
   question: string
   options: string[]
-  correctAnswer: number
+  // correctAnswer tidak disimpan di client untuk keamanan
 }
 
 const APP_NAME = "crazyrace"; // Safety check for multi-tenant DB
@@ -42,6 +42,7 @@ export default function QuizGamePage() {
   const [totalTimeRemaining, setTotalTimeRemaining] = useState(0)
   const [isAnswered, setIsAnswered] = useState(false)
   const [showResult, setShowResult] = useState(false)
+  const [correctAnswerIndex, setCorrectAnswerIndex] = useState<number | null>(null) // Dari server setelah menjawab
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isFinalizing, setIsFinalizing] = useState(false);
@@ -53,7 +54,7 @@ export default function QuizGamePage() {
   const hasBootstrapped = useRef(false);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const pendingAnswersRef = useRef<any[]>([]); 
+  const pendingAnswersRef = useRef<any[]>([]);
   const pendingScoreRef = useRef<number>(0);
   const pendingCorrectRef = useRef<number>(0);
 
@@ -82,7 +83,55 @@ export default function QuizGamePage() {
     if (!participantId || !roomCode) return;
 
     try {
-      // 1. Ambil session
+      // 1. CEK DULU apakah soal sudah ada di localStorage
+      const cachedQuestionsKey = `quizQuestions_${roomCode}`;
+      const cachedQuestions = localStorage.getItem(cachedQuestionsKey);
+
+      if (cachedQuestions) {
+        // Soal sudah tersimpan, gunakan dari cache
+        console.log("✅ Menggunakan soal dari cache localStorage");
+        const parsedQuestions = JSON.parse(cachedQuestions);
+
+        // Ambil session info (timing, status)
+        const { data: sess, error } = await mysupa
+          .from("sessions")
+          .select("id, status, started_at, total_time_minutes")
+          .eq("game_pin", roomCode)
+          .single();
+
+        if (error || !sess || sess.status !== "active") {
+          router.replace(`/join/${roomCode}`);
+          return;
+        }
+
+        // Ambil participant untuk tahu index soal mana sekarang
+        const { data: participant } = await mysupa
+          .from("participants")
+          .select("answers, completion, current_question")
+          .eq("id", participantId)
+          .single();
+
+        if (participant) {
+          const answeredCount = (participant.answers || []).length;
+
+          if (participant.completion || answeredCount >= parsedQuestions.length) {
+            router.replace(`/join/${roomCode}/result`);
+            return;
+          }
+
+          setCurrentQuestionIndex(answeredCount);
+        }
+
+        setSession(sess);
+        setQuestions(parsedQuestions);
+        setGameDuration((sess.total_time_minutes || 5) * 60);
+        setGameStartTime(new Date(sess.started_at).getTime());
+        setLoading(false);
+        return;
+      }
+
+      // 2. Jika tidak ada di cache, fetch dari database (HANYA FIRST TIME)
+      console.log("🔄 First time: fetch soal dari database");
       const { data: sess, error } = await mysupa
         .from("sessions")
         .select("id, status, started_at, total_time_minutes, current_questions")
@@ -94,22 +143,26 @@ export default function QuizGamePage() {
         return;
       }
 
-      // 2. Parse questions DULU (tapi JANGAN setState dulu)
+      // 3. Parse questions TANPA correctAnswer (untuk keamanan)
       const parsedQuestions = (sess.current_questions || []).map((q: any) => ({
         id: q.id,
         question: q.question,
         options: q.answers.map((a: any) => a.answer),
-        correctAnswer: parseInt(q.correct),
+        // correctAnswer TIDAK disimpan di client! Akan di-check via server
       }));
 
-      // 3. Ambil participant DULU
+      // 4. Simpan soal ke localStorage (TANPA jawaban - aman)
+      localStorage.setItem(cachedQuestionsKey, JSON.stringify(parsedQuestions));
+      console.log("💾 Soal disimpan ke localStorage (tanpa kunci jawaban)");
+
+      // 5. Ambil participant
       const { data: participant } = await mysupa
         .from("participants")
         .select("answers, completion, current_question")
         .eq("id", participantId)
         .single();
 
-      // 4. CEK DULU sebelum setQuestions!
+      // 6. CEK DULU sebelum setQuestions!
       if (participant) {
         const answeredCount = (participant.answers || []).length;
 
@@ -122,9 +175,9 @@ export default function QuizGamePage() {
         setCurrentQuestionIndex(answeredCount);
       }
 
-      // 5. BARU SET SEMUA STATE (setelah semua pengecekan selesai)
+      // 7. SET SEMUA STATE (setelah semua pengecekan selesai)
       setSession(sess);
-      setQuestions(parsedQuestions);  // ← pindah ke bawah!
+      setQuestions(parsedQuestions);
       setGameDuration((sess.total_time_minutes || 5) * 60);
       setGameStartTime(new Date(sess.started_at).getTime());
       setLoading(false);
@@ -165,6 +218,11 @@ export default function QuizGamePage() {
         })
         .eq("id", participantId);
     }
+
+    // 🧹 Hapus cache soal dari localStorage setelah game selesai
+    const cachedQuestionsKey = `quizQuestions_${roomCode}`;
+    localStorage.removeItem(cachedQuestionsKey);
+    console.log("🗑️ Cache soal dihapus dari localStorage");
 
     router.push(`/join/${roomCode}/result`);
   };
@@ -234,58 +292,61 @@ export default function QuizGamePage() {
 
     setIsAnswered(true);
     setSelectedAnswer(answerIndex);
-    setShowResult(true);
 
-    const isCorrect = answerIndex === currentQuestion.correctAnswer;
     const nextIndex = currentQuestionIndex + 1;
     const isFinished = nextIndex >= totalQuestions;
     const isRacing = nextIndex % 3 === 0 && !isFinished;
-
     const scorePerQuestion = Math.max(1, Math.floor(100 / totalQuestions));
-    const currentScoreAdd = isCorrect ? scorePerQuestion : 0;
-    const currentCorrectAdd = isCorrect ? 1 : 0;
-
-    const newAnswer = {
-      id: generateXID(),
-      question_id: currentQuestion.id,
-      answer_id: String(answerIndex),
-      correct: isCorrect,
-    };
-
-    const payloadAnswers = [...pendingAnswersRef.current, newAnswer];
-    const payloadScore = pendingScoreRef.current + currentScoreAdd;
-    const payloadCorrect = pendingCorrectRef.current + currentCorrectAdd;
 
     try {
-      const serverTask = mysupa.rpc('submit_quiz_answer_batch', {
+      // Panggil RPC dengan jawaban - server akan return isCorrect dan correctAnswer
+      const serverTask = mysupa.rpc('submit_quiz_answer_secure', {
         p_participant_id: participantId,
-        p_new_answers: payloadAnswers,      // Kirim array (titipan + baru)
-        p_total_score_add: payloadScore,    // Kirim total score
-        p_total_correct_add: payloadCorrect,// Kirim total correct
+        p_question_id: currentQuestion.id,
+        p_answer_index: answerIndex,
+        p_score_per_question: scorePerQuestion,
         p_next_index: nextIndex,
         p_is_finished: isFinished,
-        p_is_racing: isRacing
+        p_is_racing: isRacing,
+        p_pending_answers: pendingAnswersRef.current,
+        p_pending_score: pendingScoreRef.current,
+        p_pending_correct: pendingCorrectRef.current
       });
 
-      const timeoutTask = new Promise((_, reject) =>
+      const timeoutTask = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error("Request Timeout")), 3000)
       );
-      const visualTask = new Promise(resolve => setTimeout(resolve, 500));
 
-      await visualTask;
-      await Promise.race([serverTask, timeoutTask]);
-      console.log("Data terkirim ke server!");
+      const result = await Promise.race([serverTask, timeoutTask]);
+      const { is_correct, correct_answer } = (result as any).data || {};
 
+      // Set correctAnswer dari server untuk tampilan
+      setCorrectAnswerIndex(correct_answer);
+      setShowResult(true);
+      console.log("✅ Jawaban terkirim, isCorrect:", is_correct, "correctAnswer:", correct_answer);
+
+      // Clear pending
       pendingAnswersRef.current = [];
       pendingScoreRef.current = 0;
       pendingCorrectRef.current = 0;
 
+      // Delay sebelum navigasi agar player lihat hasil
+      await new Promise(resolve => setTimeout(resolve, 500));
       navigateNext(nextIndex, isFinished, isRacing);
     } catch (err: any) {
-      console.warn("⚠️ Gagal kirim (Timeout/Error), simpan ke tas lokal:", err);
-      pendingAnswersRef.current = payloadAnswers;
-      pendingScoreRef.current = payloadScore;
-      pendingCorrectRef.current = payloadCorrect;
+      console.warn("⚠️ Gagal kirim (Timeout/Error), simpan ke pending:", err);
+
+      // Simpan ke pending untuk dikirim nanti
+      const newAnswer = {
+        id: generateXID(),
+        question_id: currentQuestion.id,
+        answer_id: String(answerIndex),
+        correct: null, // Tidak tahu benar/salah, akan di-resolve server
+      };
+      pendingAnswersRef.current = [...pendingAnswersRef.current, newAnswer];
+
+      // Tidak tampilkan hasil karena tidak tahu jawaban benar
+      setShowResult(false);
       navigateNext(nextIndex, isFinished, isRacing);
     }
   };
@@ -301,17 +362,19 @@ export default function QuizGamePage() {
       setSelectedAnswer(null);
       setIsAnswered(false);
       setShowResult(false);
+      setCorrectAnswerIndex(null); // Reset correctAnswer untuk soal baru
     }
   };
 
   const getOptionStyle = (optionIndex: number) => {
-    if (!showResult) {
+    if (!showResult || correctAnswerIndex === null) {
       return selectedAnswer === optionIndex
         ? "border-[#00ffff] bg-[#00ffff]/10 animate-neon-pulse"
         : "border-[#ff6bff]/70 hover:border-[#ff6bff] hover:bg-[#ff6bff]/10 hover:scale-[1.01] glow-pink-subtle";
     }
+    // Gunakan correctAnswerIndex dari server, bukan dari local
     if (optionIndex === selectedAnswer) {
-      return optionIndex === currentQuestion.correctAnswer
+      return optionIndex === correctAnswerIndex
         ? "border-[#00ff00] bg-[#00ff00]/10 text-[#00ff00] glow-green" // BENAR: Hijau
         : "border-red-500 bg-red-500/10 text-red-500"; // SALAH: Merah
     }

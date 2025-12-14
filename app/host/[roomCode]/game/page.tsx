@@ -15,6 +15,7 @@ import LoadingRetro from "@/components/loadingRetro"
 import Image from "next/image"
 import { Dialog, DialogContent, DialogOverlay, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { generateXID } from "@/lib/id-generator"
+import { useHostGuard } from "@/lib/host-guard"
 
 const backgroundImage = "/assets/background/host/9.webp"
 
@@ -30,6 +31,9 @@ export default function HostMonitorPage() {
   const params = useParams();
   const router = useRouter();
   const roomCode = params.roomCode as string;
+
+  // Security: Verify host access
+  useHostGuard(roomCode);
 
   const [session, setSession] = useState<any>(null);
   const [participants, setParticipants] = useState<any[]>([]);
