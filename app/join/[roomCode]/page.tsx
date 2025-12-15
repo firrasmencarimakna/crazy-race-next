@@ -69,11 +69,36 @@ export default function LobbyPage() {
   const [showCarDialog, setShowCarDialog] = useState(false)
   const [showExitDialog, setShowExitDialog] = useState(false)
   const hasBootstrapped = useRef(false);
+  const hasPreloaded = useRef(false); // ✅ Track if assets already preloaded
 
   useEffect(() => {
     syncServerTime()
     localStorage.removeItem("roomCode")
   }, [])
+
+  // ✅ Handle browser back button (Alt+Left Arrow / Back button)
+  useEffect(() => {
+    // Push a dummy state to history so we can intercept back button
+    window.history.pushState({ lobby: true }, "", window.location.href);
+
+    const handlePopState = (event: PopStateEvent) => {
+      // Prevent default back navigation
+      event.preventDefault();
+
+      // Push state again to prevent leaving
+      window.history.pushState({ lobby: true }, "", window.location.href);
+
+      // Show exit dialog
+      setShowExitDialog(true);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+
 
   const calculateCountdown = (startTimestamp: string, durationSeconds: number = 10): number => {
     const start = new Date(startTimestamp).getTime();
@@ -100,6 +125,123 @@ export default function LobbyPage() {
       }
     }, 100);
   }, []);
+
+  // ✅ Preload minigame assets based on difficulty
+  const preloadMinigameAssets = useCallback((difficulty: string) => {
+    if (hasPreloaded.current) return; // Already preloaded
+    hasPreloaded.current = true;
+
+    // Determine which game HTML to preload
+    let gameSrc = '/racing-game/v4.final.html';
+    switch (difficulty) {
+      case 'easy':
+        gameSrc = '/racing-game/v1.straight.html';
+        break;
+      case 'normal':
+        gameSrc = '/racing-game/v2.curves.html';
+        break;
+      case 'hard':
+        gameSrc = '/racing-game/v4.final.html';
+        break;
+    }
+
+    // Preload main game HTML via hidden iframe prefetch
+    const linkGame = document.createElement('link');
+    linkGame.rel = 'prefetch';
+    linkGame.href = gameSrc;
+    document.head.appendChild(linkGame);
+
+    // Common assets to preload (images only, skip audio)
+    const assetsToPreload = [
+      '/racing-game/common.js',
+      '/racing-game/common.css',
+      '/racing-game/images/sprites.png',
+      '/racing-game/images/background.png',
+      '/racing-game/images/up.webp',
+      '/racing-game/images/down.webp',
+      '/racing-game/images/left.webp',
+      '/racing-game/images/right.webp',
+    ];
+
+    // Preload each asset
+    assetsToPreload.forEach(src => {
+      if (src.endsWith('.png') || src.endsWith('.webp')) {
+        // Preload images using HTMLImageElement
+        const img = document.createElement('img');
+        img.src = src;
+      } else {
+        // Prefetch JS/CSS
+        const link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.href = src;
+        document.head.appendChild(link);
+      }
+    });
+  }, []);
+
+  // ✅ Prefetch game data (questions, session, participant) saat countdown
+  const prefetchGameData = useCallback(async () => {
+    if (!roomCode) return;
+
+    const prefetchKey = `prefetch_game_${roomCode}`;
+
+    // Skip jika sudah di-prefetch
+    if (sessionStorage.getItem(prefetchKey)) {
+      return;
+    }
+
+
+
+    try {
+      const participantId = localStorage.getItem("participantId") || "";
+
+      // 1. Fetch session dengan current_questions
+      const { data: sess, error: sessError } = await mysupa
+        .from("sessions")
+        .select("id, status, started_at, total_time_minutes, current_questions, difficulty")
+        .eq("game_pin", roomCode)
+        .single();
+
+      if (sessError || !sess) {
+        console.error("❌ Prefetch session error:", sessError);
+        return;
+      }
+
+      // 2. Parse questions TANPA correctAnswer (keamanan!)
+      const questions = (sess.current_questions || []).map((q: any) => ({
+        id: q.id,
+        question: q.question,
+        options: q.answers.map((a: any) => a.answer),
+        // NO correctAnswer! Server-side validation only
+      }));
+
+      // 3. Fetch participant state
+      const { data: participant } = await mysupa
+        .from("participants")
+        .select("answers, completion, current_question")
+        .eq("id", participantId)
+        .single();
+
+      // 4. Store prefetched data ke sessionStorage (lebih aman dari localStorage)
+      const prefetchedData = {
+        session: {
+          id: sess.id,
+          status: sess.status,
+          started_at: sess.started_at,
+          total_time_minutes: sess.total_time_minutes,
+          difficulty: sess.difficulty,
+        },
+        questions,
+        participant: participant || { answers: [], completion: false, current_question: 0 },
+        prefetchedAt: Date.now(),
+      };
+
+      sessionStorage.setItem(prefetchKey, JSON.stringify(prefetchedData));
+
+    } catch (err) {
+      console.error("❌ Prefetch game data error:", err);
+    }
+  }, [roomCode]);
 
   const stopCountdownSync = useCallback(() => {
     if (countdownIntervalRef.current) {
@@ -128,7 +270,6 @@ export default function LobbyPage() {
     if (error) {
       console.error('Error exiting session via RPC:', error);
     } else {
-      console.log('Player exited session successfully via RPC.');
       localStorage.removeItem('participantId');
       localStorage.removeItem('game_pin');
       router.push('/');
@@ -154,8 +295,6 @@ export default function LobbyPage() {
     if (error) {
       console.error('Error updating car via RPC:', error);
       // Revert optimistic update on error if needed
-    } else {
-      console.log('Car updated successfully via RPC');
     }
   };
 
@@ -169,15 +308,14 @@ export default function LobbyPage() {
     const bootstrap = async () => {
       setLoading(true);
 
-      // Fetch session dari gameplay supabase
+      // Fetch session dari gameplay supabase (include difficulty)
       const { data: fetchedSession, error: sessionErr } = await mysupa
         .from("sessions")
-        .select("id, status, countdown_started_at, started_at, ended_at")
+        .select("id, status, countdown_started_at, started_at, ended_at, difficulty")
         .eq("game_pin", roomCode)
         .single();
 
       if (sessionErr || !fetchedSession) {
-        console.log("Session not found", sessionErr);
         router.replace("/");
         return;
       }
@@ -187,6 +325,12 @@ export default function LobbyPage() {
 
       if (fetchedSession.countdown_started_at) {
         startCountdownSync(fetchedSession.countdown_started_at, 10);
+        // ✅ Preload minigame assets saat countdown dimulai
+        if (fetchedSession.difficulty) {
+          preloadMinigameAssets(fetchedSession.difficulty);
+        }
+        // ✅ Prefetch game data (questions, session info) saat countdown
+        prefetchGameData();
       } else {
         stopCountdownSync();
       }
@@ -224,7 +368,15 @@ export default function LobbyPage() {
             setGamePhase(newSessionData.status);
 
             // countdown realtime
-            if (newSessionData.countdown_started_at) startCountdownSync(newSessionData.countdown_started_at, 10);
+            if (newSessionData.countdown_started_at) {
+              startCountdownSync(newSessionData.countdown_started_at, 10);
+              // ✅ Preload minigame assets saat countdown dimulai via realtime
+              if (newSessionData.difficulty) {
+                preloadMinigameAssets(newSessionData.difficulty);
+              }
+              // ✅ Prefetch game data via realtime
+              prefetchGameData();
+            }
             else stopCountdownSync();
 
             // Navigation between phases
@@ -245,8 +397,6 @@ export default function LobbyPage() {
             filter: `session_id=eq.${fetchedSession.id}`,   // FIX HERE
           },
           (payload) => {
-            console.log("Participant change", payload);
-
             if (payload.eventType === "INSERT") {
               setParticipants(prev => [...prev, payload.new]);
             }
@@ -411,14 +561,14 @@ export default function LobbyPage() {
             <div className="flex justify-center mb-4">
               <img src={carGifMap[currentPlayer.car || 'blue']} alt="Your Car" className="h-24 w-32 object-contain filter brightness-125 glow-cyan" />
             </div>
-            <DialogDescription className="text-cyan-400 text-center">
+            <DialogDescription className="text-gray-300 text-center">
               {t('lobby.homepage')}
             </DialogDescription>
             <div className="flex justify-end space-x-3 pt-4">
               <Button variant="outline" onClick={() => setShowExitDialog(false)} className="text-[#00ffff] border-1 border-[#00ffff] hover:bg-[#00ffff] ">
                 {t('lobby.cancel')}
               </Button>
-              <Button onClick={handleExit} className="bg-[#000] border-1 text-[#00ffff] border-[#00ffff] hover:bg-red-500 hover:text-white">
+              <Button onClick={handleExit} className="bg-red-500 border-1 border-[#00ffff] hover:bg-red-600 hover:text-white">
                 {t('lobby.exit')}
               </Button>
             </div>

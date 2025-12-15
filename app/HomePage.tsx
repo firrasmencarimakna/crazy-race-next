@@ -263,29 +263,37 @@ export default function HomePage() {
   };
 
   // Di useEffect yang set nickname
-useEffect(() => {
-  if (authLoading) return;
+  useEffect(() => {
+    if (authLoading) return;
 
-  const setupNickname = async () => {
-    let nick = generateNickname();
+    const setupNickname = async () => {
+      try {
+        let nick = generateNickname();
 
-    // ✅ Priority order: fullname > username > fallback
-    if (profile?.fullname && profile.fullname.trim()) {
-      nick = profile.fullname;
-    } else if (profile?.username && profile.username.trim()) {
-      nick = profile.username;
-    } else if (user?.email) {
-      nick = user.email.split("@")[0];
-    } else {
-      nick = generateNickname();
-    }
+        // ✅ Priority order: fullname > username > fallback
+        if (profile?.fullname && profile.fullname.trim()) {
+          nick = profile.fullname;
+        } else if (profile?.username && profile.username.trim()) {
+          nick = profile.username;
+        } else if (user?.email) {
+          nick = user.email.split("@")[0];
+        } else {
+          nick = generateNickname();
+        }
 
-    setNickname(nick);
-    localStorage.setItem("nickname", nick);
-  };
+        setNickname(nick);
+        localStorage.setItem("nickname", nick);
+      } catch (error) {
+        console.error("Error setting up nickname:", error);
+        // Fallback to generated nickname
+        const fallbackNick = generateNickname();
+        setNickname(fallbackNick);
+        localStorage.setItem("nickname", fallbackNick);
+      }
+    };
 
-  setupNickname();
-}, [user, profile, authLoading, i18n]);
+    setupNickname();
+  }, [user, profile, authLoading]); // ✅ FIX: Removed unnecessary i18n dependency
 
   useEffect(() => {
     if (authLoading) return;

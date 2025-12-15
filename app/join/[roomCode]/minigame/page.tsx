@@ -143,7 +143,6 @@ export default function RacingGame() {
         (payload) => {
           const newSession = payload.new as any;
           if (newSession.status === 'finished') {
-            console.log("Host ended the game. Finalizing player session.");
             saveAndRedirectToResult();
           }
         }
@@ -167,8 +166,6 @@ export default function RacingGame() {
           .eq("id", participantId);
 
         if (error) throw error;
-
-        console.log("Racing selesai! Kembali ke soal...");
 
         // Ambil nextQuestionIndex dari localStorage
         const nextIdx = localStorage.getItem("nextQuestionIndex");
