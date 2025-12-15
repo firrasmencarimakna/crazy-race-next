@@ -135,6 +135,13 @@
     "languages": {
       "en": "English",
       "id": "Bahasa Indonesia"
+    },
+    "deleteSession": {
+      "title": "Delete Session?",
+      "description": "This action will delete the session.",
+      "cancelButton": "Cancel",
+      "deleteButton": "Delete",
+      "deletingButton": "Deleting..."
     }
   },
     "soal": {

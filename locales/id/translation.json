@@ -135,6 +135,13 @@
     "languages": {
       "en": "Inggris",
       "id": "Bahasa Indonesia"
+    },
+    "deleteSession": {
+      "title": "Hapus Sesi?",
+      "description": "Tindakan ini akan menghapus sesi.",
+      "cancelButton": "Batal",
+      "deleteButton": "Hapus",
+      "deletingButton": "Menghapus..."
     }
   },
    "soal": {

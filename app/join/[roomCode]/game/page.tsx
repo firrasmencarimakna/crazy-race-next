@@ -83,13 +83,55 @@ export default function QuizGamePage() {
     if (!participantId || !roomCode) return;
 
     try {
+      // ✅ 0. CEK PREFETCHED DATA dari sessionStorage (dari countdown prefetch)
+      // HANYA gunakan jika belum pernah pakai (first load dari lobby)
+      const prefetchKey = `prefetch_game_${roomCode}`;
+      const hasUsedPrefetchKey = `hasUsedPrefetch_${roomCode}`;
+      const prefetchedRaw = sessionStorage.getItem(prefetchKey);
+      const hasUsedPrefetch = sessionStorage.getItem(hasUsedPrefetchKey);
+
+      if (prefetchedRaw && !hasUsedPrefetch) {
+        const prefetched = JSON.parse(prefetchedRaw);
+
+        // Validasi freshness (max 60 detik)
+        const age = Date.now() - prefetched.prefetchedAt;
+        if (age < 60000 && prefetched.session?.status === "active") {
+          // Clear prefetched data setelah dipakai (security + prevent reuse)
+          sessionStorage.removeItem(prefetchKey);
+          // ✅ Set flag bahwa prefetch sudah dipakai (untuk navigasi dari minigame)
+          sessionStorage.setItem(hasUsedPrefetchKey, "true");
+
+          // Cek completion
+          const answeredCount = (prefetched.participant?.answers || []).length;
+          if (prefetched.participant?.completion || answeredCount >= prefetched.questions.length) {
+            router.replace(`/join/${roomCode}/result`);
+            return;
+          }
+
+          // Set all states dari prefetched data
+          setCurrentQuestionIndex(answeredCount);
+          setSession(prefetched.session);
+          setQuestions(prefetched.questions);
+          setGameDuration((prefetched.session.total_time_minutes || 5) * 60);
+          setGameStartTime(new Date(prefetched.session.started_at).getTime());
+
+          // Cache questions ke localStorage untuk reload
+          const cachedQuestionsKey = `quizQuestions_${roomCode}`;
+          localStorage.setItem(cachedQuestionsKey, JSON.stringify(prefetched.questions));
+
+          setLoading(false);
+          return;
+        } else {
+          sessionStorage.removeItem(prefetchKey);
+        }
+      }
+
       // 1. CEK DULU apakah soal sudah ada di localStorage
       const cachedQuestionsKey = `quizQuestions_${roomCode}`;
       const cachedQuestions = localStorage.getItem(cachedQuestionsKey);
 
       if (cachedQuestions) {
         // Soal sudah tersimpan, gunakan dari cache
-        console.log("✅ Menggunakan soal dari cache localStorage");
         const parsedQuestions = JSON.parse(cachedQuestions);
 
         // Ambil session info (timing, status)
@@ -131,7 +173,6 @@ export default function QuizGamePage() {
       }
 
       // 2. Jika tidak ada di cache, fetch dari database (HANYA FIRST TIME)
-      console.log("🔄 First time: fetch soal dari database");
       const { data: sess, error } = await mysupa
         .from("sessions")
         .select("id, status, started_at, total_time_minutes, current_questions")
@@ -153,7 +194,6 @@ export default function QuizGamePage() {
 
       // 4. Simpan soal ke localStorage (TANPA jawaban - aman)
       localStorage.setItem(cachedQuestionsKey, JSON.stringify(parsedQuestions));
-      console.log("💾 Soal disimpan ke localStorage (tanpa kunci jawaban)");
 
       // 5. Ambil participant
       const { data: participant } = await mysupa
@@ -188,16 +228,16 @@ export default function QuizGamePage() {
     }
   }, [participantId, roomCode, router]);
 
+
   useEffect(() => {
     if (participantId) {
       fetchGameData();
     }
   }, [participantId, fetchGameData]);
 
-  const saveProgressAndRedirect = async () => {
+  // ✅ FIX: Wrap dengan useCallback untuk menghindari race condition
+  const saveProgressAndRedirect = useCallback(async () => {
     if (pendingAnswersRef.current.length > 0) {
-      console.log("Mengirim sisa jawaban yang tertunda di akhir game...");
-
       await mysupa.rpc('submit_quiz_answer_batch', {
         p_participant_id: participantId,
         p_new_answers: pendingAnswersRef.current,
@@ -222,10 +262,10 @@ export default function QuizGamePage() {
     // 🧹 Hapus cache soal dari localStorage setelah game selesai
     const cachedQuestionsKey = `quizQuestions_${roomCode}`;
     localStorage.removeItem(cachedQuestionsKey);
-    console.log("🗑️ Cache soal dihapus dari localStorage");
 
     router.push(`/join/${roomCode}/result`);
-  };
+  }, [participantId, roomCode, router, totalQuestions]); // ✅ FIX: Added proper dependencies
+
 
   useEffect(() => {
     if (loading || !gameStartTime || gameDuration === 0) {
@@ -268,7 +308,6 @@ export default function QuizGamePage() {
         (payload) => {
           const newSession = payload.new as any;
           if (newSession.status === 'finished') {
-            console.log("Host ended the game. Finalizing player session.");
             saveProgressAndRedirect();
           }
         }
@@ -323,7 +362,6 @@ export default function QuizGamePage() {
       // Set correctAnswer dari server untuk tampilan
       setCorrectAnswerIndex(correct_answer);
       setShowResult(true);
-      console.log("✅ Jawaban terkirim, isCorrect:", is_correct, "correctAnswer:", correct_answer);
 
       // Clear pending
       pendingAnswersRef.current = [];
@@ -464,17 +502,15 @@ export default function QuizGamePage() {
                   key={index}
                   onClick={() => handleAnswerSelect(index)}
                   disabled={isAnswered}
-                  className={`p-3 sm:p-4 rounded-xl border-4 border-double transition-all duration-200 text-left bg-[#1a0a2a]/50 ${getOptionStyle(index)}`}
+                  className={`p-3 sm:p-4 rounded-xl border-4 border-double transition-all duration-200 text-left bg-[#1a0a2a]/50 w-full overflow-hidden ${getOptionStyle(index)}`}
                   whileHover={{ scale: isAnswered ? 1 : 1.01 }}
                   whileTap={{ scale: isAnswered ? 1 : 0.99 }}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-8 h-8 rounded-full bg-[#ff6bff]/20 flex items-center justify-center font-bold text-[#ff6bff] pixel-text glow-pink-subtle">
-                        {String.fromCharCode(65 + index)}
-                      </div>
-                      <span className="text-base sm:text-lg font-medium text-white pixel-text glow-text">{option}</span>
+                  <div className="flex items-center gap-2 sm:gap-3 w-full">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#ff6bff]/20 flex items-center justify-center font-bold text-[#ff6bff] pixel-text glow-pink-subtle flex-shrink-0 text-sm sm:text-base">
+                      {String.fromCharCode(65 + index)}
                     </div>
+                    <span className="text-sm sm:text-base md:text-lg font-medium text-white pixel-text glow-text break-words leading-tight flex-1 min-w-0">{option}</span>
                   </div>
                 </motion.button>
               ))}
