@@ -490,11 +490,13 @@ export default function QuizGamePage() {
           </CardContent>
         </Card>
         <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 pixel-card">
-          <CardHeader className="text-center">
-            <h2 className="text-lg sm:text-2xl font-bold text-[#00ffff] pixel-text glow-cyan text-balance">
-              {currentQuestion.question}
-            </h2>
-          </CardHeader>
+<CardHeader className="text-center pb-4 px-4">
+  <div className="max-h-[200px] overflow-y-auto"> {/* <-- ini yang penting */}
+    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#00ffff] pixel-text glow-cyan leading-tight text-balance whitespace-pre-wrap break-words px-2">
+      {currentQuestion.question}
+    </h2>
+  </div>
+</CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {currentQuestion.options.map((option, index) => (
