@@ -124,6 +124,49 @@ export default function HostMonitorPage() {
     }
   };
 
+  // ✅ FIX: Wrap handleEndGame dengan useCallback terlebih dahulu
+  const handleEndGame = useCallback(async () => {
+    setEndGameConfirmOpen(false);
+    setLoading(true)
+
+    try {
+      // 1. Akhiri session
+      const { data: sess, error: sessError } = await mysupa
+        .from("sessions")
+        .update({
+          status: "finished",
+          ended_at: new Date(getSyncedServerTime()).toISOString(),
+        })
+        .eq("game_pin", roomCode)
+        .select("id") // ambil id session
+        .single();
+
+      if (sessError || !sess) throw sessError || new Error("Session tidak ditemukan");
+
+      // 2. PAKSA SEMUA PLAYER SELESAI → DURASI OTOMATIS KEISI VIA TRIGGER!
+      const { error: playerError } = await mysupa
+        .from("participants")
+        .update({
+          completion: true,
+          racing: false,
+          finished_at: new Date(getSyncedServerTime()).toISOString(), // TRIGGER OTOMATIS ISI duration!
+        })
+        .eq("session_id", sess.id)
+        .eq("completion", false)
+
+      if (playerError) throw playerError;
+
+      await syncResultsToMainSupabase(sess.id);
+
+      console.log("Game diakhiri! Semua player masuk leaderboard.");
+      router.push(`/host/${roomCode}/leaderboard`);
+
+    } catch (err: any) {
+      console.error("Gagal end game:", err);
+      alert("Gagal mengakhiri game. Coba lagi.");
+    }
+  }, [roomCode, router]); // ✅ FIX: Added proper dependencies
+
   // Timer akurat
   const updateTimer = useCallback(() => {
     if (!session?.started_at) return;
@@ -135,7 +178,7 @@ export default function HostMonitorPage() {
     if (remaining <= 0 && session?.status === "active") {
       handleEndGame()
     }
-  }, [session?.started_at, gameDuration, session?.status, roomCode]);
+  }, [session?.started_at, gameDuration, session?.status, handleEndGame]); // ✅ FIX: Added handleEndGame, removed unused roomCode
 
   useEffect(() => {
     const interval = setInterval(updateTimer, 1000);
@@ -296,47 +339,7 @@ export default function HostMonitorPage() {
     return "text-[#00ffff] glow-cyan";
   };
 
-  const handleEndGame = async () => {
-    setEndGameConfirmOpen(false);
-    setLoading(true)
-
-    try {
-      // 1. Akhiri session
-      const { data: sess, error: sessError } = await mysupa
-        .from("sessions")
-        .update({
-          status: "finished",
-          ended_at: new Date(getSyncedServerTime()).toISOString(),
-        })
-        .eq("game_pin", roomCode)
-        .select("id") // ambil id session
-        .single();
-
-      if (sessError || !sess) throw sessError || new Error("Session tidak ditemukan");
-
-      // 2. PAKSA SEMUA PLAYER SELESAI → DURASI OTOMATIS KEISI VIA TRIGGER!
-      const { error: playerError } = await mysupa
-        .from("participants")
-        .update({
-          completion: true,
-          racing: false,
-          finished_at: new Date(getSyncedServerTime()).toISOString(), // TRIGGER OTOMATIS ISI duration!
-        })
-        .eq("session_id", sess.id)
-        .eq("completion", false)
-
-      if (playerError) throw playerError;
-
-      await syncResultsToMainSupabase(sess.id);
-
-      console.log("Game diakhiri! Semua player masuk leaderboard.");
-      router.push(`/host/${roomCode}/leaderboard`);
-
-    } catch (err: any) {
-      console.error("Gagal end game:", err);
-      alert("Gagal mengakhiri game. Coba lagi.");
-    }
-  };
+  // ✅ FIX: handleEndGame sudah dipindahkan ke atas (sebelum updateTimer)
 
   // Audio sama kayak sebelumnya
   useEffect(() => {
@@ -354,7 +357,7 @@ export default function HostMonitorPage() {
   if (loading) return <LoadingRetro />;
 
   return (
-    <div className="min-h-screen bg-[#1a0a2a] relative overflow-hidden">
+    <div className="h-screen bg-[#1a0a2a] relative overflow-hidden">
       <audio ref={audioRef} src="/assets/music/racingprogress.mp3" loop preload="auto" className="hidden" />
       <div className="absolute inset-0 w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${backgroundImage})` }} />
 
@@ -366,84 +369,86 @@ export default function HostMonitorPage() {
       <h1 className="absolute top-5 right-20 hidden md:block"><Image src="/gameforsmartlogo.webp" alt="Logo" width={256} height={64} /></h1>
       <h1 className="absolute top-7 left-10 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">Crazy Race</h1>
 
-      <div className="relative z-10 max-w-7xl mx-auto p-4 sm:p-6 md:p-10">
-        <div className="flex flex-col items-center text-center">
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center pb-4 sm:pb-5">
-            <div className="inline-block py-4 md:pt-10 max-w-[200px] sm:max-w-none">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#ffefff] pixel-text glow-pink">Race Progress</h1>
-            </div>
-          </motion.div>
-
-          <Card className="bg-[#1a0a2a]/60 border-[#ff6bff]/50 pixel-card px-6 py-4 mb-4 w-full">
-            <div className="flex flex-col gap-2 sm:flex-row items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Clock className={`w-8 h-8 ${getTimeColor()}`} />
-                <div className={`text-2xl font-bold ${getTimeColor()} pixel-text`}>{formatTime(timeRemaining)}</div>
+      {/* Scrollable Content Wrapper */}
+      <div className="absolute inset-0 overflow-y-auto z-10">
+        <div className="relative max-w-7xl mx-auto p-4 sm:p-6 md:p-10">
+          <div className="flex flex-col items-center text-center">
+            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center pb-4 sm:pb-5">
+              <div className="inline-block py-4 md:pt-10 max-w-[200px] sm:max-w-none">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#ffefff] pixel-text glow-pink">Race Progress</h1>
               </div>
-              <Button onClick={() => setEndGameConfirmOpen(true)} className="bg-red-500 hover:bg-red-600 pixel-button glow-red flex items-center space-x-2">
-                <SkipForward className="w-4 h-4" /><span>End Game</span>
-              </Button>
-            </div>
-          </Card>
+            </motion.div>
+
+            <Card className="bg-[#1a0a2a]/60 border-[#ff6bff]/50 pixel-card px-6 py-4 mb-4 w-full">
+              <div className="flex flex-col gap-2 sm:flex-row items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Clock className={`w-8 h-8 ${getTimeColor()}`} />
+                  <div className={`text-2xl font-bold ${getTimeColor()} pixel-text`}>{formatTime(timeRemaining)}</div>
+                </div>
+                <Button onClick={() => setEndGameConfirmOpen(true)} className="bg-red-500 hover:bg-red-600 pixel-button glow-red flex items-center space-x-2">
+                  <SkipForward className="w-4 h-4" /><span>End Game</span>
+                </Button>
+              </div>
+            </Card>
+          </div>
+
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.4 }}>
+            <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 pixel-card p-4 md:p-6 mb-8">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                <AnimatePresence>
+                  {sortedPlayers.map((player) => {
+                    const progress = player.currentQuestion;
+                    const isCompleted = player.isComplete;
+                    const currentlyAnswering = progress > 0 && !isCompleted && progress < totalQuestions;
+
+                    return (
+                      <motion.div key={player.id} layoutId={player.id} initial={{ opacity: 0, scale: 0.8, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.8, y: -20 }} transition={{ type: "spring", stiffness: 300, damping: 30 }} whileHover={{ scale: 1.05 }} className={`group ${currentlyAnswering ? "glow-cyan animate-neon-pulse" : "glow-pink-subtle"}`}>
+                        <Card className={`p-3 bg-[#1a0a2a]/50 border-2 border-double transition-all duration-300 h-full gap-4 ${currentlyAnswering ? "border-[#00ffff]/70 bg-[#00ffff]/10" : isCompleted ? "border-[#00ff00]/70 bg-[#00ff00]/10" : "border-[#ff6bff]/70"}`}>
+                          <div className="flex items-center justify-end">
+                            {isCompleted ? (
+                              <Badge className="bg-green-500/20 border border-green-500/50 text-green-400"><Check className="w-4 h-4" /></Badge>
+                            ) : (
+                              <Badge>{progress}/{totalQuestions}</Badge>
+                            )}
+                          </div>
+                          <div className="relative mb-3">
+                            <img src={carGifMap[player.car] || '/assets/car/car5_v2.webp'} alt="car" className="h-28 w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150" style={{ transform: 'scaleX(-1)' }} />
+                          </div>
+                          <div className="text-center">
+                            <h3 className="text-white pixel-text text-sm leading-tight mb-2 line-clamp-2 break-words">{breakOnCaps(player.nickname)}</h3>
+                            <Progress value={(progress / totalQuestions) * 100} className={`h-2 bg-[#1a0a2a]/50 border border-[#00ffff]/30 mb-2 ${isCompleted ? "bg-green-500/20" : ""}`} />
+                          </div>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
+              {sortedPlayers.length === 0 && (
+                <div className="text-center py-8 text-gray-400">
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No players in the game yet...</p>
+                </div>
+              )}
+            </Card>
+          </motion.div>
         </div>
 
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.4 }}>
-          <Card className="bg-[#1a0a2a]/40 border-[#ff6bff]/50 pixel-card p-4 md:p-6 mb-8">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              <AnimatePresence>
-                {sortedPlayers.map((player) => {
-                  const progress = player.currentQuestion;
-                  const isCompleted = player.isComplete;
-                  const currentlyAnswering = progress > 0 && !isCompleted && progress < totalQuestions;
+        {/* Dialog End Game (sama persis) */}
+        <Dialog open={isEndGameConfirmOpen} onOpenChange={setEndGameConfirmOpen}>
+          <DialogOverlay className="bg-[#1a0a2a]/60 backdrop-blur-md fixed inset-0 z-50" />
+          <DialogContent className="bg-[#1a0a2a]/80 border-2 border-[#ff6bff] pixel-card">
+            <DialogTitle className="text-xl text-[#ffefff] pixel-text glow-pink text-center">End Game</DialogTitle>
+            <DialogDescription className="text-center text-gray-300 pixel-text my-4">Are you sure want to end the game?</DialogDescription>
+            <DialogFooter className="flex justify-center gap-4">
+              <Button variant="outline" onClick={() => setEndGameConfirmOpen(false)} className="pixel-button bg-gray-700 hover:bg-gray-600">Cancel</Button>
+              <Button onClick={handleEndGame} className="pixel-button bg-red-600 hover:bg-red-500 glow-red">Confirm</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-                  return (
-                    <motion.div key={player.id} layoutId={player.id} initial={{ opacity: 0, scale: 0.8, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.8, y: -20 }} transition={{ type: "spring", stiffness: 300, damping: 30 }} whileHover={{ scale: 1.05 }} className={`group ${currentlyAnswering ? "glow-cyan animate-neon-pulse" : "glow-pink-subtle"}`}>
-                      <Card className={`p-3 bg-[#1a0a2a]/50 border-2 border-double transition-all duration-300 h-full gap-4 ${currentlyAnswering ? "border-[#00ffff]/70 bg-[#00ffff]/10" : isCompleted ? "border-[#00ff00]/70 bg-[#00ff00]/10" : "border-[#ff6bff]/70"}`}>
-                        <div className="flex items-center justify-end">
-                          {isCompleted ? (
-                            <Badge className="bg-green-500/20 border border-green-500/50 text-green-400"><Check className="w-4 h-4" /></Badge>
-                          ) : (
-                            <Badge>{progress}/{totalQuestions}</Badge>
-                          )}
-                        </div>
-                        <div className="relative mb-3">
-                          <img src={carGifMap[player.car] || '/assets/car/car5_v2.webp'} alt="car" className="h-28 w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150" style={{ transform: 'scaleX(-1)' }} />
-                        </div>
-                        <div className="text-center">
-                          <h3 className="text-white pixel-text text-sm leading-tight mb-2 line-clamp-2 break-words">{breakOnCaps(player.nickname)}</h3>
-                          <Progress value={(progress / totalQuestions) * 100} className={`h-2 bg-[#1a0a2a]/50 border border-[#00ffff]/30 mb-2 ${isCompleted ? "bg-green-500/20" : ""}`} />
-                        </div>
-                      </Card>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-            {sortedPlayers.length === 0 && (
-              <div className="text-center py-8 text-gray-400">
-                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No players in the game yet...</p>
-              </div>
-            )}
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* Dialog End Game (sama persis) */}
-      <Dialog open={isEndGameConfirmOpen} onOpenChange={setEndGameConfirmOpen}>
-        <DialogOverlay className="bg-[#1a0a2a]/60 backdrop-blur-md fixed inset-0 z-50" />
-        <DialogContent className="bg-[#1a0a2a]/80 border-2 border-[#ff6bff] pixel-card">
-          <DialogTitle className="text-xl text-[#ffefff] pixel-text glow-pink text-center">End Game</DialogTitle>
-          <DialogDescription className="text-center text-gray-300 pixel-text my-4">Are you sure want to end the game?</DialogDescription>
-          <DialogFooter className="flex justify-center gap-4">
-            <Button variant="outline" onClick={() => setEndGameConfirmOpen(false)} className="pixel-button bg-gray-700 hover:bg-gray-600">Cancel</Button>
-            <Button onClick={handleEndGame} className="pixel-button bg-red-600 hover:bg-red-500 glow-red">Confirm</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* CSS sama persis */}
-      <style jsx>{`
+        {/* CSS sama persis */}
+        <style jsx>{`
         .pixel-text { image-rendering: pixelated; text-shadow: 2px 2px 0px #000; }
         .pixel-button { image-rendering: pixelated; box-shadow: 3px 3px 0px rgba(0,0,0,0.8); transition: all 0.1s ease; }
         .pixel-button:hover:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0px rgba(0,0,0,0.8); }
@@ -455,6 +460,7 @@ export default function HostMonitorPage() {
         @keyframes neon-pulse { 50% { box-shadow: 0 0 15px rgba(0,255,255,1), 0 0 30px rgba(0,255,255,0.8); } }
         .animate-neon-pulse { animation: neon-pulse 1.5s ease-in-out infinite; }
       `}</style>
+      </div>
     </div>
   )
 }

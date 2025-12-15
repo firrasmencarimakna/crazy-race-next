@@ -14,21 +14,20 @@ interface ClientLayoutProps {
 export default function ClientLayout({ children }: ClientLayoutProps) {
   const i18n = getI18nInstance();
   const [isClient, setIsClient] = useState(false);
-  const [currentLang, setCurrentLang] = useState("en");
 
+  // ✅ FIX: Pisahkan effect untuk initial setup (run once)
   useEffect(() => {
     setIsClient(true);
     const savedLang = localStorage.getItem("language");
     if (savedLang && i18n.language !== savedLang && typeof i18n.changeLanguage === "function") {
       i18n.changeLanguage(savedLang);
     }
-    setCurrentLang(i18n.language);
-  }, [i18n]);
+  }, []); // Run only once on mount
 
+  // ✅ FIX: Separate effect untuk update document lang attribute
   useEffect(() => {
     if (isClient && i18n.language) {
       document.documentElement.lang = i18n.language;
-      setCurrentLang(i18n.language);
     }
   }, [i18n.language, isClient]);
 

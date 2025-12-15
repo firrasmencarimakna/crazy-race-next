@@ -19,3 +19,5 @@ next-env.d.ts
 
 Dockerfile
 docker-compose.yml
+
+./app/test
