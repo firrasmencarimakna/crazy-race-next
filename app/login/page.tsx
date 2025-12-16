@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/authContext"
 import { FcGoogle } from 'react-icons/fc';
+import { FaHandPointRight } from 'react-icons/fa';
 import { useTranslation } from "react-i18next"
 import Image from "next/image"
 
@@ -176,22 +177,36 @@ export default function LoginPage() {
                 </motion.div>
               )}
 
-              <Button
-                type="button"
-                onClick={handleGoogleLogin}
-                disabled={isLoading}
-                variant="outline"
-                className="w-full min-h-12 sm:min-h-10 border-[#ff6bff]/60 text-[#ff6bff] hover:text-[#ff6bff] hover:bg-[#ff6bff]/20 hover:border-[#ff8aff] pixel-button flex items-center justify-center gap-2 sm:gap-3 px-4 py-5 transition-all duration-200 cursor-pointer"
-              >
-                {/* Icon Google — ukuran responsif */}
-                <FcGoogle className="w-6 h-6 sm:w-7 sm:h-7 shrink-0" />
+              <div className="relative">
+                <motion.div
+                  className="absolute -left-7 md:-left-10 top-1/2 -translate-y-1/2 text-2xl md:text-3xl text-[#ff6bff]"
+                  animate={{ x: [0, 10, 0] }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    repeatType: "loop",
+                    ease: "easeInOut",
+                  }}
+                >
+                  <FaHandPointRight />
+                </motion.div>
+                <Button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={isLoading}
+                  variant="outline"
+                  className="w-full min-h-12 sm:min-h-10 border-[#ff6bff]/60 text-[#ff6bff] hover:text-[#ff6bff] hover:bg-[#ff6bff]/20 hover:border-[#ff8aff] pixel-button flex items-center justify-center gap-2 sm:gap-3 px-4 py-5 transition-all duration-200 cursor-pointer"
+                >
+                  {/* Icon Google — ukuran responsif */}
+                  <FcGoogle className="w-6 h-6 sm:w-7 sm:h-7 shrink-0" />
 
-                {/* Teks kondisional: mobile = "Google", desktop = "Continue with Google" */}
-                <span className="text-center font-medium">
-                  <span className="sm:hidden">{t("login.googleMobile")}</span>
-                  <span className="hidden sm:inline">{t("login.googleDesktop")}</span>
-                </span>
-              </Button>
+                  {/* Teks kondisional: mobile = "Google", desktop = "Continue with Google" */}
+                  <span className="text-center font-medium">
+                    <span className="sm:hidden">{t("login.googleMobile")}</span>
+                    <span className="hidden sm:inline">{t("login.googleDesktop")}</span>
+                  </span>
+                </Button>
+              </div>
 
               {/* Divider - Lebih subtle pada mobile */}
               <div className="relative my-2">
