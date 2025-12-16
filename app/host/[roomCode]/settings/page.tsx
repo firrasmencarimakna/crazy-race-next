@@ -210,7 +210,7 @@ export default function HostSettingsPage() {
           </motion.div>
           {!quizDetail ? (
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="text-center text-gray-400 pixel-text  text-sm sm:text-base">
-              Loading session or session not found...
+              {t('settings.loadingSession')}
             </motion.p>
           ) : (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
@@ -220,8 +220,8 @@ export default function HostSettingsPage() {
                     <div className="flex items-start space-x-3">
                       <div className="flex-shrink-0 mt-1"><Hash className="h-5 w-5 text-[#ff87ff]" /></div>
                       <div className="flex-1 space-y-1">
-                        <p className="text-base sm:text-lg text-[#ff87ff] pixel-text font-semibold">{quizDetail.title || 'Unknown Quiz'}</p>
-                        <p className="text-[#00ffff] pixel-text text-xs sm:text-sm overflow-y-auto max-h-[60px]">{quizDetail.description || 'No description available'}</p>
+                        <p className="text-base sm:text-lg text-[#ff87ff] pixel-text font-semibold">{quizDetail.title || t('settings.unknownQuiz')}</p>
+                        <p className="text-[#00ffff] pixel-text text-xs sm:text-sm overflow-y-auto max-h-[60px]">{quizDetail.description || t('settings.noDescription')}</p>
                       </div>
                     </div>
                   </div>
@@ -231,7 +231,7 @@ export default function HostSettingsPage() {
                       <Select value={duration} onValueChange={setDuration}>
                         <SelectTrigger className="text-base sm:text-lg p-3 sm:p-5 bg-[#0a0a0f] border-2 border-[#00ffff]/30 text-white pixel-text focus:border-[#00ffff] w-full transition-all"><SelectValue /></SelectTrigger>
                         <SelectContent className="bg-[#0a0a0f] border-2 sm:border-4 border-[#6a4c93] text-white pixel-text">
-                          {Array.from({ length: 6 }, (_, i) => (i + 1) * 5).map((min) => (<SelectItem key={min} value={(min * 60).toString()}>{min} Minutes</SelectItem>))}
+                          {Array.from({ length: 6 }, (_, i) => (i + 1) * 5).map((min) => (<SelectItem key={min} value={(min * 60).toString()}>{min} {t('settings.minutes')}</SelectItem>))}
                         </SelectContent>
                       </Select>
                     </div>

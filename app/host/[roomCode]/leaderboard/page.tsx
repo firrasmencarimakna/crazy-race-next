@@ -334,13 +334,13 @@ export default function HostLeaderboardPage() {
         </AnimatePresence>
         <div className="relative z-10 max-w-4xl mx-auto p-4 text-center flex items-center justify-center h-screen">
           <Card className="bg-[#1a0a2a]/60 border-[#ff6bff]/50 pixel-card p-6">
-            <h1 className="text-xl font-bold mb-2 text-[#00ffff] pixel-text glow-cyan">Leaderboard not available</h1>
-            <p className="text-[#ff6bff] mb-4 pixel-text">{error || 'No data found'}</p>
+            <h1 className="text-xl font-bold mb-2 text-[#00ffff] pixel-text glow-cyan">{t('resulthost.notAvailable')}</h1>
+            <p className="text-[#ff6bff] mb-4 pixel-text">{error || t('resulthost.noDataFound')}</p>
             <Button
               className="bg-[#ff6bff] pixel-button glow-pink"
               onClick={() => router.push('/')}
             >
-              Back to Home
+              {t('resulthost.backToHome')}
             </Button>
           </Card>
         </div>
@@ -564,7 +564,7 @@ export default function HostLeaderboardPage() {
               onClick={() => router.push('/')}
               className="bg-[#1a0a2a]/70 border border-[#00ffff] rounded-lg text-[#00ffff] px-4 py-2 text-sm hover:bg-[#00ffff]/20 transition-all duration-300"
             >
-              HOME
+              {t('resulthost.home')}
             </button>
 
             {/* Tombol Restart */}
@@ -572,7 +572,7 @@ export default function HostLeaderboardPage() {
               onClick={restartGame}
               className="bg-[#ff6bff] border border-white rounded-lg text-white px-4 py-2 text-sm hover:bg-[#ff8aff]/80 transition-all duration-300"
             >
-              RESTART
+              {t('resulthost.restart')}
             </button>
           </div>
 
