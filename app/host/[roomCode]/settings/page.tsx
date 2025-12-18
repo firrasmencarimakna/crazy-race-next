@@ -148,7 +148,7 @@ export default function HostSettingsPage() {
     }
 
     localStorage.setItem("hostroomCode", roomCode);
-    router.push(`/host/${roomCode}`);
+    router.push(`/host/${roomCode}/lobby`);
   };
 
   const handleCancelSession = async () => {
@@ -189,24 +189,38 @@ export default function HostSettingsPage() {
         animate={{ opacity: 0.5 }}
         transition={{ duration: 1, ease: "easeInOut" }}
       />
-      <motion.button
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        whileHover={{ scale: 1.05 }}
-        className="absolute top-4 left-4 z-40 p-3 bg-[#00ffff]/20 border-2 border-[#00ffff] pixel-button hover:bg-[#33ffff]/30 glow-cyan rounded-lg shadow-lg shadow-[#00ffff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
-        aria-label="Back to Host"
-        onClick={() => setShowCancelDialog(true)}
-      >
-        <ArrowLeft size={20} className="text-white" />
-      </motion.button>
-      <h1 className="absolute top-5 right-5 hidden md:block display-flex"><Image src="/gameforsmartlogo.webp" alt="Gameforsmart Logo" width={256} height={64} /></h1>
-      <h1 className="absolute top-6 left-20 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">Crazy Race</h1>
       {saving && <LoadingRetro />}
       {/* Scrollable Content Wrapper */}
       <div className="absolute inset-0 overflow-y-auto z-10">
-        <div className="relative container mx-auto px-4 sm:px-6 py-6 max-w-4xl">
+        {/* Header - Full width, ikut scroll */}
+        <div className="w-full px-4 py-4 pb-0 flex items-center justify-between">
+          {/* Left side: Back button + Crazy Race logo */}
+          <div className="flex items-center gap-4">
+            <motion.button
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              whileHover={{ scale: 1.05 }}
+              className="p-3 bg-[#00ffff]/20 border-2 border-[#00ffff] pixel-button hover:bg-[#33ffff]/30 glow-cyan rounded-lg shadow-lg shadow-[#00ffff]/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
+              aria-label="Back to Host"
+              onClick={() => setShowCancelDialog(true)}
+            >
+              <ArrowLeft size={20} className="text-white" />
+            </motion.button>
+
+            <div className="hidden md:block">
+              <Image src="/crazyrace-logo.png" alt="Crazy Race" width={270} height={50} style={{ imageRendering: 'auto' }} className="h-auto drop-shadow-xl" />
+            </div>
+          </div>
+
+          {/* Right side: Gameforsmart logo */}
+          <div className="hidden md:block">
+            <Image src="/gameforsmartlogo.webp" alt="Gameforsmart Logo" width={256} height={64} />
+          </div>
+        </div>
+
+        <div className="relative container mx-auto px-4 sm:px-6 py-6 pt-0 max-w-4xl">
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="text-center mb-8">
-            <div className="p-4 sm:p-6 sm:mt-7"><h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-[#ffefff] pixel-text glow-pink">{t('settings.title')}</h1></div>
+            <div className="p-4 sm:p-6 pt-0"><h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#ffefff] pixel-text glow-pink">{t('settings.title')}</h1></div>
           </motion.div>
           {!quizDetail ? (
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="text-center text-gray-400 pixel-text  text-sm sm:text-base">

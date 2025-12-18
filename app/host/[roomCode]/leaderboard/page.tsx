@@ -367,23 +367,37 @@ export default function HostLeaderboardPage() {
         />
       </AnimatePresence>
 
-      <h1 className="absolute top-5 right-10 hidden md:block">
-        <Image
-          src="/gameforsmartlogo.webp"
-          alt="Gameforsmart Logo"
-          width={256}
-          height={64}
-        />
-      </h1>
-
-      <h1 className="absolute top-7 left-10 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">
-        Crazy Race
-      </h1>
-
       {/* Scrollable Content Wrapper */}
       <div className="absolute inset-0 overflow-y-auto z-10">
-        <div className="relative max-w-5xl mx-auto p-4 pb-20 md:pb-0">
-          <div className="text-center py-4 md:pt-14">
+        {/* Header - Full width, ikut scroll */}
+        <div className="w-full px-4 py-4 pb-0 flex items-center justify-between">
+          {/* Left side: Crazy Race logo */}
+          <div className="flex items-center gap-4">
+            <div className="hidden md:block">
+              <Image src="/crazyrace-logo.png" alt="Crazy Race" width={270} height={50} style={{ imageRendering: 'auto' }} className="h-auto drop-shadow-xl" />
+            </div>
+          </div>
+
+          {/* Right side: Gameforsmart logo */}
+          <div className="hidden md:block">
+            <Image src="/gameforsmartlogo.webp" alt="Gameforsmart Logo" width={256} height={64} />
+          </div>
+        </div>
+
+        <div className="relative max-w-5xl mx-auto p-4 pb-20 md:pb-0 pt-0">
+
+          <div className="block md:hidden w-full flex justify-center mx-auto">
+            <Image
+              src="/crazyrace-logo-utama.png"
+              alt="Crazy Race"
+              width={200}
+              height={50}
+              style={{ imageRendering: 'auto' }}
+              className="h-auto drop-shadow-xl"
+            />
+          </div>
+
+          <div className="text-center py-4">
             <motion.h1
               className="text-4xl md:text-5xl font-bold text-[#00ffff] pixel-text glow-cyan tracking-wider animate-neon-glow"
               initial={{ opacity: 0, y: -20 }}

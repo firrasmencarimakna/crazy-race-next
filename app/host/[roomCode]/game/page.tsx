@@ -362,17 +362,35 @@ export default function HostMonitorPage() {
       <audio ref={audioRef} src="/assets/music/racingprogress.mp3" loop preload="auto" className="hidden" />
       <div className="absolute inset-0 w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${backgroundImage})` }} />
 
-      {/* Semua UI kamu 100% SAMA, cuma data dari mysupa */}
-      <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} whileHover={{ scale: 1.05 }} onClick={() => setIsMuted(p => !p)} className={`absolute top-4 right-4 z-40 p-3 border-2 pixel-button rounded-lg shadow-lg min-w-[48px] min-h-[48px] flex items-center justify-center transition-all cursor-pointer ${isMuted ? "bg-[#ff6bff]/30 border-[#ff6bff] glow-pink" : "bg-[#00ffff]/30 border-[#00ffff] glow-cyan"}`}>
-        <span className="filter drop-shadow-[2px_2px_2px_rgba(0,0,0,0.7)]">{isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}</span>
-      </motion.button>
-
-      <h1 className="absolute top-5 right-20 hidden md:block"><Image src="/gameforsmartlogo.webp" alt="Logo" width={256} height={64} /></h1>
-      <h1 className="absolute top-7 left-10 text-2xl font-bold text-[#00ffff] pixel-text glow-cyan hidden md:block">Crazy Race</h1>
-
       {/* Scrollable Content Wrapper */}
       <div className="absolute inset-0 overflow-y-auto z-10">
-        <div className="relative max-w-7xl mx-auto p-4 sm:p-6 md:p-10">
+        {/* Header - Full width, ikut scroll */}
+        <div className="w-full px-4 py-4 pb-0 flex items-center justify-between">
+          {/* Left side: Crazy Race logo */}
+          <div className="flex items-center gap-4">
+            <div className="hidden md:block">
+              <Image src="/crazyrace-logo.png" alt="Crazy Race" width={270} height={50} style={{ imageRendering: 'auto' }} className="h-auto drop-shadow-xl" />
+            </div>
+          </div>
+
+          {/* Right side: Gameforsmart logo + Mute button */}
+          <div className="flex items-center gap-4">
+            <div className="hidden md:block">
+              <Image src="/gameforsmartlogo.webp" alt="Logo" width={256} height={64} />
+            </div>
+            <motion.button
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              whileHover={{ scale: 1.05 }}
+              onClick={() => setIsMuted(p => !p)}
+              className={`p-3 border-2 pixel-button rounded-lg shadow-lg min-w-[48px] min-h-[48px] flex items-center justify-center transition-all cursor-pointer ${isMuted ? "bg-[#ff6bff]/30 border-[#ff6bff] glow-pink" : "bg-[#00ffff]/30 border-[#00ffff] glow-cyan"}`}
+            >
+              <span className="filter drop-shadow-[2px_2px_2px_rgba(0,0,0,0.7)]">{isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}</span>
+            </motion.button>
+          </div>
+        </div>
+
+        <div className="relative max-w-7xl mx-auto p-4 sm:p-6 md:p-10 pt-0">
           <div className="flex flex-col items-center text-center">
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center pb-4 sm:pb-5">
               <div className="inline-block py-4 md:pt-10 max-w-[200px] sm:max-w-none">
