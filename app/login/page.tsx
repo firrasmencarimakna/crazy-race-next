@@ -140,16 +140,23 @@ export default function LoginPage() {
         />
       </h1>
 
-      <h1 className="absolute top-6 left-10 text-3xl text-[#00ffff] pixel-text glow-cyan hidden md:block">
-        Crazy Race
-      </h1>
+      <div className="absolute top-4 left-10 hidden md:block">
+        <Image src="/crazyrace-logo.png" alt="Crazy Race" width={150} height={50} style={{ imageRendering: 'auto' }} className="h-auto drop-shadow-xl"
+        />
+      </div>
 
       {/* Logo & Title - Responsive untuk mobile */}
       <div className="relative z-10 flex flex-col justify-center items-center md:min-h-screen px-4 sm:px-6">
 
-        <h1 className="text-center mx-auto py-10 text-3xl text-[#00ffff] pixel-text glow-cyan md:hidden">
-          Crazy Race
-        </h1>
+        <div className="text-center mx-auto py-10 md:hidden">
+          <Image
+            src="/crazyrace-logo-utama.png"
+            alt="Crazy Race"
+            width={200}
+            height={70}
+            className="h-auto mx-auto"
+          />
+        </div>
 
         {/* Login Card - Lebih compact dan touch-friendly pada mobile */}
         <motion.div
@@ -245,7 +252,7 @@ export default function LoginPage() {
 
                 <Button
                   type="submit"
-                  disabled={isLoading  || !identifier.trim() || !password.trim()}
+                  disabled={isLoading || !identifier.trim() || !password.trim()}
                   className="w-full bg-gradient-to-r from-[#00ffff] via-[#00ffff]/80 to-[#ff6bff] hover:from-[#33ffff] hover:to-[#ff8aff] text-black font-bold pixel-button-large glow-cyan text-base sm:text-lg py-3.5 sm:py-4 h-12 sm:h-auto transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-lg hover:shadow-xl"
                 >
                   {isLoading ? (
