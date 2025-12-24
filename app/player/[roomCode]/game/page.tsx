@@ -526,30 +526,10 @@ export default function QuizGamePage() {
     return "text-[#00ffff] glow-cyan";
   };
 
-  const isReady = !loading && !error && questions.length > 0 && gameStartTime && gameDuration > 0 && !!currentQuestion;
+  const isReady = !loading && !error && questions.length > 0 && gameStartTime && gameDuration > 0 && totalTimeRemaining > 0 && !!currentQuestion;
 
   if (!isReady) {
-    return (
-      <div className="min-h-screen bg-[#1a0a2a] flex items-center justify-center relative overflow-hidden">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentBgIndex}
-            className="absolute inset-0 w-full h-full bg-cover bg-center"
-            style={{ backgroundImage: `url(${backgroundGifs[currentBgIndex]})` }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1 }}
-          />
-        </AnimatePresence>
-        <LoadingRetro />
-        {error && (
-          <div className="absolute top-4 left-4 bg-red-500/90 text-white p-2 rounded pixel-text">
-            Error: {error}
-          </div>
-        )}
-      </div>
-    );
+    return <LoadingRetro />;
   }
 
   return (
