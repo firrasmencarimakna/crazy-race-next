@@ -55,6 +55,7 @@ export default function HostLeaderboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentBgIndex, setCurrentBgIndex] = useState(0);
   const [session, setSession] = useState<any>(null); // TAMBAHKAN INI DI ATAS
+  const [isRestarting, setIsRestarting] = useState(false);
 
   const computePlayerStats = (response: any, totalQuestions: number): Omit<PlayerStats, 'nickname' | 'car' | 'rank'> => {
     const stats = response || {};
@@ -226,6 +227,9 @@ export default function HostLeaderboardPage() {
   }, []);
 
   const restartGame = async () => {
+    if (isRestarting) return; // Prevent double click
+    setIsRestarting(true);
+
     try {
       // 1. Ambil session lama dari mysupa
       const { data: oldSess } = await mysupa
@@ -288,6 +292,7 @@ export default function HostLeaderboardPage() {
     } catch (err: any) {
       console.error("Restart gagal:", err);
       alert("Gagal restart game: " + err.message);
+      setIsRestarting(false);
     }
   };
 
@@ -565,9 +570,16 @@ export default function HostLeaderboardPage() {
             {/* Tombol Restart */}
             <button
               onClick={restartGame}
-              className="pointer-events-auto flex items-center justify-center w-12 h-12 rounded-full bg-[#ff6bff]/70 border border-white text-white hover:bg-[#ff8aff]/80 transition-all duration-300 shadow-lg"
+              disabled={isRestarting}
+              className={`pointer-events-auto flex items-center justify-center w-12 h-12 rounded-full bg-[#ff6bff]/70 border border-white text-white hover:bg-[#ff8aff]/80 transition-all duration-300 shadow-lg ${isRestarting ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              <RotateCwIcon className="w-6 h-6" />
+              {isRestarting ? (
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
+                  <RotateCwIcon className="w-6 h-6" />
+                </motion.div>
+              ) : (
+                <RotateCwIcon className="w-6 h-6" />
+              )}
             </button>
           </motion.div>
 
@@ -584,9 +596,15 @@ export default function HostLeaderboardPage() {
             {/* Tombol Restart */}
             <button
               onClick={restartGame}
-              className="bg-[#ff6bff] border border-white rounded-lg text-white px-4 py-2 text-sm hover:bg-[#ff8aff]/80 transition-all duration-300"
+              disabled={isRestarting}
+              className={`bg-[#ff6bff] border border-white rounded-lg text-white px-4 py-2 text-sm hover:bg-[#ff8aff]/80 transition-all duration-300 flex items-center gap-2 ${isRestarting ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {t('resulthost.restart')}
+              {isRestarting && (
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
+                  <RotateCwIcon className="w-4 h-4" />
+                </motion.div>
+              )}
+              {isRestarting ? 'Restarting...' : t('resulthost.restart')}
             </button>
           </div>
 

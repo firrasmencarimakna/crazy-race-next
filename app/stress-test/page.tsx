@@ -61,6 +61,10 @@ export default function StressTestPage() {
     const [showCleanupDialog, setShowCleanupDialog] = useState(false);
     const [isCleaningUp, setIsCleaningUp] = useState(false);
 
+    // Answer interval settings (in seconds)
+    const [answerIntervalMin, setAnswerIntervalMin] = useState(3);
+    const [answerIntervalMax, setAnswerIntervalMax] = useState(10);
+
     const stopRef = useRef(false);
     const usersRef = useRef<TestUser[]>([]);
     const sessionChannelRef = useRef<any>(null);
@@ -202,15 +206,15 @@ export default function StressTestPage() {
         const scorePerQuestion = Math.max(1, Math.floor(100 / totalQuestions));
 
         addLog(`📝 Starting game with ${totalQuestions} questions...`);
-        addLog(`🤖 Each bot thinks independently (3-10s per answer)...`);
+        addLog(`🤖 Each bot thinks independently (${answerIntervalMin}-${answerIntervalMax}s per answer)...`);
 
         // Each bot runs independently
         const botPromises = usersRef.current.map(async (user, botIndex) => {
             for (let qIndex = 0; qIndex < totalQuestions; qIndex++) {
                 if (stopRef.current || user.completed) break;
 
-                // Random thinking time 3-10 seconds
-                await randomDelayRange(3000, 10000);
+                // Random thinking time based on user settings
+                await randomDelayRange(answerIntervalMin * 1000, answerIntervalMax * 1000);
                 if (stopRef.current) break;
 
                 const question = questions[qIndex];
@@ -220,11 +224,9 @@ export default function StressTestPage() {
 
                 const newAnswer = {
                     id: generateXID(),
+                    correct: isCorrect,
+                    answer_id: randomAnswer.toString(),
                     question_id: question.id,
-                    selected_answer: randomAnswer,
-                    is_correct: isCorrect,
-                    score,
-                    answered_at: new Date().toISOString(),
                 };
 
                 const isLastQuestion = qIndex === totalQuestions - 1;
@@ -434,6 +436,44 @@ export default function StressTestPage() {
                                 </div>
                             </div>
 
+                            {/* Answer Interval Settings */}
+                            <div className="grid grid-cols-2 gap-4 mb-5">
+                                <div>
+                                    <label className="text-sm text-[#00ffff] pixel-text">
+                                        Min Interval: <span className="text-[#ff6bff]">{answerIntervalMin}s</span>
+                                    </label>
+                                    <Slider
+                                        value={[answerIntervalMin]}
+                                        onValueChange={([v]) => {
+                                            setAnswerIntervalMin(v);
+                                            if (v > answerIntervalMax) setAnswerIntervalMax(v);
+                                        }}
+                                        min={1}
+                                        max={30}
+                                        step={1}
+                                        disabled={isRunning}
+                                        className="mt-3"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-sm text-[#00ffff] pixel-text">
+                                        Max Interval: <span className="text-[#ff6bff]">{answerIntervalMax}s</span>
+                                    </label>
+                                    <Slider
+                                        value={[answerIntervalMax]}
+                                        onValueChange={([v]) => {
+                                            setAnswerIntervalMax(v);
+                                            if (v < answerIntervalMin) setAnswerIntervalMin(v);
+                                        }}
+                                        min={1}
+                                        max={60}
+                                        step={1}
+                                        disabled={isRunning}
+                                        className="mt-3"
+                                    />
+                                </div>
+                            </div>
+
                             <div className="flex gap-3">
                                 {!isRunning ? (
                                     <Button
@@ -464,25 +504,25 @@ export default function StressTestPage() {
                     {/* Stats Grid */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <Card className="bg-[#1a0a2a]/80 border-[#00ffff]/50 pixel-card">
-                            <CardContent className="p-4 text-center">
+                            <CardContent className="p-2 text-center">
                                 <div className="text-3xl font-bold text-[#00ffff] pixel-text glow-cyan">{joinedCount}</div>
                                 <div className="text-xs text-[#00ffff]/70 pixel-text">Joined</div>
                             </CardContent>
                         </Card>
                         <Card className="bg-[#1a0a2a]/80 border-[#ff6bff]/50 pixel-card">
-                            <CardContent className="p-4 text-center">
+                            <CardContent className="p-2 text-center">
                                 <div className="text-3xl font-bold text-[#ff6bff] pixel-text glow-pink">{answeringCount}</div>
                                 <div className="text-xs text-[#ff6bff]/70 pixel-text">Question</div>
                             </CardContent>
                         </Card>
                         <Card className="bg-[#1a0a2a]/80 border-green-500/50 pixel-card">
-                            <CardContent className="p-4 text-center">
+                            <CardContent className="p-2 text-center">
                                 <div className="text-3xl font-bold text-green-400 pixel-text">{completedCount}</div>
                                 <div className="text-xs text-green-400/70 pixel-text">Completed</div>
                             </CardContent>
                         </Card>
                         <Card className="bg-[#1a0a2a]/80 border-red-500/50 pixel-card">
-                            <CardContent className="p-4 text-center">
+                            <CardContent className="p-2 text-center">
                                 <div className="text-3xl font-bold text-red-400 pixel-text">{errorCount}</div>
                                 <div className="text-xs text-red-400/70 pixel-text">Errors</div>
                             </CardContent>
@@ -490,8 +530,8 @@ export default function StressTestPage() {
                     </div>
 
                     {/* Logs */}
-                    <Card className="bg-[#1a0a2a]/80 border-[#ff6bff]/30 pixel-card">
-                        <CardHeader className="pb-2">
+                    <Card className="bg-[#1a0a2a]/80 border-[#ff6bff]/30 pixel-card gap-3">
+                        <CardHeader>
                             <CardTitle className="text-sm text-[#ff6bff] pixel-text">📜 Live Logs</CardTitle>
                         </CardHeader>
                         <CardContent>
