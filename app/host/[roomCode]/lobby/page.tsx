@@ -613,7 +613,7 @@ export default function HostRoomPage() {
                             />
                           </div>
                           <div className="text-center">
-                            <p className="text-white text-xs leading-tight glow-text line-clamp-2 break-words">
+                            <p className="text-white text-xs leading-tight glow-text line-clamp-2 break-words" title={player.nickname}>
                               {breakOnCaps(player.nickname)}
                             </p>
                           </div>

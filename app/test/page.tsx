@@ -23,6 +23,40 @@ import {
 
 const CAR_OPTIONS = ["purple", "white", "black", "aqua", "blue"];
 
+// Combined name list (Indonesian + Foreign, all mixed)
+const NAMES = [
+    // Indonesian
+    "Andi", "Budi", "Cahya", "Dewi", "Eka", "Fajar", "Gita", "Hendra", "Indra", "Joko",
+    "Kartika", "Lina", "Maya", "Nia", "Putra", "Rahmat", "Sari", "Tono", "Wati", "Yudi",
+    "Zahra", "Agus", "Bayu", "Dian", "Firman", "Galih", "Hesti", "Iwan", "Kevin", "Luna",
+    "Mega", "Nova", "Okta", "Prima", "Rio", "Tiara", "Vino", "Wulan", "Yoga", "Zara",
+    "Ahmad", "Bambang", "Cinta", "Deni", "Elsa", "Fandi", "Gilang", "Hana", "Irfan", "Jihan",
+    "Nur", "Dwi", "Tri", "Sri", "Adi", "Bima", "Candra", "Dewa", "Rama", "Perdana",
+    "Pratama", "Wijaya", "Saputra", "Kusuma", "Hidayat", "Santoso", "Nugraha", "Permana",
+    "Setiawan", "Wibowo", "Anggraini", "Lestari", "Putri", "Rahayu", "Utami", "Purnama",
+    // Foreign
+    "John", "James", "Michael", "David", "Chris", "Alex", "Ryan", "Daniel", "Matthew", "Andrew",
+    "Emma", "Olivia", "Sophia", "Mia", "Isabella", "Charlotte", "Amelia", "Harper", "Evelyn", "Abigail",
+    "Tom", "Jack", "Harry", "Oliver", "George", "Noah", "Liam", "Ethan", "Mason", "Lucas",
+    "William", "Benjamin", "Henry", "Sebastian", "Alexander", "Emily", "Ava", "Grace", "Chloe", "Lily",
+    "Robert", "Joseph", "Thomas", "Charles", "Edward", "Victoria", "Elizabeth", "Margaret", "Catherine", "Alice",
+    "Smith", "Johnson", "Williams", "Brown", "Jones", "Miller", "Davis", "Garcia", "Wilson", "Moore",
+    "Taylor", "Anderson", "Jackson", "White", "Harris", "Martin", "Thompson", "Lee", "Walker", "King"
+];
+
+// Helper to pick random from array
+const pickRandom = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+// Generate random nickname with 1-4 words (pure random, with spaces)
+const generateRandomNickname = (): string => {
+    const wordCount = Math.floor(Math.random() * 4) + 1; // 1 to 4 words
+    const words: string[] = [];
+    for (let i = 0; i < wordCount; i++) {
+        words.push(pickRandom(NAMES));
+    }
+    return words.join(" "); // "John Smith Lee Davis"
+};
+
 // Background GIFs like host pages
 const backgroundGifs = [
     "/assets/background/host/1.webp",
@@ -44,7 +78,7 @@ interface SessionData {
     current_questions: any[];
 }
 
-export default function StressTestPage() {
+export default function TestPage() {
     const { isAdmin, loading } = useAdminGuard();
     const [roomCode, setRoomCode] = useState("");
     const [userCount, setUserCount] = useState(100);
@@ -104,7 +138,7 @@ export default function StressTestPage() {
     // Subscribe to session changes (detect game end)
     const subscribeToSession = (sessionId: string) => {
         sessionChannelRef.current = mysupa
-            .channel(`stress-test-session-${sessionId}`)
+            .channel(`test-session-${sessionId}`)
             .on(
                 "postgres_changes",
                 { event: "UPDATE", schema: "public", table: "sessions", filter: `id=eq.${sessionId}` },
@@ -142,7 +176,7 @@ export default function StressTestPage() {
             if (stopRef.current) return null;
 
             const userId = generateXID();
-            const nickname = `Bot_${(i + 1).toString().padStart(3, "0")}`;
+            const nickname = generateRandomNickname();
 
             const { error } = await mysupa
                 .from("participants")
@@ -160,7 +194,7 @@ export default function StressTestPage() {
 
             if (error) {
                 setErrorCount(prev => prev + 1);
-                addLog(`❌ ${nickname} failed to join`);
+                addLog(`❌ ${nickname} failed: ${error.message || error.code || 'Unknown error'}`);
                 return null;
             }
 
@@ -285,7 +319,7 @@ export default function StressTestPage() {
         setErrorCount(0);
         usersRef.current = [];
 
-        addLog(`🧪 Starting stress test: ${roomCode}`);
+        addLog(`🧪 Starting test: ${roomCode}`);
 
         const sess = await fetchSession(roomCode);
         if (!sess) {
@@ -330,11 +364,14 @@ export default function StressTestPage() {
         setIsCleaningUp(true);
         addLog("🧹 Cleaning up bots...");
 
-        await mysupa
-            .from("participants")
-            .delete()
-            .eq("session_id", session.id)
-            .like("nickname", "Bot_%");
+        // Delete all participants created by this test (using stored IDs)
+        const userIds = usersRef.current.map(u => u.id);
+        if (userIds.length > 0) {
+            await mysupa
+                .from("participants")
+                .delete()
+                .in("id", userIds);
+        }
 
         addLog("✅ Cleanup complete");
         usersRef.current = [];
@@ -397,17 +434,13 @@ export default function StressTestPage() {
                             className="pixel-border-large inline-block pb-2"
                         >
                             <h1 className="text-4xl font-bold text-[#ffefff] pixel-text glow-pink">
-                                Stress Test
+                                TEST
                             </h1>
                         </motion.div>
                     </div>
 
                     {/* Control Panel */}
                     <Card className="bg-[#1a0a2a]/80 border-[#ff6bff]/50 pixel-card backdrop-blur-sm">
-                        {/* <CardHeader className="pb-2">
-                            <CardTitle className="text-xl text-[#ff6bff] pixel-text glow-pink flex items-center gap-2">Control Panel                                {gameEnded && <span className="text-red-400 text-sm animate-pulse">⛔ Game Ended</span>}
-                            </CardTitle>
-                        </CardHeader> */}
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
@@ -480,7 +513,7 @@ export default function StressTestPage() {
                                         onClick={startTest}
                                         className="flex-1 bg-[#00ffff]/20 border-2 border-[#00ffff] text-[#00ffff] hover:bg-[#00ffff]/40 pixel-button glow-cyan"
                                     >
-                                        <Play className="w-4 h-4 mr-2" /> Start Test
+                                        <Play className="w-4 h-4 mr-2" /> Start
                                     </Button>
                                 ) : (
                                     <Button
@@ -532,7 +565,7 @@ export default function StressTestPage() {
                     {/* Logs */}
                     <Card className="bg-[#1a0a2a]/80 border-[#ff6bff]/30 pixel-card gap-3">
                         <CardHeader>
-                            <CardTitle className="text-sm text-[#ff6bff] pixel-text">📜 Live Logs</CardTitle>
+                            <CardTitle className="text-sm text-[#ff6bff] pixel-text">📜 Logs</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="h-64 overflow-y-auto bg-black/60 rounded-lg p-3 font-mono text-xs space-y-0.5 border border-[#ff6bff]/20">

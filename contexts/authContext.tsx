@@ -7,6 +7,7 @@ interface Profile {
   id: string
   username: string
   email: string
+  nickname?: string
   fullname?: string
   avatar_url?: string
   auth_user_id: string
@@ -89,6 +90,7 @@ async function ensureProfileWithRetry(
         id: 'fallback-' + currentUser.id,
         username: currentUser.email?.split('@')[0] || 'user',
         email: currentUser.email || '',
+        nickname: '',
         fullname: '',
         avatar_url: '',
         auth_user_id: currentUser.id

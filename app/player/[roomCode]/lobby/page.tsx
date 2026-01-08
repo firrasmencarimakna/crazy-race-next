@@ -531,7 +531,7 @@ export default function LobbyPage() {
                         </div>
                         <div className="text-center">
                           <div className="flex items-center justify-center space-x-2 mb-1">
-                            <h3 className="text-white pixel-text text-sm leading-tight line-clamp-2 break-words">
+                            <h3 className="text-white pixel-text text-sm leading-tight line-clamp-2 break-words" title={player.nickname}>
                               {breakOnCaps(player.nickname)}
                             </h3>
                           </div>
