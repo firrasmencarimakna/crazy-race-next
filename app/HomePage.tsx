@@ -271,8 +271,10 @@ export default function HomePage() {
       try {
         let nick = generateNickname();
 
-        // ✅ Priority order: fullname > username > fallback
-        if (profile?.fullname && profile.fullname.trim()) {
+        // ✅ Priority order: nickname > fullname > username > email > fallback
+        if (profile?.nickname && profile.nickname.trim()) {
+          nick = profile.nickname;
+        } else if (profile?.fullname && profile.fullname.trim()) {
           nick = profile.fullname;
         } else if (profile?.username && profile.username.trim()) {
           nick = profile.username;
@@ -556,7 +558,8 @@ export default function HomePage() {
                     />
                   ) : (
                     <span className="text-xl font-bold text-white pixel-text">
-                      {profile?.fullname?.charAt(0)?.toUpperCase() ||
+                      {profile?.nickname?.charAt(0)?.toUpperCase() ||
+                        profile?.fullname?.charAt(0)?.toUpperCase() ||
                         profile?.username?.charAt(0)?.toUpperCase() ||
                         user?.email?.charAt(0)?.toUpperCase() ||
                         "U"}
@@ -565,7 +568,8 @@ export default function HomePage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-[#00ffff] pixel-text truncate">
-                    {profile?.fullname ||
+                    {profile?.nickname ||
+                      profile?.fullname ||
                       profile?.username ||
                       user?.email?.split("@")[0] ||
                       t("menu.user")}

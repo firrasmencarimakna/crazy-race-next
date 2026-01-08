@@ -447,7 +447,7 @@ export default function HostMonitorPage() {
                             <img src={carGifMap[player.car] || '/assets/car/car5_v2.webp'} alt="car" className="h-28 w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150" style={{ transform: 'scaleX(-1)' }} />
                           </div>
                           <div className="text-center">
-                            <h3 className="text-white pixel-text text-sm leading-tight mb-2 line-clamp-2 break-words">{breakOnCaps(player.nickname)}</h3>
+                            <h3 className="text-white pixel-text text-sm leading-tight mb-2 line-clamp-2 break-words" title={player.nickname}>{breakOnCaps(player.nickname)}</h3>
                             <Progress value={(progress / totalQuestions) * 100} className={`h-2 bg-[#1a0a2a]/50 border border-[#00ffff]/30 mb-2 ${isCompleted ? "bg-green-500/20" : ""}`} />
                           </div>
                         </Card>

@@ -41,6 +41,7 @@ export default function QuizGamePage() {
   // ============ GAME MODE STATE ============
   const [gameMode, setGameMode] = useState<GameMode>('quiz');
   const [gameSrc, setGameSrc] = useState('/racing-game/v4.final.html');
+  const [racingKey, setRacingKey] = useState(0); // Force iframe remount on each new race
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // ============ QUIZ STATES ============
@@ -495,6 +496,7 @@ export default function QuizGamePage() {
     } else if (isRacing) {
       // ✅ INSTANT: Switch to racing mode (no navigation!)
       setCurrentQuestionIndex(nextIndex);
+      setRacingKey(prev => prev + 1); // Force iframe remount to reset game state
       setGameMode('racing');
     } else {
       setCurrentQuestionIndex(nextIndex);
@@ -521,7 +523,7 @@ export default function QuizGamePage() {
   };
 
   const getTimeColor = () => {
-    if (totalTimeRemaining <= 10) return "text-red-500";
+    if (totalTimeRemaining <= 10) return "text-red-500 glow-red animate-pulse";
     if (totalTimeRemaining <= 20) return "text-[#ff6bff] glow-pink-subtle";
     return "text-[#00ffff] glow-cyan";
   };
@@ -612,6 +614,7 @@ export default function QuizGamePage() {
           </div>
         )}
         <iframe
+          key={racingKey}
           ref={iframeRef}
           src={gameSrc}
           width="100%"
@@ -630,6 +633,7 @@ export default function QuizGamePage() {
         .glow-cyan { filter: drop-shadow(0 0 10px #00ffff); }
         .glow-pink-subtle { animation: neon-pulse-pink 1.5s ease-in-out infinite; }
         .glow-green { filter: drop-shadow(0 0 10px rgba(0, 255, 0, 0.8)); }
+        .glow-red { filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.8)); }
         .glow-text { filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8)); }
         .animate-neon-pulse { animation: neon-pulse 1.5s ease-in-out infinite; }
         @keyframes neon-pulse {

@@ -436,7 +436,7 @@ export default function HostLeaderboardPage() {
                     className="w-20 lg:w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
                   />
                   <div className="text-xl lg:text-2xl font-bold text-[#00ffff] mb-1 sm:mb-2 pixel-text glow-cyan">{topThree[1].finalScore}</div>
-                  <h3 className="text-base lg:text-xl font-bold text-white pixel-text glow-text break-words line-clamp-3">{breakOnCaps(topThree[1].nickname)}</h3>
+                  <h3 className="text-base lg:text-xl font-bold text-white pixel-text glow-text break-words line-clamp-3" title={topThree[1].nickname}>{breakOnCaps(topThree[1].nickname)}</h3>
                 </Card>
               </motion.div>
             )}
@@ -457,7 +457,7 @@ export default function HostLeaderboardPage() {
                     className="w-30 lg:w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
                   />
                   <div className="text-2xl lg:text-4xl font-bold text-[#00ffff] mb-2 pixel-text glow-cyan">{topThree[0].finalScore}</div>
-                  <h3 className="text-xl lg:text-2xl font-bold text-white pixel-text glow-text break-words line-clamp-3">{breakOnCaps(topThree[0].nickname)}</h3>
+                  <h3 className="text-xl lg:text-2xl font-bold text-white pixel-text glow-text break-words line-clamp-3" title={topThree[0].nickname}>{breakOnCaps(topThree[0].nickname)}</h3>
                 </Card>
               </motion.div>
             )}
@@ -478,7 +478,7 @@ export default function HostLeaderboardPage() {
                     className="w-20 lg:w-40 mx-auto object-contain animate-neon-bounce filter brightness-125 contrast-150"
                   />
                   <div className="text-xl lg:text-2xl font-bold text-[#00ffff] mb-1 sm:mb-2 pixel-text glow-cyan">{topThree[2].finalScore}</div>
-                  <h3 className="text-base lg:text-lg font-bold text-white pixel-text glow-text break-words line-clamp-3">{breakOnCaps(topThree[2].nickname)}</h3>
+                  <h3 className="text-base lg:text-lg font-bold text-white pixel-text glow-text break-words line-clamp-3" title={topThree[2].nickname}>{breakOnCaps(topThree[2].nickname)}</h3>
                 </Card>
               </motion.div>
             )}
@@ -504,7 +504,7 @@ export default function HostLeaderboardPage() {
                       <div className={`text-sm font-bold ${getRankColor(player.rank)} pixel-text min-w-[22px]`}>
                         #{player.rank}
                       </div>
-                      <h4 className="text-sm font-bold text-white pixel-text glow-text break-words line-clamp-2 flex-1 min-w-0 pl-1">
+                      <h4 className="text-sm font-bold text-white pixel-text glow-text break-words line-clamp-2 flex-1 min-w-0 pl-1" title={player.nickname}>
                         {breakOnCaps(player.nickname)}
                       </h4>
                     </div>
@@ -538,7 +538,7 @@ export default function HostLeaderboardPage() {
                         <div className={`text-xl font-bold ${getRankColor(player.rank)} pixel-text`}>
                           #{player.rank}
                         </div>
-                        <h4 className="text-lg font-bold text-white pixel-text glow-text break-words line-clamp-2 pl-1">{breakOnCaps(player.nickname)}</h4>
+                        <h4 className="text-lg font-bold text-white pixel-text glow-text break-words line-clamp-2 pl-1" title={player.nickname}>{breakOnCaps(player.nickname)}</h4>
                       </div>
                       <div className="flex items-center space-x-6 text-sm">
                         <div className="text-center">
