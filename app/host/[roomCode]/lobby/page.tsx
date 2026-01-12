@@ -57,7 +57,7 @@ export default function HostRoomPage() {
   const [countdown, setCountdown] = useState(0);
 
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true); // Default muted
   const [hasInteracted, setHasInteracted] = useState(false);
 
   const [currentBgIndex, setCurrentBgIndex] = useState(0);
@@ -135,55 +135,18 @@ export default function HostRoomPage() {
     setCountdown(0);
   }, []);
 
+  // Audio control - only play/pause on mute toggle, no autoplay
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    const startAudio = async () => {
-      if (!hasInteracted) {
-        try {
-          audio.muted = isMuted;
-          await audio.play();
-          setHasInteracted(true);
-          console.log("🔊 Audio started via interaction!");
-        } catch (err) {
-          console.warn("⚠️ Audio play blocked, waiting for interaction...");
-        } finally {
-          // lepas listener apapun hasilnya
-          document.removeEventListener("click", startAudio);
-          document.removeEventListener("keydown", startAudio);
-          document.removeEventListener("scroll", startAudio);
-        }
-      }
-    };
-    const tryAutoplay = async () => {
-      try {
-        audio.muted = isMuted;
-        await audio.play();
-        setHasInteracted(true);
-      } catch {
-        const startAudio = async () => {
-          if (hasInteracted) return;
-          try {
-            audio.muted = isMuted;
-            await audio.play();
-            setHasInteracted(true);
-          } catch (err) {
-            console.warn("Audio play blocked");
-          }
-          document.removeEventListener("click", startAudio);
-        };
-        document.addEventListener("click", startAudio);
-        document.addEventListener("keydown", startAudio);
-        document.addEventListener("scroll", startAudio);
-      }
-    };
-    tryAutoplay();
-    return () => {
-      document.removeEventListener("click", startAudio);
-      document.removeEventListener("keydown", startAudio);
-      document.removeEventListener("scroll", startAudio);
-    };
-  }, [hasInteracted, isMuted]);
+    audio.volume = 0.5; // Default 50% volume
+
+    if (isMuted) {
+      audio.pause();
+    } else {
+      audio.play().catch(() => console.warn("Audio play blocked"));
+    }
+  }, [isMuted]);
 
   useEffect(() => {
     const countdownAudio = countdownAudioRef.current;
@@ -431,11 +394,10 @@ export default function HostRoomPage() {
     <div className="h-screen bg-[#1a0a2a] relative overflow-hidden">
       <audio
         ref={audioRef}
-        src="/assets/music/hostroom.mp3"
+        src="/assets/music/run_banana.mp3"
         loop
         preload="auto"
         className="hidden"
-        autoPlay
       />
       <AnimatePresence mode="wait">
         <motion.div

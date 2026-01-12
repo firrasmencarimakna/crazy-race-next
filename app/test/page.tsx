@@ -23,39 +23,65 @@ import {
 
 const CAR_OPTIONS = ["purple", "white", "black", "aqua", "blue"];
 
-// Combined name list (Indonesian + Foreign, all mixed)
-const NAMES = [
-    // Indonesian
-    "Andi", "Budi", "Cahya", "Dewi", "Eka", "Fajar", "Gita", "Hendra", "Indra", "Joko",
-    "Kartika", "Lina", "Maya", "Nia", "Putra", "Rahmat", "Sari", "Tono", "Wati", "Yudi",
-    "Zahra", "Agus", "Bayu", "Dian", "Firman", "Galih", "Hesti", "Iwan", "Kevin", "Luna",
-    "Mega", "Nova", "Okta", "Prima", "Rio", "Tiara", "Vino", "Wulan", "Yoga", "Zara",
-    "Ahmad", "Bambang", "Cinta", "Deni", "Elsa", "Fandi", "Gilang", "Hana", "Irfan", "Jihan",
-    "Nur", "Dwi", "Tri", "Sri", "Adi", "Bima", "Candra", "Dewa", "Rama", "Perdana",
-    "Pratama", "Wijaya", "Saputra", "Kusuma", "Hidayat", "Santoso", "Nugraha", "Permana",
-    "Setiawan", "Wibowo", "Anggraini", "Lestari", "Putri", "Rahayu", "Utami", "Purnama",
-    // Foreign
-    "John", "James", "Michael", "David", "Chris", "Alex", "Ryan", "Daniel", "Matthew", "Andrew",
-    "Emma", "Olivia", "Sophia", "Mia", "Isabella", "Charlotte", "Amelia", "Harper", "Evelyn", "Abigail",
-    "Tom", "Jack", "Harry", "Oliver", "George", "Noah", "Liam", "Ethan", "Mason", "Lucas",
-    "William", "Benjamin", "Henry", "Sebastian", "Alexander", "Emily", "Ava", "Grace", "Chloe", "Lily",
-    "Robert", "Joseph", "Thomas", "Charles", "Edward", "Victoria", "Elizabeth", "Margaret", "Catherine", "Alice",
-    "Smith", "Johnson", "Williams", "Brown", "Jones", "Miller", "Davis", "Garcia", "Wilson", "Moore",
-    "Taylor", "Anderson", "Jackson", "White", "Harris", "Martin", "Thompson", "Lee", "Walker", "King"
-];
+// Import Indonesian names from JSON (more efficient, easier to maintain)
+import indonesianNames from "@/data/indonesian-names.json";
 
 // Helper to pick random from array
 const pickRandom = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
-// Generate random nickname with 1-4 words (pure random, with spaces)
-const generateRandomNickname = (): string => {
-    const wordCount = Math.floor(Math.random() * 4) + 1; // 1 to 4 words
-    const words: string[] = [];
-    for (let i = 0; i < wordCount; i++) {
-        words.push(pickRandom(NAMES));
+// Unique nickname generator class to avoid duplicates
+class UniqueNicknameGenerator {
+    private usedNames: Set<string> = new Set();
+    private firstNames: string[];
+    private middleNames: string[];
+    private lastNames: string[];
+
+    constructor() {
+        this.firstNames = indonesianNames.firstNames;
+        this.middleNames = indonesianNames.middleNames;
+        this.lastNames = indonesianNames.lastNames;
     }
-    return words.join(" "); // "John Smith Lee Davis"
-};
+
+    generate(): string {
+        let attempts = 0;
+        const maxAttempts = 100;
+
+        while (attempts < maxAttempts) {
+            // Random format: 1-4 words
+            const wordCount = Math.floor(Math.random() * 4) + 1;
+            let nickname: string;
+
+            if (wordCount === 1) {
+                // Just first name
+                nickname = pickRandom(this.firstNames);
+            } else if (wordCount === 2) {
+                // First + Last
+                nickname = `${pickRandom(this.firstNames)} ${pickRandom(this.lastNames)}`;
+            } else if (wordCount === 3) {
+                // First + Middle + Last
+                nickname = `${pickRandom(this.firstNames)} ${pickRandom(this.middleNames)} ${pickRandom(this.lastNames)}`;
+            } else {
+                // First + Middle1 + Middle2 + Last
+                nickname = `${pickRandom(this.firstNames)} ${pickRandom(this.middleNames)} ${pickRandom(this.middleNames)} ${pickRandom(this.lastNames)}`;
+            }
+
+            if (!this.usedNames.has(nickname)) {
+                this.usedNames.add(nickname);
+                return nickname;
+            }
+            attempts++;
+        }
+
+        // Fallback: use full 4-word format for guaranteed uniqueness
+        const fallback = `${pickRandom(this.firstNames)} ${pickRandom(this.middleNames)} ${pickRandom(this.middleNames)} ${pickRandom(this.lastNames)}`;
+        this.usedNames.add(fallback);
+        return fallback;
+    }
+
+    reset(): void {
+        this.usedNames.clear();
+    }
+}
 
 // Background GIFs like host pages
 const backgroundGifs = [
@@ -102,6 +128,7 @@ export default function TestPage() {
     const stopRef = useRef(false);
     const usersRef = useRef<TestUser[]>([]);
     const sessionChannelRef = useRef<any>(null);
+    const nicknameGeneratorRef = useRef(new UniqueNicknameGenerator());
 
     // Background cycling
     useEffect(() => {
@@ -176,7 +203,7 @@ export default function TestPage() {
             if (stopRef.current) return null;
 
             const userId = generateXID();
-            const nickname = generateRandomNickname();
+            const nickname = nicknameGeneratorRef.current.generate();
 
             const { error } = await mysupa
                 .from("participants")
@@ -318,6 +345,7 @@ export default function TestPage() {
         setCompletedCount(0);
         setErrorCount(0);
         usersRef.current = [];
+        nicknameGeneratorRef.current.reset(); // Reset used names for new test
 
         addLog(`🧪 Starting test: ${roomCode}`);
 
