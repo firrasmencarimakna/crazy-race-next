@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { mysupa } from "@/lib/supabase";
-import { generateXID } from "@/lib/id-generator";
-import { Play, Trash2, StopCircle, Zap } from "lucide-react";
+import { Play, Trash2, StopCircle } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -20,6 +19,7 @@ import {
     DialogOverlay,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { BotInstance } from "@/components/test/BotInstance";
 
 const CAR_OPTIONS = ["purple", "white", "black", "aqua", "blue"];
 
@@ -90,13 +90,6 @@ const backgroundGifs = [
     "/assets/background/host/7.webp",
 ];
 
-interface TestUser {
-    id: string;
-    nickname: string;
-    currentQuestion: number;
-    completed: boolean;
-}
-
 interface SessionData {
     id: string;
     status: string;
@@ -117,18 +110,15 @@ export default function TestPage() {
     const [answeringCount, setAnsweringCount] = useState(0);
     const [completedCount, setCompletedCount] = useState(0);
     const [errorCount, setErrorCount] = useState(0);
-    const [gameEnded, setGameEnded] = useState(false);
     const [showCleanupDialog, setShowCleanupDialog] = useState(false);
     const [isCleaningUp, setIsCleaningUp] = useState(false);
 
-    // Answer interval settings (in seconds)
-    const [answerIntervalMin, setAnswerIntervalMin] = useState(3);
-    const [answerIntervalMax, setAnswerIntervalMax] = useState(10);
-
+    // Refs for BotInstance communication
     const stopRef = useRef(false);
-    const usersRef = useRef<TestUser[]>([]);
+    const gameStatusRef = useRef<string>("waiting");
     const sessionChannelRef = useRef<any>(null);
     const nicknameGeneratorRef = useRef(new UniqueNicknameGenerator());
+    const botIdsRef = useRef<string[]>([]);
 
     // Background cycling
     useEffect(() => {
@@ -142,10 +132,6 @@ export default function TestPage() {
         const timestamp = new Date().toLocaleTimeString();
         setLogs(prev => [`[${timestamp}] ${message}`, ...prev.slice(0, 199)]);
     }, []);
-
-    // Random delay between min and max milliseconds
-    const randomDelayRange = (minMs: number, maxMs: number) =>
-        new Promise(resolve => setTimeout(resolve, minMs + Math.random() * (maxMs - minMs)));
 
     // Fetch session
     const fetchSession = async (code: string): Promise<SessionData | null> => {
@@ -162,7 +148,7 @@ export default function TestPage() {
         return data;
     };
 
-    // Subscribe to session changes (detect game end)
+    // Subscribe to session changes (detect game start/end)
     const subscribeToSession = (sessionId: string) => {
         sessionChannelRef.current = mysupa
             .channel(`test-session-${sessionId}`)
@@ -171,12 +157,18 @@ export default function TestPage() {
                 { event: "UPDATE", schema: "public", table: "sessions", filter: `id=eq.${sessionId}` },
                 (payload) => {
                     const newStatus = payload.new?.status;
+                    gameStatusRef.current = newStatus;
+
                     if (newStatus === "finished") {
                         addLog("🛑 Host ended the game!");
-                        setGameEnded(true);
                         stopRef.current = true;
+                        setIsRunning(false);
                     } else if (newStatus === "active") {
                         addLog("🎮 Game started by host!");
+                        // Update session with questions
+                        setSession(prev => prev ? { ...prev, ...payload.new } : null);
+                    } else if (newStatus === "countdown") {
+                        addLog("⏱️ Countdown started!");
                     }
                 }
             )
@@ -185,149 +177,33 @@ export default function TestPage() {
                 { event: "DELETE", schema: "public", table: "sessions", filter: `id=eq.${sessionId}` },
                 () => {
                     addLog("🗑️ Session deleted by host!");
-                    setGameEnded(true);
                     stopRef.current = true;
+                    setIsRunning(false);
                 }
             )
             .subscribe();
     };
 
-    // Phase 1: Join all users CONCURRENTLY with random delays (1-10s each)
-    const joinUsersConcurrently = async (sessionId: string) => {
-        addLog(`🚀 Joining ${userCount} users concurrently (1-10s delays)...`);
+    // Bot callbacks
+    const handleBotJoined = useCallback((nickname: string) => {
+        setJoinedCount(prev => prev + 1);
+        addLog(`✅ ${nickname} joined`);
+    }, [addLog]);
 
-        const joinPromises = Array.from({ length: userCount }, async (_, i) => {
-            // Each bot has random delay 1-10 seconds
-            await randomDelayRange(1000, 10000);
+    const handleBotAnswered = useCallback((nickname: string, questionIndex: number) => {
+        setAnsweringCount(prev => Math.max(prev, questionIndex));
+        addLog(`${nickname} → Q${questionIndex}`);
+    }, [addLog]);
 
-            if (stopRef.current) return null;
+    const handleBotCompleted = useCallback((nickname: string) => {
+        setCompletedCount(prev => prev + 1);
+        addLog(`🏁 ${nickname} finished!`);
+    }, [addLog]);
 
-            const userId = generateXID();
-            const nickname = nicknameGeneratorRef.current.generate();
-
-            const { error } = await mysupa
-                .from("participants")
-                .insert({
-                    id: userId,
-                    session_id: sessionId,
-                    nickname,
-                    car: CAR_OPTIONS[Math.floor(Math.random() * CAR_OPTIONS.length)],
-                    score: 0,
-                    answers: [],
-                    current_question: 0,
-                    completion: false,
-                    racing: false,
-                });
-
-            if (error) {
-                setErrorCount(prev => prev + 1);
-                addLog(`❌ ${nickname} failed: ${error.message || error.code || 'Unknown error'}`);
-                return null;
-            }
-
-            setJoinedCount(prev => prev + 1);
-            addLog(`✅ ${nickname} joined`);
-            return { id: userId, nickname, currentQuestion: 0, completed: false } as TestUser;
-        });
-
-        const results = await Promise.all(joinPromises);
-        const users = results.filter(Boolean) as TestUser[];
-        usersRef.current = users;
-        addLog(`📊 Total joined: ${users.length} users`);
-    };
-
-    // Phase 2: Lobby - CONCURRENT car changes with random delays (1-10s each)
-    const lobbyPhaseConcurrent = async () => {
-        addLog("🚗 Car selection phase...");
-
-        while (!stopRef.current) {
-            const sess = await fetchSession(roomCode);
-            // Stop if game active OR countdown started
-            if (sess?.status === "active" || sess?.status === "countdown") {
-                addLog("⏱️ Game starting! Stopping car changes...");
-                break;
-            }
-
-            // All users change car CONCURRENTLY with random delays 1-10s
-            await Promise.all(
-                usersRef.current.map(async (user) => {
-                    await randomDelayRange(1000, 10000);
-                    if (stopRef.current) return;
-
-                    const newCar = CAR_OPTIONS[Math.floor(Math.random() * CAR_OPTIONS.length)];
-                    await mysupa.from("participants").update({ car: newCar }).eq("id", user.id);
-                })
-            );
-        }
-    };
-
-    // Phase 3: Each bot answers independently with 3-10 second intervals
-    const answerQuestionsIndependently = async (questions: any[]) => {
-        const totalQuestions = questions.length;
-        const scorePerQuestion = Math.max(1, Math.floor(100 / totalQuestions));
-
-        addLog(`📝 Starting game with ${totalQuestions} questions...`);
-        addLog(`🤖 Each bot thinks independently (${answerIntervalMin}-${answerIntervalMax}s per answer)...`);
-
-        // Each bot runs independently
-        const botPromises = usersRef.current.map(async (user, botIndex) => {
-            for (let qIndex = 0; qIndex < totalQuestions; qIndex++) {
-                if (stopRef.current || user.completed) break;
-
-                // Random thinking time based on user settings
-                await randomDelayRange(answerIntervalMin * 1000, answerIntervalMax * 1000);
-                if (stopRef.current) break;
-
-                const question = questions[qIndex];
-                const randomAnswer = Math.floor(Math.random() * 4);
-                const isCorrect = Math.random() > 0.5;
-                const score = isCorrect ? scorePerQuestion : 0;
-
-                const newAnswer = {
-                    id: generateXID(),
-                    correct: isCorrect,
-                    answer_id: randomAnswer.toString(),
-                    question_id: question.id,
-                };
-
-                const isLastQuestion = qIndex === totalQuestions - 1;
-                const shouldRace = (qIndex + 1) % 3 === 0 && !isLastQuestion;
-
-                try {
-                    await mysupa.rpc("submit_quiz_answer_batch", {
-                        p_participant_id: user.id,
-                        p_new_answers: [newAnswer],
-                        p_total_score_add: score,
-                        p_total_correct_add: isCorrect ? 1 : 0,
-                        p_next_index: qIndex + 1,
-                        p_is_finished: isLastQuestion,
-                        p_is_racing: shouldRace,
-                    });
-
-                    user.currentQuestion = qIndex + 1;
-                    addLog(`${user.nickname} → Q${qIndex + 1}`);
-                    setAnsweringCount(prev => Math.max(prev, qIndex + 1));
-
-                    // Handle minigame after every 3 questions
-                    if (shouldRace) {
-                        await randomDelayRange(1000, 3000);
-                        await mysupa.from("participants").update({ racing: false }).eq("id", user.id);
-                    }
-
-                    if (isLastQuestion) {
-                        user.completed = true;
-                        setCompletedCount(prev => prev + 1);
-                        addLog(`🏁 ${user.nickname} finished!`);
-                    }
-                } catch (err) {
-                    setErrorCount(prev => prev + 1);
-                }
-            }
-        });
-
-        await Promise.all(botPromises);
-        addLog(`🎉 All bots completed!`);
-    };
+    const handleBotError = useCallback((nickname: string, error: string) => {
+        setErrorCount(prev => prev + 1);
+        addLog(`❌ ${nickname}: ${error}`);
+    }, [addLog]);
 
     // Main test runner
     const startTest = async () => {
@@ -337,15 +213,15 @@ export default function TestPage() {
         }
 
         setIsRunning(true);
-        setGameEnded(false);
         stopRef.current = false;
+        gameStatusRef.current = "waiting";
         setLogs([]);
         setJoinedCount(0);
         setAnsweringCount(0);
         setCompletedCount(0);
         setErrorCount(0);
-        usersRef.current = [];
-        nicknameGeneratorRef.current.reset(); // Reset used names for new test
+        botIdsRef.current = [];
+        nicknameGeneratorRef.current.reset();
 
         addLog(`🧪 Starting test: ${roomCode}`);
 
@@ -354,29 +230,12 @@ export default function TestPage() {
             setIsRunning(false);
             return;
         }
+
         setSession(sess);
+        gameStatusRef.current = sess.status;
         subscribeToSession(sess.id);
         addLog(`✅ Session found: ${sess.status}`);
-
-        await joinUsersConcurrently(sess.id);
-        if (stopRef.current) { setIsRunning(false); return; }
-
-        if (sess.status === "waiting") {
-            await lobbyPhaseConcurrent();
-        }
-        if (stopRef.current) { setIsRunning(false); return; }
-
-        const updatedSess = await fetchSession(roomCode);
-        if (!updatedSess?.current_questions?.length) {
-            addLog("❌ No questions found");
-            setIsRunning(false);
-            return;
-        }
-
-        await answerQuestionsIndependently(updatedSess.current_questions);
-
-        setIsRunning(false);
-        if (!stopRef.current) addLog("🎉 Test completed successfully!");
+        addLog(`🤖 Spawning ${userCount} bots with IQ-based AI...`);
     };
 
     const stopTest = () => {
@@ -385,6 +244,7 @@ export default function TestPage() {
             mysupa.removeChannel(sessionChannelRef.current);
         }
         addLog("⛔ Test stopped");
+        setIsRunning(false);
     };
 
     const cleanupUsers = async () => {
@@ -392,17 +252,13 @@ export default function TestPage() {
         setIsCleaningUp(true);
         addLog("🧹 Cleaning up bots...");
 
-        // Delete all participants created by this test (using stored IDs)
-        const userIds = usersRef.current.map(u => u.id);
-        if (userIds.length > 0) {
-            await mysupa
-                .from("participants")
-                .delete()
-                .in("id", userIds);
-        }
+        // Delete all participants in this session
+        await mysupa
+            .from("participants")
+            .delete()
+            .eq("session_id", session.id);
 
         addLog("✅ Cleanup complete");
-        usersRef.current = [];
         setJoinedCount(0);
         setCompletedCount(0);
         setIsCleaningUp(false);
@@ -497,44 +353,6 @@ export default function TestPage() {
                                 </div>
                             </div>
 
-                            {/* Answer Interval Settings */}
-                            <div className="grid grid-cols-2 gap-4 mb-5">
-                                <div>
-                                    <label className="text-sm text-[#00ffff] pixel-text">
-                                        Min Interval: <span className="text-[#ff6bff]">{answerIntervalMin}s</span>
-                                    </label>
-                                    <Slider
-                                        value={[answerIntervalMin]}
-                                        onValueChange={([v]) => {
-                                            setAnswerIntervalMin(v);
-                                            if (v > answerIntervalMax) setAnswerIntervalMax(v);
-                                        }}
-                                        min={1}
-                                        max={30}
-                                        step={1}
-                                        disabled={isRunning}
-                                        className="mt-3"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-sm text-[#00ffff] pixel-text">
-                                        Max Interval: <span className="text-[#ff6bff]">{answerIntervalMax}s</span>
-                                    </label>
-                                    <Slider
-                                        value={[answerIntervalMax]}
-                                        onValueChange={([v]) => {
-                                            setAnswerIntervalMax(v);
-                                            if (v < answerIntervalMin) setAnswerIntervalMin(v);
-                                        }}
-                                        min={1}
-                                        max={60}
-                                        step={1}
-                                        disabled={isRunning}
-                                        className="mt-3"
-                                    />
-                                </div>
-                            </div>
-
                             <div className="flex gap-3">
                                 {!isRunning ? (
                                     <Button
@@ -620,6 +438,28 @@ export default function TestPage() {
                     </Card>
                 </div>
             </div>
+
+            {/* Render Bot Instances (no UI, logic only) */}
+            {isRunning && session && (
+                <>
+                    {Array.from({ length: userCount }, (_, i) => (
+                        <BotInstance
+                            key={`bot-${i}-${session.id}`}
+                            botId={i}
+                            sessionId={session.id}
+                            roomCode={roomCode}
+                            carOptions={CAR_OPTIONS}
+                            nicknameGenerator={nicknameGeneratorRef.current}
+                            onJoined={handleBotJoined}
+                            onAnswered={handleBotAnswered}
+                            onCompleted={handleBotCompleted}
+                            onError={handleBotError}
+                            stopSignal={stopRef}
+                            gameStatus={gameStatusRef}
+                        />
+                    ))}
+                </>
+            )}
 
             {/* Cleanup Confirmation Dialog */}
             <Dialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>

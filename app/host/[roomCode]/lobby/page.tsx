@@ -394,7 +394,7 @@ export default function HostRoomPage() {
     <div className="h-screen bg-[#1a0a2a] relative overflow-hidden">
       <audio
         ref={audioRef}
-        src="/assets/music/run_banana.mp3"
+        src="/assets/music/hostroom.mp3"
         loop
         preload="auto"
         className="hidden"
