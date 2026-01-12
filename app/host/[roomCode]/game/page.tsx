@@ -42,7 +42,7 @@ export default function HostMonitorPage() {
   const [gameDuration, setGameDuration] = useState(300);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true); // Default muted
   const audioRef = useRef<HTMLAudioElement>(null);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isEndGameConfirmOpen, setEndGameConfirmOpen] = useState(false);
@@ -342,24 +342,24 @@ export default function HostMonitorPage() {
 
   // ✅ FIX: handleEndGame sudah dipindahkan ke atas (sebelum updateTimer)
 
-  // Audio sama kayak sebelumnya
+  // Audio control - only play/pause on mute toggle, no autoplay
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    const tryPlay = async () => {
-      try { audio.muted = isMuted; await audio.play(); setHasInteracted(true); }
-      catch { document.addEventListener("click", () => { audio.play().catch(() => { }); }, { once: true }); }
-    };
-    tryPlay();
-  }, [hasInteracted, isMuted]);
+    audio.volume = 0.5; // Default 50% volume
 
-  useEffect(() => { if (audioRef.current) audioRef.current.muted = isMuted; }, [isMuted]);
+    if (isMuted) {
+      audio.pause();
+    } else {
+      audio.play().catch(() => console.warn("Audio play blocked"));
+    }
+  }, [isMuted]);
 
   if (loading) return <LoadingRetro />;
 
   return (
     <div className="h-screen bg-[#1a0a2a] relative overflow-hidden">
-      <audio ref={audioRef} src="/assets/music/racingprogress.mp3" loop preload="auto" className="hidden" />
+      <audio ref={audioRef} src="/assets/music/withfriends.mp3" loop preload="auto" className="hidden" />
       <div className="absolute inset-0 w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${backgroundImage})` }} />
 
       {/* Scrollable Content Wrapper */}
