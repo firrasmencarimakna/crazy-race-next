@@ -359,7 +359,7 @@ export default function HostMonitorPage() {
 
   return (
     <div className="h-screen bg-[#1a0a2a] relative overflow-hidden">
-      <audio ref={audioRef} src="/assets/music/withfriends.mp3" loop preload="auto" className="hidden" />
+      <audio ref={audioRef} src="/assets/music/racingprogress.mp3" loop preload="auto" className="hidden" />
       <div className="absolute inset-0 w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${backgroundImage})` }} />
 
       {/* Scrollable Content Wrapper */}
