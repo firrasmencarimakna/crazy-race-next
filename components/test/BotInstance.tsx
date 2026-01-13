@@ -24,11 +24,11 @@ class BotBrain {
         return min + Math.random() * (max - min);
     }
 
-    // Answer delay: IQ 70 → 5-10s, IQ 130 → 1-3s
+    // Answer delay: IQ 70 → 8-15s, IQ 130 → 2-5s
     getAnswerDelay(): number {
         const factor = (130 - this.iq) / 60;
-        const min = 1000 + factor * 4000;  // 1s to 5s min
-        const max = 3000 + factor * 7000;  // 3s to 10s max
+        const min = 2000 + factor * 6000;  // 2s to 8s min
+        const max = 5000 + factor * 10000; // 5s to 15s max
         return min + Math.random() * (max - min);
     }
 
