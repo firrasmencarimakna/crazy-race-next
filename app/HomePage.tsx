@@ -23,7 +23,7 @@ import {
   ScanLine,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { mysupa, supabase } from "@/lib/supabase";
@@ -318,6 +318,21 @@ export default function HomePage() {
     }
   }, [authLoading, user, searchParams, pathname, router]);
 
+  // Auto-join effect: jika ada pendingRoomCode, redirect ke join page untuk handle
+  const autoJoinAttempted = useRef(false);
+  useEffect(() => {
+    if (authLoading || autoJoinAttempted.current) return;
+
+    const pendingCode = localStorage.getItem("pendingRoomCode");
+    if (!pendingCode) return;
+
+    // Ada pending code dan user sudah login → redirect ke join page untuk auto-join
+    if (user && profile?.id && !profile.id.startsWith('fallback-')) {
+      autoJoinAttempted.current = true;
+      router.replace(`/join/${pendingCode}`);
+    }
+  }, [authLoading, user, profile, router]);
+
   // REFACTORED: Uses the 'join_game_session' RPC for a safe, atomic join process.
   const handleJoin = async () => {
     // ✅ Validasi input
@@ -411,17 +426,6 @@ export default function HomePage() {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
-  const handleTryout = () => {
-    if (!nickname.trim()) {
-      setAlertReason("nickname");
-      setShowAlert(true);
-      return;
-    }
-    setJoining(true);
-    localStorage.setItem("tryout_nickname", nickname.trim());
-    router.push("/tryout");
-  };
-
   const { isLoaded, progress } = usePreloaderScreen();
   if (!isLoaded) return <LoadingRetroScreen progress={progress} />;
 
@@ -449,7 +453,7 @@ export default function HomePage() {
         src="/assets/background/1.webp"
         alt="Crazy Race Background"
         fill
-        className="object-cover"
+        className="object-cover fixed -z-10"
         priority
       />
       <h1 className="absolute top-6 md:top-4 left-4 w-42 md:w-50 lg:w-100">
@@ -601,56 +605,6 @@ export default function HomePage() {
                   </span>
                 </div>
               </button>
-              <button
-                onClick={() => setShowTryoutInput(!showTryoutInput)}
-                className="w-full p-2 bg-[#1a0a2a]/60 border-2 border-[#ff6bff]/50 hover:border-[#ff6bff] pixel-button hover:bg-[#ff6bff]/20 glow-pink-subtle rounded text-center"
-              >
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-xs text-[#ff6bff] pixel-text glow-pink">
-                    {t("menu.soloTryout")}
-                  </span>
-                </div>
-              </button>
-              <AnimatePresence>
-                {showTryoutInput && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="space-y-2 overflow-hidden"
-                  >
-                    <div className="relative">
-                      <Input
-                        placeholder={t("joinRace.nicknamePlaceholder")}
-                        value={nickname}
-                        maxLength={15}
-                        onChange={(e) => setNickname(e.target.value)}
-                        className="bg-[#1a0a2a]/50 border-[#ff6bff]/50 text-[#ff6bff] placeholder:text-[#ff6bff]/50 text-center text-xs pixel-text h-8 rounded focus:border-[#ff6bff] focus:ring-[#ff6bff]/30 pr-8"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setNickname(generateNickname())}
-                        className="absolute right-1 top-1/2 transform -translate-y-1/2 text-[#ff6bff] hover:bg-[#ff6bff]/20 hover:border-[#ff6bff] transition-all duration-200 glow-pink-subtle p-1"
-                      >
-                        <span className="text-sm">🎲</span>
-                      </button>
-                    </div>
-                    <Button
-                      onClick={() => {
-                        handleTryout();
-                        setIsMenuOpen(false);
-                      }}
-                      disabled={joining}
-                      className={`w-full text-xs ${joining
-                        ? "opacity-50 cursor-not-allowed"
-                        : "bg-gradient-to-r from-[#ff6bff] to-[#ff6bff] hover:from-[#ff8aff] hover:to-[#ffb3ff] text-white border-[#ff6bff]/80 hover:border-[#ff8aff]/80 glow-pink cursor-pointer"
-                        } pixel-button`}
-                    >
-                      {joining ? t("menu.starting") : t("menu.tryoutButton")}
-                    </Button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
               <button
                 disabled={isInstalled || !installPrompt}
                 onClick={handlePWAInstall}

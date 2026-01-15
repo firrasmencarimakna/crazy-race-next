@@ -159,9 +159,11 @@ export function BotInstance({
                 const questions = sessData.current_questions;
                 const totalQuestions = questions.length;
                 const scorePerQuestion = Math.max(1, Math.floor(100 / totalQuestions));
+                let runningTotalScore = 0; // Track running total to cap at 100
 
                 // ========== PHASE 4: ANSWER QUESTIONS ==========
-                for (let qIndex = 0; qIndex < totalQuestions; qIndex++) {
+                const maxQuestions = Math.min(totalQuestions, questions.length); // Explicit boundary
+                for (let qIndex = 0; qIndex < maxQuestions; qIndex++) {
                     if (!mounted || stopSignal.current) break;
 
                     // Thinking time based on IQ
@@ -172,7 +174,10 @@ export function BotInstance({
                     const correctIndex = parseInt(question.correct, 10);
                     const chosenAnswer = brain.chooseAnswer(correctIndex, 4);
                     const isCorrect = chosenAnswer === correctIndex;
-                    const score = isCorrect ? scorePerQuestion : 0;
+                    // Cap score to ensure total never exceeds 100
+                    const rawScore = isCorrect ? scorePerQuestion : 0;
+                    const score = Math.min(rawScore, 100 - runningTotalScore);
+                    runningTotalScore += score;
 
                     const newAnswer = {
                         id: generateXID(),

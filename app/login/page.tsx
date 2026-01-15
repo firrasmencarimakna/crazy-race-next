@@ -37,8 +37,15 @@ export default function LoginPage() {
 
 
   useEffect(() => {
-    if ((user || profile) && !loading) { // Cek user ATAU profile (biar tunggu profile ready)
-      router.replace('/')
+    if ((user || profile) && !loading) {
+      const pendingCode = localStorage.getItem("pendingRoomCode");
+      if (pendingCode) {
+        // Ada pending room code → keep di localStorage, redirect ke home untuk auto-join
+        localStorage.setItem("roomCode", pendingCode);
+        router.replace('/');
+      } else {
+        router.replace('/');
+      }
     }
   }, [user, profile, loading, router])
 
@@ -115,7 +122,7 @@ export default function LoginPage() {
       <AnimatePresence mode="wait">
         <motion.video
           key="background-video"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="fixed inset-0 w-full h-full object-cover"
           autoPlay
           loop
           muted

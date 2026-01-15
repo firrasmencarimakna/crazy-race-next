@@ -10,10 +10,11 @@ import { breakOnCaps } from "@/utils/game"
 import Image from "next/image"
 import { HomeIcon, RotateCwIcon } from "lucide-react"
 import { generateGamePin } from "../../page"
-import { shuffleArray } from "../settings/page"
+import { shuffleArray } from "../settings/settings-form"
 import { useAuth } from "@/contexts/authContext"
 import { t } from "i18next"
 import { useHostGuard } from "@/lib/host-guard"
+import { useGlobalLoading } from "@/contexts/globalLoadingContext"
 
 const APP_NAME = "crazyrace"; // Safety check for multi-tenant DB
 
@@ -49,6 +50,7 @@ export default function HostLeaderboardPage() {
 
   // Security: Verify host access
   useHostGuard(roomCode);
+  const { hideLoading } = useGlobalLoading();
 
   const [loading, setLoading] = useState(true);
   const [playerStats, setPlayerStats] = useState<PlayerStats[]>([]);
@@ -141,6 +143,7 @@ export default function HostLeaderboardPage() {
       setError("Gagal memuat leaderboard");
     } finally {
       setLoading(false);
+      hideLoading();
     }
   }, [roomCode]);
 
