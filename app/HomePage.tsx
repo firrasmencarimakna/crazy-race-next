@@ -597,7 +597,7 @@ export default function HomePage() {
                   setShowHowToPlay(true);
                   setIsMenuOpen(false);
                 }}
-                className="w-full p-2 bg-[#1a0a2a]/60 border-2 border-[#ff6bff]/50 hover:border-[#ff6bff] pixel-button hover:bg-[#ff6bff]/20 glow-pink-subtle rounded text-center"
+                className="w-full p-2 bg-[#1a0a2a]/60 border-2 border-[#00ffff]/50 hover:border-[#00ffff] pixel-button hover:bg-[#00ffff]/20 glow-cyan-subtle rounded text-center"
               >
                 <div className="flex items-center justify-center gap-2">
                   <span className="text-xs text-[#00ffff] pixel-text glow-cyan">
