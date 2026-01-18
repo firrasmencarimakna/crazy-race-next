@@ -31,6 +31,7 @@ import Image from "next/image";
 import { usePreloaderScreen } from "@/components/preloader-screen";
 import LoadingRetroScreen from "@/components/loading-screnn";
 import { useAuth } from "@/contexts/authContext";
+import { useGlobalLoading } from "@/contexts/globalLoadingContext";
 import { generateXID } from "@/lib/id-generator";
 import { useTranslation } from "react-i18next";
 import {
@@ -66,7 +67,7 @@ function LogoutDialog({
 
   const handleLogout = async () => {
     setLoading(true);
-    await supabase.auth.signOut();
+    await supabase.auth.signOut();gi
     localStorage.clear();
     window.location.replace("/login");
     onOpenChange(false);
@@ -112,6 +113,12 @@ export default function HomePage() {
   const { t, i18n } = useTranslation();
   const { user, profile, loading: authLoading } = useAuth();
   const { installPrompt, handleInstall: handlePWAInstall } = usePWAInstall();
+  const { hideLoading } = useGlobalLoading();
+
+  // Hide global loading on mount (e.g., after being kicked from lobby)
+  useEffect(() => {
+    hideLoading();
+  }, [hideLoading]);
 
   const [isBannerVisible, setBannerVisible] = useState(false);
   const [joining, setJoining] = useState(false);
