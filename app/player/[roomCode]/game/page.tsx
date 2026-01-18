@@ -8,6 +8,7 @@ import { useParams, useRouter } from "next/navigation"
 import { mysupa, supabase } from "@/lib/supabase"
 import { motion, AnimatePresence } from "framer-motion"
 import LoadingRetro from "@/components/loadingRetro"
+import { useGlobalLoading } from "@/contexts/globalLoadingContext"
 import { formatTime } from "@/utils/game"
 import { syncServerTime, getSyncedServerTime } from "@/utils/serverTime"
 import { generateXID } from "@/lib/id-generator"
@@ -37,6 +38,7 @@ export default function QuizGamePage() {
   const params = useParams()
   const router = useRouter()
   const roomCode = params.roomCode as string
+  const { hideLoading } = useGlobalLoading();
 
   // ============ GAME MODE STATE ============
   const [gameMode, setGameMode] = useState<GameMode>('quiz');
@@ -145,6 +147,7 @@ export default function QuizGamePage() {
           localStorage.setItem(cachedQuestionsKey, JSON.stringify(prefetched.questions));
 
           setLoading(false);
+          hideLoading();
           return;
         } else {
           sessionStorage.removeItem(prefetchKey);
@@ -214,6 +217,7 @@ export default function QuizGamePage() {
         setGameDuration((sess.total_time_minutes || 5) * 60);
         setGameStartTime(new Date(sess.started_at).getTime());
         setLoading(false);
+        hideLoading();
         return;
       }
 
@@ -286,6 +290,7 @@ export default function QuizGamePage() {
       setGameDuration((sess.total_time_minutes || 5) * 60);
       setGameStartTime(new Date(sess.started_at).getTime());
       setLoading(false);
+      hideLoading();
 
     } catch (err: any) {
       console.error("Fetch error:", err);
@@ -541,8 +546,13 @@ export default function QuizGamePage() {
         <AnimatePresence mode="wait">
           <motion.div
             key={currentBgIndex}
-            className="absolute inset-0 w-full h-full bg-cover bg-center"
-            style={{ backgroundImage: `url(${backgroundGifs[currentBgIndex]})` }}
+            className="fixed inset-0 w-full h-full"
+            style={{
+              backgroundImage: `url(${backgroundGifs[currentBgIndex]})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat'
+            }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

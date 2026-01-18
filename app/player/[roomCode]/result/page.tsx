@@ -8,6 +8,7 @@ import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { mysupa, supabase } from "@/lib/supabase"
 import LoadingRetro from "@/components/loadingRetro"
+import { useGlobalLoading } from "@/contexts/globalLoadingContext"
 import { breakOnCaps } from "@/utils/game"
 import Image from "next/image"
 import { t } from "i18next"
@@ -43,6 +44,7 @@ export default function PlayerResultsPage() {
   const params = useParams()
   const router = useRouter()
   const roomCode = params.roomCode as string
+  const { hideLoading } = useGlobalLoading();
   const [participantId, setParticipantId] = useState<string>("");
 
   const [loading, setLoading] = useState(true)
@@ -134,6 +136,7 @@ export default function PlayerResultsPage() {
         });
 
         setLoading(false);
+        hideLoading();
       } catch (err: any) {
         console.error("Error load result:", err);
         setError("Gagal memuat hasil. Coba refresh.");
