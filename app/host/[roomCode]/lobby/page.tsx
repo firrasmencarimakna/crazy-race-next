@@ -400,15 +400,31 @@ export default function HostRoomPage() {
   };
 
   const startGame = async () => {
+    const countdownTime = new Date(getSyncedServerTime()).toISOString();
+
     const { error } = await mysupa
       .from("sessions")
       .update({
-        countdown_started_at: new Date(getSyncedServerTime()).toISOString(),
+        countdown_started_at: countdownTime,
       })
       .eq("game_pin", roomCode);
 
-    if (error) console.error("startGame error:", error);
-    else setGameStarted(true);
+    if (error) {
+      console.error("startGame error:", error);
+      return;
+    }
+
+    setGameStarted(true);
+
+    // 🚀 Broadcast to all players for instant countdown sync
+    const broadcastChannel = mysupa.channel(`room:${roomCode}`);
+    await broadcastChannel.subscribe();
+    await broadcastChannel.send({
+      type: 'broadcast',
+      event: 'countdown_start',
+      payload: { countdown_started_at: countdownTime }
+    });
+    mysupa.removeChannel(broadcastChannel);
   };
 
   const confirmKick = async () => {

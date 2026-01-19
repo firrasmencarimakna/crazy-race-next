@@ -457,6 +457,54 @@ export default function LobbyPage() {
     };
   }, [roomCode, router, startCountdownSync, stopCountdownSync, hideLoading]);
 
+  // 🚀 BROADCAST LISTENER (Fast path for countdown - instant from host)
+  useEffect(() => {
+    if (!roomCode) return;
+
+    const broadcastChannel = mysupa.channel(`room:${roomCode}`)
+      .on('broadcast', { event: 'countdown_start' }, (payload) => {
+        console.log("⚡ Broadcast countdown received:", payload);
+        const startTime = payload.payload?.countdown_started_at;
+        if (startTime && countdown === 0) {
+          startCountdownSync(startTime, 10);
+          // Trigger preloads instantly
+          if (session?.difficulty) preloadMinigameAssets(session.difficulty);
+          prefetchGameData();
+        }
+      })
+      .subscribe();
+
+    return () => {
+      mysupa.removeChannel(broadcastChannel);
+    };
+  }, [roomCode, startCountdownSync, countdown, session?.difficulty, preloadMinigameAssets, prefetchGameData]);
+
+  // 🛡️ POLLING SAFETY NET (Fallback check every 3 seconds if no countdown yet)
+  useEffect(() => {
+    if (!roomCode || !session?.id || countdown > 0 || gamePhase === 'active') return;
+
+    const pollInterval = setInterval(async () => {
+      const { data } = await mysupa
+        .from("sessions")
+        .select("countdown_started_at, status")
+        .eq("game_pin", roomCode)
+        .single();
+
+      if (data?.countdown_started_at && countdown === 0) {
+        console.log("📡 Polling detected countdown:", data.countdown_started_at);
+        startCountdownSync(data.countdown_started_at, 10);
+        if (session?.difficulty) preloadMinigameAssets(session.difficulty);
+        prefetchGameData();
+      }
+
+      if (data?.status === 'active') {
+        router.replace(`/player/${roomCode}/game`);
+      }
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [roomCode, session?.id, countdown, gamePhase, startCountdownSync, session?.difficulty, preloadMinigameAssets, prefetchGameData, router]);
+
   // 🔥 Participants realtime - SEPARATE useEffect like host lobby
   useEffect(() => {
     if (!session?.id) return;
