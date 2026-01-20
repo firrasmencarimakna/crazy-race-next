@@ -144,12 +144,13 @@ export default function LoginPage() {
           alt="Gameforsmart Logo"
           width={300}
           height={100}
+          priority
         />
       </h1>
 
       <div className="absolute top-4 left-4 hidden md:block">
         <div className="hidden md:block">
-          <Image src="/crazyrace-logo.webp" alt="Crazy Race" width={270} height={50} style={{ imageRendering: 'auto' }} className="h-auto drop-shadow-xl" />
+          <Image src="/crazyrace-logo.webp" alt="Crazy Race" width={270} height={50} style={{ imageRendering: 'auto' }} className="h-auto drop-shadow-xl" priority />
         </div>
       </div>
 
@@ -163,6 +164,7 @@ export default function LoginPage() {
             width={200}
             height={70}
             className="h-auto mx-auto"
+            priority
           />
         </div>
 
