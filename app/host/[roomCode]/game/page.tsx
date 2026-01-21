@@ -93,7 +93,7 @@ export default function HostMonitorPage() {
           score: p.score || 0,
           correct: correctCount,
           completion: p.completion || false,
-          duration: p.duration || 0,
+          total_completion_time: p.duration || 0,
           total_question: totalQuestions,
           current_question: p.current_question || 0,
           accuracy: accuracy.toFixed(2),
