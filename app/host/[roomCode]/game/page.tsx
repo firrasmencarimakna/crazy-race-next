@@ -73,7 +73,7 @@ export default function HostMonitorPage() {
 
       const { data: participants } = await mysupa
         .from("participants")
-        .select("id, user_id, nickname, car, score, correct, answers, duration, completion, current_question")
+        .select("id, user_id, nickname, car, score, correct, answers, duration, completion, current_question, started_at, finished_at")
         .eq("session_id", sessionId);
 
       if (!participants || participants.length === 0) return;
@@ -93,7 +93,8 @@ export default function HostMonitorPage() {
           score: p.score || 0,
           correct: correctCount,
           completion: p.completion || false,
-          total_completion_time: p.duration || 0,
+          started: p.started_at,
+		  ended: p.finished_at,
           total_question: totalQuestions,
           current_question: p.current_question || 0,
           accuracy: accuracy.toFixed(2),
