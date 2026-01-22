@@ -382,13 +382,13 @@ export default function HostLeaderboardPage() {
           {/* Left side: Crazy Race logo */}
           <div className="flex items-center gap-4">
             <div className="hidden md:block">
-              <Image src="/crazyrace-logo.webp" alt="Crazy Race" width={270} height={50} style={{ imageRendering: 'auto' }} className="h-auto drop-shadow-xl" />
+              <Image src="/crazyrace-logo.webp" alt="Crazy Race" width={270} height={50} sizes="270px" style={{ imageRendering: 'auto' }} className="h-auto drop-shadow-xl" />
             </div>
           </div>
 
           {/* Right side: Gameforsmart logo */}
           <div className="hidden md:block">
-            <Image src="/gameforsmart-logo.webp" alt="Gameforsmart Logo" width={300} height={100} />
+            <Image src="/gameforsmart-logo.webp" alt="Gameforsmart Logo" width={300} height={100} sizes="300px" />
           </div>
         </div>
 
@@ -400,6 +400,7 @@ export default function HostLeaderboardPage() {
               alt="Crazy Race"
               width={200}
               height={50}
+              sizes="200px"
               style={{ imageRendering: 'auto' }}
               className="h-auto drop-shadow-xl"
             />

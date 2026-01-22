@@ -256,11 +256,12 @@ export default function PlayerResultsPage() {
           alt="Gameforsmart Logo"
           width={300}
           height={100}
+          sizes="300px"
         />
       </h1>
 
       <div className="absolute top-4 left-4 hidden md:block">
-        <Image src="/crazyrace-logo.webp" alt="Crazy Race" width={270} height={50} style={{ imageRendering: 'auto' }} className="h-auto drop-shadow-xl" />
+        <Image src="/crazyrace-logo.webp" alt="Crazy Race" width={270} height={50} sizes="270px" style={{ imageRendering: 'auto' }} className="h-auto drop-shadow-xl" />
       </div>
 
       <div className="relative z-10 max-w-4xl mx-auto p-4">

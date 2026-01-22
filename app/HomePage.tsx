@@ -469,6 +469,7 @@ export default function HomePage() {
           alt="Gameforsmart Logo"
           width="300"
           height="100"
+          sizes="300px"
           priority
         />
       </h1>
@@ -784,7 +785,7 @@ export default function HomePage() {
       </AnimatePresence>
       <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
         <div className="text-center relative pb-5 sm:pt-3 pt-16 space-y-3 flex flex-col items-center">
-          <Image src="/crazyrace-logo-utama.webp" alt="Crazy Race Logo" width={400} height={400} style={{ imageRendering: 'auto' }} className="w-[250px] sm:w-[300px] md:w-[350px] lg:w-[400px] h-auto mx-auto drop-shadow-xl" />
+          <Image src="/crazyrace-logo-utama.webp" alt="Crazy Race Logo" width={400} height={400} sizes="(max-width: 640px) 250px, (max-width: 768px) 300px, (max-width: 1024px) 350px, 400px" style={{ imageRendering: 'auto' }} className="w-[250px] sm:w-[300px] md:w-[350px] lg:w-[400px] h-auto mx-auto drop-shadow-xl" />
           <div
             className="pixel-border-small inline-block"
             style={{

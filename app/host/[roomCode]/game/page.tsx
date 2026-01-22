@@ -94,7 +94,7 @@ export default function HostMonitorPage() {
           correct: correctCount,
           completion: p.completion || false,
           started: p.started_at,
-		  ended: p.finished_at,
+          ended: p.finished_at,
           total_question: totalQuestions,
           current_question: p.current_question || 0,
           accuracy: accuracy.toFixed(2),
@@ -453,7 +453,7 @@ export default function HostMonitorPage() {
           {/* Left side: Crazy Race logo (desktop) */}
           <div className="flex items-center gap-4 flex-1">
             <div className="hidden md:block">
-              <Image src="/crazyrace-logo.webp" alt="Crazy Race" width={270} height={50} style={{ imageRendering: 'auto' }} className="h-auto drop-shadow-xl" />
+              <Image src="/crazyrace-logo.webp" alt="Crazy Race" width={270} height={50} sizes="270px" style={{ imageRendering: 'auto' }} className="h-auto drop-shadow-xl" />
             </div>
           </div>
 
@@ -464,6 +464,7 @@ export default function HostMonitorPage() {
               alt="Crazy Race"
               width={230}
               height={50}
+              sizes="230px"
               style={{ imageRendering: 'auto' }}
               className="h-auto drop-shadow-xl"
             />
@@ -472,7 +473,7 @@ export default function HostMonitorPage() {
           {/* Right side: Gameforsmart logo + Mute button */}
           <div className="flex items-center gap-4 flex-1 justify-end">
             <div className="hidden md:block">
-              <Image src="/gameforsmart-logo.webp" alt="Logo" width={300} height={100} />
+              <Image src="/gameforsmart-logo.webp" alt="Logo" width={300} height={100} sizes="300px" />
             </div>
             <motion.button
               initial={{ opacity: 0, x: 20 }}

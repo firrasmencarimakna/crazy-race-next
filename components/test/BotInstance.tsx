@@ -45,9 +45,10 @@ class BotBrain {
         return Math.floor(Math.random() * totalOptions);
     }
 
-    // Lobby activity: higher IQ = more car changes
+    // Lobby activity: higher IQ = more car changes (reduced intensity)
     shouldChangeCar(): boolean {
-        const chance = 0.1 + ((this.iq - 70) / 60) * 0.4;
+        // Reduced from 10-50% to 5-15% to minimize DB load
+        const chance = 0.05 + ((this.iq - 70) / 60) * 0.1;
         return Math.random() < chance;
     }
 }
@@ -124,7 +125,8 @@ export function BotInstance({
 
                 // ========== PHASE 2: LOBBY (wait for game to start) ==========
                 while (gameStatus.current === "waiting" && !stopSignal.current && mounted) {
-                    await delay(1000 + Math.random() * 2000);
+                    // Increased delay from 1-3s to 3-5s to reduce lobby activity
+                    await delay(3000 + Math.random() * 2000);
 
                     // Maybe change car based on personality
                     if (brain.shouldChangeCar() && gameStatus.current === "waiting") {
