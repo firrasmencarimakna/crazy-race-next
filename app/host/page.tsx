@@ -439,7 +439,7 @@ export default function QuestionListPage() {
             </motion.button>
 
             <div className="hidden md:block">
-              <Image src="/crazyrace-logo.webp" alt="Crazy Race" width={270} height={50} style={{ imageRendering: 'auto' }} className="h-auto drop-shadow-xl" />
+              <Image src="/crazyrace-logo.webp" alt="Crazy Race" width={270} height={50} sizes="270px" style={{ imageRendering: 'auto' }} className="h-auto drop-shadow-xl" />
             </div>
           </div>
 
@@ -450,6 +450,7 @@ export default function QuestionListPage() {
               alt="Gameforsmart Logo"
               width={300}
               height={100}
+              sizes="300px"
             />
           </div>
         </div>

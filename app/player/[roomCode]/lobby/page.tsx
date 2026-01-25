@@ -73,13 +73,7 @@ export default function LobbyPage() {
   const hasBootstrapped = useRef(false);
   const hasPreloaded = useRef(false); // ✅ Track if assets already preloaded
 
-  // Cursor-based pagination states
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const pageSize = 20;
-  const loaderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     syncServerTime()
@@ -306,47 +300,6 @@ export default function LobbyPage() {
     }
   };
 
-  // Load more participants using cursor
-  const loadMore = useCallback(async () => {
-    if (!session?.id || !cursor || isLoadingMore || !hasMore) return;
-
-    setIsLoadingMore(true);
-    const { data: more } = await mysupa
-      .from("participants")
-      .select("*")
-      .eq("session_id", session.id)
-      .gt("joined_at", cursor)
-      .order("joined_at", { ascending: true })
-      .limit(pageSize);
-
-    if (more && more.length > 0) {
-      setParticipants(prev => [...prev, ...more]);
-      setCursor(more[more.length - 1].joined_at);
-      setHasMore(more.length >= pageSize);
-    } else {
-      setHasMore(false);
-    }
-    setIsLoadingMore(false);
-  }, [session?.id, cursor, isLoadingMore, hasMore, pageSize]);
-
-  // Infinite scroll: observe loader element
-  useEffect(() => {
-    const loader = loaderRef.current;
-    if (!loader) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
-          loadMore();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(loader);
-    return () => observer.disconnect();
-  }, [hasMore, isLoadingMore, loadMore]);
-
   useEffect(() => {
     if (hasBootstrapped.current || !roomCode) return;
     hasBootstrapped.current = true;
@@ -383,30 +336,22 @@ export default function LobbyPage() {
         stopCountdownSync();
       }
 
-      // Fetch participants (cursor-based)
+      // Fetch ALL participants (no pagination - standard SELECT *)
       const { data: fetchedParticipants, count } = await mysupa
         .from("participants")
         .select("*", { count: "exact" })
         .eq("session_id", fetchedSession.id)
-        .order("joined_at", { ascending: true })
-        .limit(pageSize);
+        .order("joined_at", { ascending: true });
 
       setParticipants(fetchedParticipants ?? []);
       setTotalCount(count || 0);
 
-      // Set cursor and hasMore
-      if (fetchedParticipants && fetchedParticipants.length > 0) {
-        setCursor(fetchedParticipants[fetchedParticipants.length - 1].joined_at);
-        setHasMore(fetchedParticipants.length >= pageSize);
-      } else {
-        setHasMore(false);
-      }
-
       const myParticipantId = localStorage.getItem("participantId") || "";
       const me = (fetchedParticipants || []).find((p: any) => p.id === myParticipantId);
 
+      // CHECK IF I AM STILL IN SESSION
       if (!me) {
-        console.warn("Participant not found");
+        console.warn("Participant not found in session");
         localStorage.removeItem("participantId");
         localStorage.removeItem("game_pin");
         router.replace("/");
@@ -620,13 +565,13 @@ export default function LobbyPage() {
           {/* Left side: Crazy Race logo */}
           <div className="flex items-center gap-4">
             <div className="hidden md:block">
-              <Image src="/crazyrace-logo.webp" alt="Crazy Race" width={270} height={50} style={{ imageRendering: 'auto' }} className="h-auto drop-shadow-xl" />
+              <Image src="/crazyrace-logo.webp" alt="Crazy Race" width={270} height={50} sizes="270px" style={{ imageRendering: 'auto' }} className="h-auto drop-shadow-xl" />
             </div>
           </div>
 
           {/* Right side: Gameforsmart logo */}
           <div className="hidden md:block">
-            <Image src="/gameforsmart-logo.webp" alt="Gameforsmart Logo" width={300} height={100} />
+            <Image src="/gameforsmart-logo.webp" alt="Gameforsmart Logo" width={300} height={100} sizes="300px" />
           </div>
         </div>
 
@@ -676,12 +621,6 @@ export default function LobbyPage() {
                     </motion.div>
                   ))}
                 </div>
-                {/* Infinite Scroll Loader */}
-                {hasMore && participants.length < totalCount && (
-                  <div ref={loaderRef} className="flex justify-center items-center py-4">
-                    <span className="text-[#00ffff] text-sm pixel-text">Loading more...</span>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </motion.div>
